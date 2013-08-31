@@ -27,12 +27,10 @@ main = do
           StandaloneDeriving, TemplateHaskell] -}
   let ast = fromParseResult $
               parseModuleWithMode parseMode {parseFilename="stdin"} src
-  --putStrLn $ prettyPrint ast
-  --putStrLn "-----------------"
-  let logs = collectModule ast
-  let refs = map refout $ filter isRef $ map purify $ logs
+  let logs = map purify $ collectModule ast
+  let refs = map refout $ filter isRef $ logs
   let bases = basesOf refs
-  mapM_ (\x -> putStrLn "" >> putStrLn (show x)) $ logs
+  mapM_ (\x -> putStrLn "" >> putStrLn (show x)) $ filter (not . isRef) logs
   putStrLn "-----------------"
   -- assumes newline is \n (single char)
   let lineLens = map ((+1) . length) (lines src)
@@ -122,10 +120,13 @@ data Ref = Ref
   }
   deriving Show
 
+for = flip fmap
+
+-- * Link collector part
+
 data Log = LRef Ref | LWarn String
   deriving Show
 type Logs = [Log]
-type App = RWS () Logs SymTab ()
 
 type Collector = ([SymElem], SymTab -> Logs)
 
@@ -137,8 +138,6 @@ collectModule (Module _l _head _pragmas _imports decls) =
 
 mergeCollect :: [SymTab -> Logs] -> SymTab -> Logs
 mergeCollect fs s = concat $ map ($ s) fs
-
-for = flip fmap
 
 collectDecl :: Decl S -> Collector
 collectDecl decl = case decl of
@@ -177,11 +176,36 @@ collectRhs rhs = case rhs of
 collectExp :: Exp S -> SymTab -> Logs
 collectExp exp = case exp of
   Var _l qname -> resolveQName CTerm qname
+  InfixApp _l lexp _op rexp -> exps [lexp, rexp]
+  App _l exp1 exp2 -> exps [exp1, exp2]
+  Case _l exp alts -> (\s ->
+    let expLogs = collectExp exp s
+        altLogs = mergeCollect (map collectAlt alts) s
+    in expLogs ++ altLogs)
   other -> const [LWarn$ "Exp " ++ show exp]
+  where
+    exps ee = mergeCollect$ map collectExp ee
+
+collectAlt :: Alt S -> SymTab -> Logs
+collectAlt (Alt _l pat guardedAlts binds) =
+  let (patSyms, patFun) = collectPat pat
+      -- patSyms only used in guardedAlts
+      altFun = \s -> collectGuardedAlts guardedAlts (M.fromList patSyms `M.union` s)
+  in mergeCollect [patFun, altFun]
+
+collectGuardedAlts :: GuardedAlts S -> SymTab -> Logs
+collectGuardedAlts gas = case gas of
+  UnGuardedAlt _l exp -> collectExp exp
+  other -> const [LWarn$ "Guarded case alternative: " ++ show other]
 
 collectPat :: Pat S -> Collector
 collectPat p = case p of
   PVar _l name -> (return$ mkNameSym CTerm name, const []) 
+  PApp _l qname pats ->
+    let qnameFun = resolveQName CTerm qname
+        (psyms, pfuns) = unzip $ map collectPat pats
+    in (concat psyms, mergeCollect (qnameFun:pfuns))
+  PParen _l pat -> collectPat pat
   other -> ([], const [LWarn$ "xPat" ++ show other])
 
 collectDeclHead :: DeclHead S -> SymElem
@@ -201,7 +225,6 @@ collectQualConDecl (QualConDecl _l _tyvarbinds ctx conDecl) =
     InfixConDecl _l lbang name rbang -> ctorBangs name [lbang, rbang]
     RecDecl _l name fields -> 
       let ctorSym = mkNameSym CTerm name
-          -- some repetition here w/collectDecl
           (fieldSyms, fs) = unzip $ map collectFieldDecl fields
       in (ctorSym:(concat fieldSyms), mergeCollect fs)
   where
