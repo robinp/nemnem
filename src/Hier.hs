@@ -1,7 +1,9 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 
 module Hier 
-  ( mkRange, TaggedRange()
+  ( TaggedRange()
+  , mkRange
+  , mkMarker
   , tagRegions
   , untag
   , transformRegions
@@ -56,6 +58,9 @@ instance Functor (Tagged a) where
 
 mkRange :: a -> Length e -> Length e -> TaggedRange e a
 mkRange = TaggedRange
+
+mkMarker :: a -> Length e -> TaggedRange e a
+mkMarker a l = TaggedRange a l l
 
 transformRegions :: (Monoid e, LengthSplitAt e) =>
                     (a -> e -> e) -> [TaggedRange e a] -> e -> e

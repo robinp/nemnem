@@ -4,12 +4,19 @@ module Main where
 
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Monad.Trans.RWS
-import Data.List (intersperse, nub)
+import Data.List (intersperse, nub, inits)
 import Data.Map (Map)
 import Data.Maybe (maybeToList)
 import qualified Data.Map as M
+import Data.Monoid (mempty, mappend, mconcat)
 import Language.Haskell.Exts.Annotated
-import Text.Blaze as B
+import Text.Blaze ((!))
+import qualified Text.Blaze as B
+import qualified Text.Blaze.Html5 as BH
+import qualified Text.Blaze.Html5.Attributes as BA
+import qualified Text.Blaze.Html.Renderer.Text as BR
+import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy as T
 
 import Hier
 
@@ -30,8 +37,32 @@ main = do
   let lineLens = map ((+1) . length) (lines src)
   let ranges = map (refToRange lineLens) refs ++
         map (baseToRange lineLens) bases
-  putStrLn $ unlines $ map (++ "<br/>") $ lines $
-    untag (\f s -> f s) $ fmap nbspify $ tagRegions ranges src
+  putStrLn $ T.unpack$ BR.renderHtml $
+    untag tagToBlaze $ fmap toBlaze $ tagRegions ranges src
+
+----------- Blaze stuff
+data Tag = LinkTo Text
+         | LineEnd
+         | Entity Text
+
+tagToBlaze :: Tag -> B.Markup -> B.Markup
+tagToBlaze t = case t of
+  LinkTo ref -> BH.a ! BA.href (B.toValue$ T.pack "#" `mappend` ref)
+  LineEnd -> const BH.br
+  Entity ref -> BH.a ! BA.name (B.toValue ref)
+-----------
+
+toBlaze = preStyle . B.toMarkup
+toBlaze2 s = 
+  if null s then mempty
+  else
+    let br = BH.br `mappend` B.toMarkup '\n'
+        parts = intersperse br $ map B.toMarkup (lines s)
+    in preStyle $ 
+         mconcat $ if (head . reverse) s == '\n' then parts ++ [br] else parts
+  --else B.toMarkup s -- preStyle (B.toMarkup s)
+
+preStyle = BH.span ! BA.class_ (B.toValue "mpre")
 
 nbspify :: String -> String
 nbspify = concat . map (\c -> case c of
@@ -54,22 +85,26 @@ isRef _ = False
 refout (PRef x) = x
 refout _ = undefined
 
-refToRange :: [Int] -> HRef -> TaggedRange String (String -> String)
-refToRange lineLens href@(HRef (srcStart, srcEnd) _) =
-  mkRange (mkLink href) (lc srcStart) (lc srcEnd)
+refToRange :: [Int] -> HRef -> TaggedRange String Tag
+refToRange lineLens (HRef (srcStart, srcEnd) dst) =
+  mkRange (LinkTo$ idfy dst) (lc srcStart) (lc srcEnd)
   where lc = mapLineCol lineLens
 
-baseToRange lineLens lcrange@(s,e) = mkRange (mkBase lcrange) (lc s) (lc e)
+baseToRange :: [Int] -> LCRange -> TaggedRange String Tag
+baseToRange lineLens lcrange@(s,e) =
+  mkRange (Entity$ idfy lcrange) (lc s) (lc e)
   where lc = mapLineCol lineLens
+
+idfy ((la,ca), (lb,cb)) = T.pack $
+  show la ++ "_" ++ show ca ++ "_" ++ show lb ++ "_" ++ show cb
 
 basesOf refs = nub $ map (\(HRef _ dst) -> dst) refs
 
--- TODO blaze
-mkLink (HRef src dst) s = "<a href='#" ++ idfy dst ++ "'>" ++ s ++ "</a>"
-mkBase lcrange s = "<a name='" ++ idfy lcrange ++ "'>" ++ s ++ "</a>"
-idfy ((la,ca), (lb,cb)) = show la ++ "_" ++ show ca ++ "_" ++ show lb ++ "_" ++ show cb
-
-data HRef = HRef LCRange LCRange deriving Show
+---
+data HRef = HRef
+  { hSrc :: LCRange
+  , hDst :: LCRange
+  }  deriving Show
 
 purify (LRef (Ref s t)) = PRef$ HRef (lineCol s) (lineCol t)
 purify (LWarn s) = PWarn s
