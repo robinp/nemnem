@@ -29,10 +29,11 @@ main = do
               parseModuleWithMode parseMode {parseFilename="stdin"} src
   --putStrLn $ prettyPrint ast
   --putStrLn "-----------------"
-  let refs = map refout $ filter isRef $ map purify $ collectModule ast
+  let logs = collectModule ast
+  let refs = map refout $ filter isRef $ map purify $ logs
   let bases = basesOf refs
-  --mapM_ (\x -> putStrLn "" >> putStrLn (show x)) $ refs
-  --putStrLn "-----------------"
+  mapM_ (\x -> putStrLn "" >> putStrLn (show x)) $ logs
+  putStrLn "-----------------"
   -- assumes newline is \n (single char)
   let lineLens = map ((+1) . length) (lines src)
   let ranges = map (refToRange lineLens) refs ++
@@ -108,7 +109,7 @@ lineCol src =
       (srcSpanEndLine s, srcSpanEndColumn s))
 
 data Ctx a = CType a | CTerm a
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 type S = SrcSpanInfo
 
@@ -137,6 +138,8 @@ collectModule (Module _l _head _pragmas _imports decls) =
 mergeCollect :: [SymTab -> Logs] -> SymTab -> Logs
 mergeCollect fs s = concat $ map ($ s) fs
 
+for = flip fmap
+
 collectDecl :: Decl S -> Collector
 collectDecl decl = case decl of
   DataDecl _l _dataOrNew _ctx dHead quals derivings ->
@@ -150,8 +153,36 @@ collectDecl decl = case decl of
         fname name s = maybeToList$
           LRef . Ref (namePos name) <$> M.lookup (CTerm$ nameVal name) s
     in ([], mergeCollect$ tyFun:nameFuns)
+  FunBind _l matches ->
+    let (syms, funs) = unzip $ for matches (\m -> 
+          let (name, pats, rhs, binds) = case m of
+                Match _l nm ps r bs -> (nm, ps, r, bs)
+                InfixMatch _l p nm ps r bs -> (nm, p:ps, r, bs)
+              matchSym = mkNameSym CTerm name
+              (patSyms, patFuns) = unzip $ map collectPat pats
+              -- patSyms are not returned to the global scope, just
+              -- used when resolving rhs and binds
+              -- TODO rhs, binds
+              rhsFun = \s -> collectRhs rhs (M.fromList (concat patSyms) `M.union` s)
+          in ([matchSym], mergeCollect$ rhsFun:patFuns))
+    in (concat syms, mergeCollect funs)
   -- TODO
   other -> ([], const [LWarn$ "xDECL " ++ show other])
+
+collectRhs :: Rhs S -> SymTab -> Logs
+collectRhs rhs = case rhs of
+  UnGuardedRhs _l exp -> collectExp exp
+  other -> const [LWarn$ "GuardedRhs " ++ show other]
+
+collectExp :: Exp S -> SymTab -> Logs
+collectExp exp = case exp of
+  Var _l qname -> resolveQName CTerm qname
+  other -> const [LWarn$ "Exp " ++ show exp]
+
+collectPat :: Pat S -> Collector
+collectPat p = case p of
+  PVar _l name -> (return$ mkNameSym CTerm name, const []) 
+  other -> ([], const [LWarn$ "xPat" ++ show other])
 
 collectDeclHead :: DeclHead S -> SymElem
 collectDeclHead dhead = case dhead of
@@ -190,19 +221,21 @@ bangType (UnpackedTy _ t) = t
 
 collectType :: Type S -> SymTab -> Logs
 collectType ty st = case ty of
-  TyCon l qname -> maybeToList $ do
-    tyname <- flattenQName qname
-    refPos <- M.lookup (CType tyname) st
-    return$ LRef (Ref l refPos)
-  TyFun _l t1 t2 ->
-    mergeCollect (map collectType [t1, t2]) st
+  TyCon _l qname -> resolveQName CType qname st
+  TyFun _l t1 t2 -> mergeCollect (map collectType [t1, t2]) st
   other -> [LWarn$ "xTyCon " ++ show ty]
 
-flattenQName :: QName l -> Maybe String
+resolveQName :: (forall a. a -> Ctx a) -> QName S -> SymTab -> Logs
+resolveQName ct qname s = maybeToList $ do
+  (l, name) <- flattenQName qname
+  refPos <- M.lookup (ct name) s
+  return$ LRef (Ref l refPos)
+
+flattenQName :: QName l -> Maybe (l, String)
 flattenQName qname = case qname of
   -- TODO elaborate a little, no modul support now
-  Qual _l (ModuleName _ mname) name -> Just (mname ++ "." ++ nameVal name)
-  UnQual _l name -> Just (nameVal name)
+  Qual l (ModuleName _ mname) name -> Just (l, mname ++ "." ++ nameVal name)
+  UnQual l name -> Just (l, nameVal name)
   Special _ _ -> Nothing
 
 namePos (Symbol p _) = p
