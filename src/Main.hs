@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes, OverloadedStrings #-}
 
 module Main where
 
@@ -38,7 +38,7 @@ main = do
   let ranges = map (refToRange lineLens) refs ++
         map (baseToRange lineLens) bases
   putStrLn $ T.unpack$ BR.renderHtml $
-    untag tagToBlaze $ fmap toBlaze $ tagRegions ranges src
+    withHeader $ untag tagToBlaze $ fmap toBlaze $ tagRegions ranges src
 
 ----------- Blaze stuff
 data Tag = LinkTo Text
@@ -50,24 +50,17 @@ tagToBlaze t = case t of
   LinkTo ref -> BH.a ! BA.href (B.toValue$ T.pack "#" `mappend` ref)
   LineEnd -> const BH.br
   Entity ref -> BH.a ! BA.name (B.toValue ref)
------------
+
+withHeader m = BH.html $ do
+  BH.head $ do
+    BH.title "NemNem"
+    BH.link ! BA.rel "stylesheet" ! BA.type_ "text/css" ! BA.href "nemnem.css"
+  BH.body $ do
+    BH.div ! BA.id "code" $ m  
 
 toBlaze = preStyle . B.toMarkup
-toBlaze2 s = 
-  if null s then mempty
-  else
-    let br = BH.br `mappend` B.toMarkup '\n'
-        parts = intersperse br $ map B.toMarkup (lines s)
-    in preStyle $ 
-         mconcat $ if (head . reverse) s == '\n' then parts ++ [br] else parts
-  --else B.toMarkup s -- preStyle (B.toMarkup s)
-
-preStyle = BH.span ! BA.class_ (B.toValue "mpre")
-
-nbspify :: String -> String
-nbspify = concat . map (\c -> case c of
-  ' ' -> "&nbsp;"
-  x -> [x])
+preStyle = BH.span ! BA.class_ "mpre"
+-----------
 
 -- | Line and column numbers assumed from one
 mapLineCol :: [Int] -> (Int, Int) -> Int
