@@ -21,12 +21,14 @@ import qualified Data.Text.Lazy as T
 import Hier
 
 main = do
-  src <- getContents
-  let parseMode = defaultParseMode {-
+  let path = "tsrc/Test3.hs"
+  src <- readFile path
+  ast <- fromParseResult <$> parseFile path
+  {- let parseMode = defaultParseMode {
         extensions = extensions defaultParseMode ++ fmap EnableExtension [
-          StandaloneDeriving, TemplateHaskell] -}
+          TypeFamilies, FlexibleContexts] }
   let ast = fromParseResult $
-              parseModuleWithMode parseMode {parseFilename="stdin"} src
+              parseModuleWithMode parseMode {parseFilename="stdin"} src -}
   let logs = map purify $ collectModule ast
   let refs = map refout $ filter isRef $ logs
   let bases = basesOf refs
@@ -46,7 +48,11 @@ data Tag = LinkTo Text
 
 tagToBlaze :: Tag -> B.Markup -> B.Markup
 tagToBlaze t = case t of
-  LinkTo ref -> BH.a ! BA.href (B.toValue$ T.pack "#" `mappend` ref)
+  LinkTo ref ->
+    BH.a !
+      BA.href (B.toValue$ T.pack "#" `mappend` ref) !
+      BA.onmouseover (B.toValue$
+        mconcat ["nemnem.highlight('", ref, "')"])
   LineEnd -> const BH.br
   Entity ref -> BH.a ! BA.name (B.toValue ref)
 
@@ -54,6 +60,8 @@ withHeader m = BH.html $ do
   BH.head $ do
     BH.title "NemNem"
     BH.link ! BA.rel "stylesheet" ! BA.type_ "text/css" ! BA.href "nemnem.css"
+    BH.script ! BA.src "jquery-2.0.3.min.js" $ mempty
+    BH.script ! BA.src "nemnem.js" $ mempty
   BH.body $ do
     BH.div ! BA.id "code" $ m  
 
