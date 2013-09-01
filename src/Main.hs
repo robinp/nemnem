@@ -21,25 +21,31 @@ import qualified Data.Text.Lazy as T
 import Hier
 
 main = do
-  let path = "tsrc/Test3.hs"
-  src <- readFile path
-  ast <- fromParseResult <$> parseFile path
+  let path1 = "tsrc/Test4.hs"
+  let path2 = "tsrc/Test3.hs"
+  src2 <- readFile path2
+  ast1 <- fromParseResult <$> parseFile path1
+  ast2 <- fromParseResult <$> parseFile path2
   {- let parseMode = defaultParseMode {
         extensions = extensions defaultParseMode ++ fmap EnableExtension [
           TypeFamilies, FlexibleContexts] }
   let ast = fromParseResult $
               parseModuleWithMode parseMode {parseFilename="stdin"} src -}
-  let logs = map purify $ collectModule ast
-  let refs = map refout $ filter isRef $ logs
-  let bases = basesOf refs
-  mapM_ (\x -> putStrLn "" >> putStrLn (show x)) $ filter (not . isRef) logs
+  let mi1 = collectModule M.empty ast1
+  putStrLn $ "exports1: " ++ show (miExports mi1)
+  -- TODO add renamed variants of imports
+  let mi = collectModule (head$maybeToList$miExports mi1) ast2
+  putStrLn $ "exports2: " ++ show (miExports mi)
+  putStrLn $ "refs2: " ++ show (miRefs mi)
+  let bases = basesOf (miRefs mi)
+  mapM_ (\x -> putStrLn "" >> putStrLn (show x)) $ miWarns mi
   putStrLn "-----------------"
   -- assumes newline is \n (single char)
-  let lineLens = map ((+1) . length) (lines src)
-  let ranges = map (refToRange lineLens) refs ++
+  let lineLens = map ((+1) . length) (lines src2)
+  let ranges = map (refToRange lineLens) (miRefs mi) ++
         map (baseToRange lineLens) bases
   putStrLn $ T.unpack$ BR.renderHtml $
-    withHeader $ untag tagToBlaze $ fmap toBlaze $ tagRegions ranges src
+    withHeader $ untag tagToBlaze $ fmap toBlaze $ tagRegions ranges src2
 
 ----------- Blaze stuff
 data Tag = LinkTo Text
@@ -75,74 +81,135 @@ mapLineCol lineLens (line, col) =
   sum (take (line-1) lineLens) + (col-1)
 
 type LineCol = (Int,Int)
-type LCRange = (LineCol,LineCol)
-data PLog = PRef HRef | PWarn String
-  deriving Show
+type LineColRange = (LineCol,LineCol)
 
-isRef (PRef _) = True
-isRef _ = False
-
-refout (PRef x) = x
-refout _ = undefined
-
-refToRange :: [Int] -> HRef -> TaggedRange String Tag
-refToRange lineLens (HRef (srcStart, srcEnd) dst) =
+refToRange :: [Int] -> Ref -> TaggedRange String Tag
+refToRange lineLens (Ref (SymV (srcStart, srcEnd) _) dst) =
   mkRange (LinkTo$ idfy dst) (lc srcStart) (lc srcEnd)
   where lc = mapLineCol lineLens
 
-baseToRange :: [Int] -> LCRange -> TaggedRange String Tag
-baseToRange lineLens lcrange@(s,e) =
-  mkRange (Entity$ idfy lcrange) (lc s) (lc e)
+-- TODO check if module is the current or not
+baseToRange :: [Int] -> SymV -> TaggedRange String Tag
+baseToRange lineLens sym@(SymV (s,e) _) =
+  mkRange (Entity$ idfy sym) (lc s) (lc e)
   where lc = mapLineCol lineLens
 
-idfy ((la,ca), (lb,cb)) = T.pack $
-  show la ++ "_" ++ show ca ++ "_" ++ show lb ++ "_" ++ show cb
+-- TODO Either Local Nonlocal
+idfy :: SymV -> Text
+idfy s = T.pack $
+  (maybe "local" id (symModule s)) ++ "_" ++
+  show (fst$a$s) ++ "_" ++ show (snd$a$s) ++ "_" ++ 
+    show (fst$b$s) ++ "_" ++ show (snd$b$s)
+  where a = fst . symRange
+        b = snd . symRange
 
-basesOf refs = nub $ map (\(HRef _ dst) -> dst) refs
+-- the base is the destination of a reference
+basesOf :: [Ref] -> [SymV]
+basesOf = nub . map (\(Ref _ dst) -> dst)
 
 ---
-data HRef = HRef
-  { hSrc :: LCRange
-  , hDst :: LCRange
-  }  deriving Show
+data Ctx a = CType a | CTerm a
+  deriving (Eq, Ord, Show)
 
-purify (LRef (Ref s t)) = PRef$ HRef (lineCol s) (lineCol t)
-purify (LWarn s) = PWarn s
+instance Functor Ctx where
+  fmap f (CType a) = CType (f a)
+  fmap f (CTerm a) = CTerm (f a)
 
+type S = SrcSpanInfo
+
+type SymK = Ctx String
+data SymV = SymV
+  { symRange :: LineColRange
+  , symModule :: Maybe String
+  } deriving (Eq, Show)
+type SymKV = (SymK, SymV)
+type SymTab = Map SymK SymV
+
+wrapLoc :: S -> SymV
+wrapLoc loc = SymV { symRange = lineCol loc, symModule = Nothing }
+
+data Ref = Ref
+  { refSource :: SymV
+  , refTarget :: SymV
+  } deriving Show
+
+getRef (LRef r) = [r]
+getRef _ = []
+getWarn (LWarn s) = [s]
+getWarn _ = []
+getChild (LChild p c) = [(p, c)]
+getChild _ = []
+
+lineCol :: S -> LineColRange
 lineCol src = 
   let s = srcInfoSpan src
   in ((srcSpanStartLine s, srcSpanStartColumn s),
       (srcSpanEndLine s, srcSpanEndColumn s))
 
-data Ctx a = CType a | CTerm a
-  deriving (Eq, Ord, Show)
-
-type S = SrcSpanInfo
-
-type SymElem = (Ctx String, S)
-type SymTab = Map (Ctx String) S
-
-data Ref = Ref
-  { refSource :: S
-  , refTarget :: S
-  }
-  deriving Show
-
+for :: Functor f => f a -> (a -> b) -> f b
 for = flip fmap
 
 -- * Link collector part
 
-data Log = LRef Ref | LWarn String
+data Log = LRef Ref | LWarn String | LChild (Ctx String) (Ctx String)
   deriving Show
 type Logs = [Log]
 
-type Collector = ([SymElem], SymTab -> Logs)
+type Collector = ([SymKV], SymTab -> Logs)
 
-collectModule :: Module S -> Logs
-collectModule (Module _l _head _pragmas _imports decls) =
+data ModuleInfo = ModuleInfo
+    -- newly defined top-level symbols (may not be exported)
+  { miSymbols :: SymTab  
+    -- exported symbols 
+  , miExports :: Maybe SymTab
+    -- references from this module
+  , miRefs :: [Ref]
+    -- warnings while processing AST (likely todos)
+  , miWarns :: [String]
+  }
+
+exportedKeys :: Map (Ctx String) [Ctx String] -> [ExportSpec l] -> [Ctx String]
+exportedKeys children xs = xs >>= exports
+  where
+    exports x = case x of
+      EVar _ qname -> getQName CTerm qname
+      EAbs _ qname -> getQName CType qname
+      EThingAll _ qname -> do
+        name <- getQName CType qname
+        name:(M.findWithDefault [] name children)
+      EThingWith _ qname cnames ->
+        getQName CType qname ++ map (CTerm . getName) cnames
+          where getName (VarName _ name) = nameVal name
+                getName (ConName _ name) = nameVal name
+      EModuleContents _ (ModuleName _ mname) -> error "EModuleContents"
+    getQName ctx = maybeToList . fmap (ctx . snd) . flattenQName
+
+collectModule :: SymTab -> Module S -> ModuleInfo
+collectModule importSyms (Module _l mhead _pragmas _imports decls) =
   let (syms, funs) = unzip $ map collectDecl decls
-      symTab = M.fromList $ concat syms
-  in mergeCollect funs symTab
+      mname = moduleName <$> mhead
+      symTab = M.map (\s -> s { symModule = mname }) $
+                 M.fromList$ concat syms 
+      logs = mergeCollect funs (symTab `mappend` importSyms)
+      children = 
+        let pairs = map (\(p,c) -> (p, [c])) $ logs >>= getChild
+        in M.unionsWith (++) (map (M.fromList . return) pairs) 
+      exports = headExports symTab children <$> mhead
+  in ModuleInfo
+      { miSymbols = symTab
+      , miExports = exports
+      , miRefs = logs >>= getRef
+      , miWarns = logs >>= getWarn
+      }
+  where
+    moduleName (ModuleHead _ (ModuleName _ mname) _ _) = mname
+    headExports symTab children (ModuleHead _ _ _ exportSpecs) = 
+      case exportSpecs of
+        Nothing -> symTab
+        Just (ExportSpecList _ xs) -> 
+          let keySet = exportedKeys children xs
+             -- TODO improve lookup efficiency
+          in M.filterWithKey (\k _ -> k `elem` keySet) symTab
 
 mergeCollect :: [SymTab -> Logs] -> SymTab -> Logs
 mergeCollect fs s = concat $ map ($ s) fs
@@ -150,8 +217,8 @@ mergeCollect fs s = concat $ map ($ s) fs
 collectDecl :: Decl S -> Collector
 collectDecl decl = case decl of
   DataDecl _l _dataOrNew _ctx dHead quals derivings ->
-    let headSym = collectDeclHead dHead
-        (qualSyms, qualFuns) = unzip $ map collectQualConDecl quals
+    let headSym@(headCtx,_) = collectDeclHead dHead
+        (qualSyms, qualFuns) = unzip $ map (collectQualConDecl headCtx) quals
     in (headSym:(concat qualSyms), mergeCollect qualFuns)
   TypeSig _l names ty ->
     -- we want names in signatures to point to the definitions
@@ -184,6 +251,7 @@ collectRhs rhs = case rhs of
 collectExp :: Exp S -> SymTab -> Logs
 collectExp exp = case exp of
   Var _l qname -> resolveQName CTerm qname
+  Con _l qname -> resolveQName CTerm qname
   InfixApp _l lexp _op rexp -> exps [lexp, rexp]
   App _l exp1 exp2 -> exps [exp1, exp2]
   Case _l exp alts -> (\s ->
@@ -216,17 +284,20 @@ collectPat p = case p of
   PParen _l pat -> collectPat pat
   other -> ([], const [LWarn$ "xPat" ++ show other])
 
-collectDeclHead :: DeclHead S -> SymElem
+collectDeclHead :: DeclHead S -> SymKV
 collectDeclHead dhead = case dhead of
   DHead _hl name _tyvarbinds -> mkNameSym CType name
   DHInfix _hl _tyleft name _tyright -> mkNameSym CType name
   DHParen _hl innerHead -> collectDeclHead innerHead
 
-mkNameSym :: (forall a. a -> Ctx a) -> Name S -> SymElem
+mkNameSym :: (forall a. a -> Ctx a) -> Name S -> SymKV
 mkNameSym ctxType name = (ctxType (nameVal name), namePos name)
 
-collectQualConDecl :: QualConDecl S -> Collector
-collectQualConDecl (QualConDecl _l _tyvarbinds ctx conDecl) =
+mkChild :: Ctx String -> (forall a. a -> Ctx a) -> Name S -> a -> Logs
+mkChild p ctx c = const [LChild p (ctx$ nameVal c)]
+
+collectQualConDecl :: Ctx String -> QualConDecl S -> Collector
+collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
   -- TODO ctx
   case conDecl of
     ConDecl _l name bangs -> ctorBangs name bangs
@@ -237,7 +308,9 @@ collectQualConDecl (QualConDecl _l _tyvarbinds ctx conDecl) =
       in (ctorSym:(concat fieldSyms), mergeCollect fs)
   where
     bangCollect = mergeCollect . map (collectType . bangType)
-    ctorBangs name bangs = ([mkNameSym CTerm name], bangCollect bangs)
+    ctorBangs name bangs = 
+      ([mkNameSym CTerm name],
+        mergeCollect [mkChild tyname CTerm name, bangCollect bangs])
 
 collectFieldDecl :: FieldDecl S -> Collector
 collectFieldDecl (FieldDecl l names bang) =
@@ -260,7 +333,7 @@ resolveQName :: (forall a. a -> Ctx a) -> QName S -> SymTab -> Logs
 resolveQName ct qname s = maybeToList $ do
   (l, name) <- flattenQName qname
   refPos <- M.lookup (ct name) s
-  return$ LRef (Ref l refPos)
+  return$ LRef (Ref (wrapLoc l) refPos)
 
 flattenQName :: QName l -> Maybe (l, String)
 flattenQName qname = case qname of
@@ -269,8 +342,8 @@ flattenQName qname = case qname of
   UnQual l name -> Just (l, nameVal name)
   Special _ _ -> Nothing
 
-namePos (Symbol p _) = p
-namePos (Ident p _) = p
+namePos (Symbol p _) = wrapLoc p
+namePos (Ident p _) = wrapLoc p
 
 nameVal (Symbol _ v) = v
 nameVal (Ident _ v) = v

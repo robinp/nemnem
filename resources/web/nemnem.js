@@ -13,7 +13,6 @@ nemnem = {
       nemnem.highlit_.toggleClass(nemnem.highliteClass_);
     }
     nemnem.highlit_ = $('a[name="' + idname + '"],a[href="#' + idname + '"]');
-    console.log(nemnem.highlit_);
     nemnem.highlit_.toggleClass(nemnem.highliteClass_);
   }
 }
