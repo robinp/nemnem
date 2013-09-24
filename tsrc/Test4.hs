@@ -1,4 +1,4 @@
-module Test4 
+module Test4
   ( DAbs
   , DAll(..)
   , DRecAll(..)
@@ -10,6 +10,9 @@ module Test4
 
 foo x = 1 :: Int
 bar y = 2 :: Int
+
+lam :: Int -> Int
+lam x = 2 * x
 
 data DAbs = NotExported
 data DAll = Me | AndMe

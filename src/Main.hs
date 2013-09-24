@@ -17,12 +17,17 @@ import qualified Text.Blaze.Html5.Attributes as BA
 import qualified Text.Blaze.Html.Renderer.Text as BR
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.IO as TIO
 
 import Hier
+
+type MName = Maybe String
 
 main = do
   let path1 = "tsrc/Test4.hs"
   let path2 = "tsrc/Test3.hs"
+  let outdir = "deploy/"
+  src1 <- readFile path1
   src2 <- readFile path2
   ast1 <- fromParseResult <$> parseFile path1
   ast2 <- fromParseResult <$> parseFile path2
@@ -34,31 +39,39 @@ main = do
   let mi1 = collectModule M.empty ast1
   putStrLn $ "exports1: " ++ show (miExports mi1)
   -- TODO add renamed variants of imports
-  let mi = collectModule (head$maybeToList$miExports mi1) ast2
+  let mi = collectModule (maybe M.empty id $ miExports mi1) ast2
   putStrLn $ "exports2: " ++ show (miExports mi)
   putStrLn $ "refs2: " ++ show (miRefs mi)
-  let bases = basesOf (miRefs mi)
   mapM_ (\x -> putStrLn "" >> putStrLn (show x)) $ miWarns mi
   putStrLn "-----------------"
-  -- assumes newline is \n (single char)
-  let lineLens = map ((+1) . length) (lines src2)
-  let ranges = map (refToRange lineLens) (miRefs mi) ++
-        map (baseToRange lineLens) bases
-  putStrLn $ T.unpack$ BR.renderHtml $
-    withHeader $ untag tagToBlaze $ fmap toBlaze $ tagRegions ranges src2
+  writeLinked outdir src1 mi1
+  writeLinked outdir src2 mi
+  where
+    writeLinked outdir src mi =
+      -- assumes newline is \n (single char)
+      let lineLens = map ((+1) . length) (lines src)
+          bases = basesOf (miRefs mi)
+          ranges = map (refToRange lineLens) (miRefs mi) ++
+                     map (baseToRange lineLens) bases
+      in TIO.writeFile (outdir ++ (maybe "anonymous" id (miName mi)) ++ ".html") $ 
+           (BR.renderHtml . withHeader . untag (tagToBlaze$ miName mi) . fmap toBlaze)
+             (tagRegions ranges src)
 
 ----------- Blaze stuff
-data Tag = LinkTo Text
+data Tag = LinkTo MName Text
          | LineEnd
          | Entity Text
 
-tagToBlaze :: Tag -> B.Markup -> B.Markup
-tagToBlaze t = case t of
-  LinkTo ref ->
-    BH.a !
-      BA.href (B.toValue$ T.pack "#" `mappend` ref) !
-      BA.onmouseover (B.toValue$
-        mconcat ["nemnem.highlight('", ref, "')"])
+tagToBlaze :: MName -> Tag -> B.Markup -> B.Markup
+tagToBlaze mname t = case t of
+  LinkTo mod ref ->
+    cond (mod == mname || mod == Nothing) (! hoverAttrib) id $
+      BH.a ! BA.href (B.toValue fullRef)
+    where
+      cond c a b = if c then a else b
+      hoverAttrib = BA.onmouseover (B.toValue$
+                      mconcat ["nemnem.highlight('", ref, "')"])
+      fullRef = mconcat [maybe mempty (T.pack . (++ ".html")) mod, "#", ref]
   LineEnd -> const BH.br
   Entity ref -> BH.a ! BA.name (B.toValue ref)
 
@@ -69,7 +82,7 @@ withHeader m = BH.html $ do
     BH.script ! BA.src "jquery-2.0.3.min.js" $ mempty
     BH.script ! BA.src "nemnem.js" $ mempty
   BH.body $ do
-    BH.div ! BA.id "code" $ m  
+    BH.div ! BA.id "code" $ m
 
 toBlaze = preStyle . B.toMarkup
 preStyle = BH.span ! BA.class_ "mpre"
@@ -85,7 +98,7 @@ type LineColRange = (LineCol,LineCol)
 
 refToRange :: [Int] -> Ref -> TaggedRange String Tag
 refToRange lineLens (Ref (SymV (srcStart, srcEnd) _) dst) =
-  mkRange (LinkTo$ idfy dst) (lc srcStart) (lc srcEnd)
+  mkRange (LinkTo (symModule dst) (idfy dst)) (lc srcStart) (lc srcEnd)
   where lc = mapLineCol lineLens
 
 -- TODO check if module is the current or not
@@ -94,11 +107,9 @@ baseToRange lineLens sym@(SymV (s,e) _) =
   mkRange (Entity$ idfy sym) (lc s) (lc e)
   where lc = mapLineCol lineLens
 
--- TODO Either Local Nonlocal
 idfy :: SymV -> Text
 idfy s = T.pack $
-  (maybe "local" id (symModule s)) ++ "_" ++
-  show (fst$a$s) ++ "_" ++ show (snd$a$s) ++ "_" ++ 
+  "loc_" ++ show (fst$a$s) ++ "_" ++ show (snd$a$s) ++ "_" ++
     show (fst$b$s) ++ "_" ++ show (snd$b$s)
   where a = fst . symRange
         b = snd . symRange
@@ -158,9 +169,10 @@ type Logs = [Log]
 type Collector = ([SymKV], SymTab -> Logs)
 
 data ModuleInfo = ModuleInfo
+  { miName :: MName
     -- newly defined top-level symbols (may not be exported)
-  { miSymbols :: SymTab  
-    -- exported symbols 
+  , miSymbols :: SymTab
+    -- exported symbols
   , miExports :: Maybe SymTab
     -- references from this module
   , miRefs :: [Ref]
@@ -196,7 +208,8 @@ collectModule importSyms (Module _l mhead _pragmas _imports decls) =
         in M.unionsWith (++) (map (M.fromList . return) pairs) 
       exports = headExports symTab children <$> mhead
   in ModuleInfo
-      { miSymbols = symTab
+      { miName = mname
+      , miSymbols = symTab
       , miExports = exports
       , miRefs = logs >>= getRef
       , miWarns = logs >>= getWarn
