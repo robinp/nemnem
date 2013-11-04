@@ -6,7 +6,7 @@ import Control.Applicative ((<$>), (<*>), pure)
 import Control.Monad.Trans.RWS
 import Data.List (intersperse, nub, inits)
 import Data.Map (Map)
-import Data.Maybe (maybeToList)
+import Data.Maybe (maybeToList, fromMaybe)
 import qualified Data.Map as M
 import Data.Monoid (mempty, mappend, mconcat)
 import Language.Haskell.Exts.Annotated
@@ -21,7 +21,9 @@ import qualified Data.Text.Lazy.IO as TIO
 
 import Hier
 
-type MName = Maybe String
+type MName = String
+
+--linkFile :: StateT SymTab
 
 main = do
   let path1 = "tsrc/Test4.hs"
@@ -31,6 +33,7 @@ main = do
   src2 <- readFile path2
   ast1 <- fromParseResult <$> parseFile path1
   ast2 <- fromParseResult <$> parseFile path2
+  putStrLn . ("AST " ++) . show $ ast2
   {- let parseMode = defaultParseMode {
         extensions = extensions defaultParseMode ++ fmap EnableExtension [
           TypeFamilies, FlexibleContexts] }
@@ -38,8 +41,9 @@ main = do
               parseModuleWithMode parseMode {parseFilename="stdin"} src -}
   let mi1 = collectModule M.empty ast1
   putStrLn $ "exports1: " ++ show (miExports mi1)
+  putStrLn $ "refs1: " ++ show (miRefs mi1)
   -- TODO add renamed variants of imports
-  let mi = collectModule (maybe M.empty id $ miExports mi1) ast2
+  let mi = collectModule (M.insert "Test4" mi1 M.empty) ast2
   putStrLn $ "exports2: " ++ show (miExports mi)
   putStrLn $ "refs2: " ++ show (miRefs mi)
   mapM_ (\x -> putStrLn "" >> putStrLn (show x)) $ miWarns mi
@@ -53,22 +57,23 @@ main = do
           bases = basesOf (miRefs mi)
           ranges = map (refToRange lineLens) (miRefs mi) ++
                      map (baseToRange lineLens) bases
-      in TIO.writeFile (outdir ++ (maybe "anonymous" id (miName mi)) ++ ".html") $ 
+      in TIO.writeFile (outdir ++ (maybe "anonymous" id (miName mi)) ++ ".html") $
            (BR.renderHtml . withHeader . untag (tagToBlaze$ miName mi) . fmap toBlaze)
              (tagRegions ranges src)
 
 ----------- Blaze stuff
-data Tag = LinkTo MName Text
+data Tag = LinkTo (Maybe MName) Text
          | LineEnd
          | Entity Text
 
-tagToBlaze :: MName -> Tag -> B.Markup -> B.Markup
+cond c a b = if c then a else b
+
+tagToBlaze :: Maybe MName -> Tag -> B.Markup -> B.Markup
 tagToBlaze mname t = case t of
   LinkTo mod ref ->
     cond (mod == mname || mod == Nothing) (! hoverAttrib) id $
       BH.a ! BA.href (B.toValue fullRef)
     where
-      cond c a b = if c then a else b
       hoverAttrib = BA.onmouseover (B.toValue$
                       mconcat ["nemnem.highlight('", ref, "')"])
       fullRef = mconcat [maybe mempty (T.pack . (++ ".html")) mod, "#", ref]
@@ -169,18 +174,21 @@ type Logs = [Log]
 type Collector = ([SymKV], SymTab -> Logs)
 
 data ModuleInfo = ModuleInfo
-  { miName :: MName
+  { miName :: Maybe MName
     -- newly defined top-level symbols (may not be exported)
   , miSymbols :: SymTab
     -- exported symbols
-  , miExports :: Maybe SymTab
+  , miExports :: SymTab
+  , miChildren :: ChildMap
     -- references from this module
   , miRefs :: [Ref]
     -- warnings while processing AST (likely todos)
   , miWarns :: [String]
   }
 
-exportedKeys :: Map (Ctx String) [Ctx String] -> [ExportSpec l] -> [Ctx String]
+type ChildMap = Map SymK [SymK]
+
+exportedKeys :: ChildMap -> [ExportSpec l] -> [Ctx String]
 exportedKeys children xs = xs >>= exports
   where
     exports x = case x of
@@ -190,39 +198,90 @@ exportedKeys children xs = xs >>= exports
         name <- getQName CType qname
         name:(M.findWithDefault [] name children)
       EThingWith _ qname cnames ->
-        getQName CType qname ++ map (CTerm . getName) cnames
-          where getName (VarName _ name) = nameVal name
-                getName (ConName _ name) = nameVal name
+        getQName CType qname ++ map (CTerm . getCName) cnames
       EModuleContents _ (ModuleName _ mname) -> error "EModuleContents"
-    getQName ctx = maybeToList . fmap (ctx . snd) . flattenQName
+    getQName ctx =
+      -- TODO maybe should drop module part instead flatten? what's the
+      --    spec here?
+      maybeToList . fmap (ctx . snd) . flattenQName
 
-collectModule :: SymTab -> Module S -> ModuleInfo
-collectModule importSyms (Module _l mhead _pragmas _imports decls) =
+getCName (VarName _ name) = nameVal name
+getCName (ConName _ name) = nameVal name
+
+imports :: ChildMap -> ImportSpec S -> [SymK]
+imports children is = case is of
+  IVar _ name -> getName CTerm name
+  IAbs _ name ->
+    -- See Haskell report 5.3.1 item 2
+    getName CType name ++ getName CTerm name
+  IThingAll _ name -> do
+    n <- getName CType name
+    n:(M.findWithDefault [] n children)
+  IThingWith _ name cnames ->
+    getName CType name ++ map (CTerm . getCName) cnames
+  where
+    getName :: (forall a . a -> Ctx a) -> Name S -> [SymK]
+    getName ctx = (\x -> [x])  . fst . mkNameSym ctx
+
+importSyms :: Map MName ModuleInfo -> [ImportDecl S] -> SymTab
+importSyms modules = mconcat . map getImports
+  where
+    getImports (ImportDecl _l lmname isQual _src _pkg alias specs) =
+      fromMaybe M.empty $ for (M.lookup (mname lmname) modules) (\mi ->
+      let exports = miExports mi
+          filtered = maybe id (filterImports$ miChildren mi) specs exports
+          aliased mAlias =
+            let prefix = mAlias ++ "."
+            in M.mapKeys (fmap (prefix ++)) filtered
+      in case alias of
+           Just a -> aliased (mname a) `mappend`
+                       cond isQual M.empty filtered
+           Nothing -> cond isQual (aliased$ mname lmname) filtered
+      )
+    mname (ModuleName _ m) = m
+    filterImports :: ChildMap -> ImportSpecList S -> SymTab -> SymTab
+    filterImports children (ImportSpecList _ isHiding iss) syms =
+      let selected = iss >>= imports children -- TODO use set
+          passes s = invertIf isHiding $ s `elem` selected
+      in M.filterWithKey (\s _ -> passes s) syms
+
+invertIf :: Bool -> Bool -> Bool
+invertIf f = cond f not id
+
+collectModule :: Map MName ModuleInfo -> Module S -> ModuleInfo
+collectModule modules (Module _l mhead _pragmas imports decls) =
   let (syms, funs) = unzip $ map collectDecl decls
       mname = moduleName <$> mhead
       symTab = M.map (\s -> s { symModule = mname }) $
-                 M.fromList$ concat syms 
-      logs = mergeCollect funs (symTab `mappend` importSyms)
-      children = 
+                 M.fromList$ concat syms
+      logs = mergeCollect funs
+               (symTab `mappend` (importSyms modules imports))
+               ++ [LWarn . ("IMPORTS " ++ ) . show $ importSyms modules imports]
+      children =
         let pairs = map (\(p,c) -> (p, [c])) $ logs >>= getChild
-        in M.unionsWith (++) (map (M.fromList . return) pairs) 
-      exports = headExports symTab children <$> mhead
+        in M.unionsWith (++) (map (M.fromList . return) pairs)
+      exports = fromMaybe M.empty $ headExports symTab children <$> mhead
   in ModuleInfo
       { miName = mname
       , miSymbols = symTab
       , miExports = exports
+      , miChildren = exportedChildren exports children
       , miRefs = logs >>= getRef
       , miWarns = logs >>= getWarn
       }
   where
     moduleName (ModuleHead _ (ModuleName _ mname) _ _) = mname
-    headExports symTab children (ModuleHead _ _ _ exportSpecs) = 
+    headExports symTab children (ModuleHead _ _ _ exportSpecs) =
       case exportSpecs of
         Nothing -> symTab
-        Just (ExportSpecList _ xs) -> 
+        Just (ExportSpecList _ xs) ->
           let keySet = exportedKeys children xs
              -- TODO improve lookup efficiency
           in M.filterWithKey (\k _ -> k `elem` keySet) symTab
+    exportedChildren :: SymTab -> (ChildMap -> ChildMap)
+    exportedChildren exports =
+      let exported = flip M.member exports
+      in M.map (filter exported) . M.filterWithKey (\s _ -> exported s)
 
 mergeCollect :: [SymTab -> Logs] -> SymTab -> Logs
 mergeCollect fs s = concat $ map ($ s) fs
@@ -241,7 +300,7 @@ collectDecl decl = case decl of
           LRef . Ref (namePos name) <$> M.lookup (CTerm$ nameVal name) s
     in ([], mergeCollect$ tyFun:nameFuns)
   FunBind _l matches ->
-    let (syms, funs) = unzip $ for matches (\m -> 
+    let (syms, funs) = unzip $ for matches (\m ->
           let (name, pats, rhs, binds) = case m of
                 Match _l nm ps r bs -> (nm, ps, r, bs)
                 InfixMatch _l p nm ps r bs -> (nm, p:ps, r, bs)
@@ -289,7 +348,7 @@ collectGuardedAlts gas = case gas of
 
 collectPat :: Pat S -> Collector
 collectPat p = case p of
-  PVar _l name -> (return$ mkNameSym CTerm name, const []) 
+  PVar _l name -> (return$ mkNameSym CTerm name, const [])
   PApp _l qname pats ->
     let qnameFun = resolveQName CTerm qname
         (psyms, pfuns) = unzip $ map collectPat pats
@@ -315,13 +374,13 @@ collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
   case conDecl of
     ConDecl _l name bangs -> ctorBangs name bangs
     InfixConDecl _l lbang name rbang -> ctorBangs name [lbang, rbang]
-    RecDecl _l name fields -> 
+    RecDecl _l name fields ->
       let ctorSym = mkNameSym CTerm name
           (fieldSyms, fs) = unzip $ map collectFieldDecl fields
       in (ctorSym:(concat fieldSyms), mergeCollect fs)
   where
     bangCollect = mergeCollect . map (collectType . bangType)
-    ctorBangs name bangs = 
+    ctorBangs name bangs =
       ([mkNameSym CTerm name],
         mergeCollect [mkChild tyname CTerm name, bangCollect bangs])
 
@@ -350,7 +409,7 @@ resolveQName ct qname s = maybeToList $ do
 
 flattenQName :: QName l -> Maybe (l, String)
 flattenQName qname = case qname of
-  -- TODO elaborate a little, no modul support now
+  -- TODO does this impl fit all uses?
   Qual l (ModuleName _ mname) name -> Just (l, mname ++ "." ++ nameVal name)
   UnQual l name -> Just (l, nameVal name)
   Special _ _ -> Nothing

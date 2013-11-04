@@ -1,6 +1,6 @@
 module Test3 where
 
-import Test4
+import Test4 hiding (One)
 import qualified Test4 as T4
 
 data MyData = Case1 | Case2 String MyData | MyRec MyRecord
