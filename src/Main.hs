@@ -40,7 +40,8 @@ prettish lvl (x:xs) = case x of
   where spaces x = take x $ repeat ' '
 
 main = do
-  let path1 = "tsrc/Test4.hs"
+  let path1 = "src/Hier.hs"
+  --let path1 = "tsrc/Test4.hs"
   let path2 = "tsrc/Test3.hs"
   let outdir = "deploy/"
   src1 <- readFile path1
@@ -343,7 +344,7 @@ collectDecl decl = case decl of
     let (patSyms, patFuns) = collectPat pat
         -- TODO duplication with above
         rhsFun = \s -> collectRhs rhs (M.fromList patSyms `M.union` s)
-    in (patSyms {- ?? restrict only to syms from PVar ?? -}, mergeCollect [rhsFun, patFuns])
+    in (patSyms, mergeCollect [rhsFun, patFuns])
   -- TODO
   other -> ([], const [LWarn$ "xDECL " ++ show other])
 
@@ -363,6 +364,15 @@ collectExp exp = case exp of
         altLogs = mergeCollect (map collectAlt alts) s
     in expLogs ++ altLogs)
   If _l c a b -> exps [c, a, b]
+  Let _l binds exp -> case binds of
+    BDecls _l decls ->
+      let (dsyms, dfuns) = unzip $ map collectDecl decls
+          syms = concat dsyms
+      in (\s -> mergeCollect (collectExp exp:dfuns) $ M.fromList syms `M.union` s)
+    IPBinds _l ipbinds -> error "no IPBind support"
+  --Lambda pats exp -> 
+  --  let (psyms, pfuns) = unzip $ map collectPat pats
+  --      syms = concat psyms
   other -> const [LWarn$ "Exp " ++ show exp]
   where
     exps ee = mergeCollect$ map collectExp ee
