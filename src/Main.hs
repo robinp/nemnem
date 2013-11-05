@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes, OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, RankNTypes,
+             OverloadedStrings #-}
 
 module Main where
 
@@ -6,7 +7,7 @@ import Control.Applicative ((<$>), (<*>), pure)
 import Control.Monad.Trans.RWS
 import Data.List (intersperse, nub, inits)
 import Data.Map (Map)
-import Data.Maybe (maybeToList, fromMaybe)
+import Data.Maybe (maybeToList, fromMaybe, catMaybes)
 import qualified Data.Map as M
 import Data.Monoid (mempty, mappend, mconcat)
 import Language.Haskell.Exts.Annotated
@@ -25,6 +26,19 @@ type MName = String
 
 --linkFile :: StateT SymTab
 
+prettish _ [] = []
+prettish lvl (x:xs) = case x of
+  o | o `elem` "([{" ->
+    let lvl' = lvl + 1
+    in '\n':o:(spaces lvl' ++ prettish lvl' xs)
+  c | c `elem` ")]}" ->
+    let lvl' = lvl - 1
+    in c:prettish lvl' xs
+  d | d == ',' ->
+    d:'\n':(spaces lvl ++ prettish lvl xs)
+  x -> x:prettish lvl xs
+  where spaces x = take x $ repeat ' '
+
 main = do
   let path1 = "tsrc/Test4.hs"
   let path2 = "tsrc/Test3.hs"
@@ -33,38 +47,48 @@ main = do
   src2 <- readFile path2
   ast1 <- fromParseResult <$> parseFile path1
   ast2 <- fromParseResult <$> parseFile path2
-  putStrLn . ("AST " ++) . show $ ast2
+  putStrBreak . ("AST " ++) . prettish 0 . show $ fmap (const "") ast2
   {- let parseMode = defaultParseMode {
         extensions = extensions defaultParseMode ++ fmap EnableExtension [
           TypeFamilies, FlexibleContexts] }
   let ast = fromParseResult $
               parseModuleWithMode parseMode {parseFilename="stdin"} src -}
   let mi1 = collectModule M.empty ast1
-  putStrLn $ "exports1: " ++ show (miExports mi1)
-  putStrLn $ "refs1: " ++ show (miRefs mi1)
+  putStrBreak $ "exports1: " ++ show (miExports mi1)
+  putStrBreak $ "refs1: " ++ show (miRefs mi1)
   -- TODO add renamed variants of imports
-  let mi = collectModule (M.insert "Test4" mi1 M.empty) ast2
-  putStrLn $ "exports2: " ++ show (miExports mi)
-  putStrLn $ "refs2: " ++ show (miRefs mi)
-  mapM_ (\x -> putStrLn "" >> putStrLn (show x)) $ miWarns mi
+  let mi2 = collectModule (M.insert "Test4" mi1 M.empty) ast2
+  putStrBreak $ "exports2: " ++ show (miExports mi2)
+  putStrBreak $ "refs2: " ++ show (miRefs mi2)
+  mapM_ putStrBreak $ miWarns mi2
   putStrLn "-----------------"
   writeLinked outdir src1 mi1
-  writeLinked outdir src2 mi
+  writeLinked outdir src2 mi2
   where
     writeLinked outdir src mi =
       -- assumes newline is \n (single char)
       let lineLens = map ((+1) . length) (lines src)
           bases = basesOf (miRefs mi)
           ranges = map (refToRange lineLens) (miRefs mi) ++
-                     map (baseToRange lineLens) bases
-      in TIO.writeFile (outdir ++ (maybe "anonymous" id (miName mi)) ++ ".html") $
-           (BR.renderHtml . withHeader . untag (tagToBlaze$ miName mi) . fmap toBlaze)
-             (tagRegions ranges src)
+                     catMaybes (map (baseToRange lineLens (miName mi)) bases)
+      in do
+        let tagged = tagRegions ranges src
+        TIO.writeFile (outdir ++ (maybe "anonymous" id (miName mi)) ++ ".html") $
+          (BR.renderHtml . withHeader . untag (tagToBlaze$ miName mi) . fmap toBlaze)
+            tagged
+        mapM_ (putStrBreak . show) ranges
+        putStrBreak$ prettish 0$ show tagged
+    break = putStrLn "---"
+    putStrBreak x = break >> putStrLn x
+
+instance Show (TaggedRange String Tag) where
+  show = showTaggedRange
 
 ----------- Blaze stuff
 data Tag = LinkTo (Maybe MName) Text
          | LineEnd
          | Entity Text
+  deriving Show
 
 cond c a b = if c then a else b
 
@@ -106,10 +130,12 @@ refToRange lineLens (Ref (SymV (srcStart, srcEnd) _) dst) =
   mkRange (LinkTo (symModule dst) (idfy dst)) (lc srcStart) (lc srcEnd)
   where lc = mapLineCol lineLens
 
--- TODO check if module is the current or not
-baseToRange :: [Int] -> SymV -> TaggedRange String Tag
-baseToRange lineLens sym@(SymV (s,e) _) =
-  mkRange (Entity$ idfy sym) (lc s) (lc e)
+baseToRange :: [Int] -> Maybe MName -> SymV -> Maybe (TaggedRange String Tag)
+baseToRange lineLens curModule sym@(SymV (s,e) sModule) =
+  -- sModule is Nothing is a local var? TODO explain
+  if sModule == curModule || sModule == Nothing
+    then Just $ mkRange (Entity$ idfy sym) (lc s) (lc e)
+    else Nothing
   where lc = mapLineCol lineLens
 
 idfy :: SymV -> Text
@@ -397,9 +423,11 @@ bangType (UnpackedTy _ t) = t
 
 collectType :: Type S -> SymTab -> Logs
 collectType ty st = case ty of
-  TyCon _l qname -> resolveQName CType qname st
+  TyCon _l qname -> resolveQName CType qname st -- ++ 
+                      --[LWarn$ prettish 5 $ "xTTT" ++ show (hush qname) ++ "|| " ++ show st]
   TyFun _l t1 t2 -> mergeCollect (map collectType [t1, t2]) st
   other -> [LWarn$ "xTyCon " ++ show ty]
+  --where hush = fmap (const "")
 
 resolveQName :: (forall a. a -> Ctx a) -> QName S -> SymTab -> Logs
 resolveQName ct qname s = maybeToList $ do

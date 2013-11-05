@@ -3,6 +3,7 @@
 module Hier 
   ( TaggedRange()
   , mkRange
+  , showTaggedRange
   , mkMarker
   , tagRegions
   , untag
@@ -32,6 +33,10 @@ data TaggedRange e a = TaggedRange
   , rangeStart :: Length e
   , rangeEnd :: Length e
   }
+
+showTaggedRange :: (Show a, Show (Length e)) => TaggedRange e a -> String
+showTaggedRange tr = show (rangeTag tr) ++ " (" ++ show (rangeStart tr) ++
+                       ", " ++ show (rangeEnd tr)
 
 class (Num (Length a), Ord (Length a)) => LengthSplitAt a where
   type Length a
