@@ -47,7 +47,8 @@ main = do
   src2 <- readFile path2
   ast1 <- fromParseResult <$> parseFile path1
   ast2 <- fromParseResult <$> parseFile path2
-  putStrBreak . ("AST " ++) . prettish 0 . show $ fmap (const "") ast2
+  putStrBreak . ("AST1 " ++) . prettish 0 . show $ fmap (const "") ast1
+  putStrBreak . ("AST2 " ++) . prettish 0 . show $ fmap (const "") ast2
   {- let parseMode = defaultParseMode {
         extensions = extensions defaultParseMode ++ fmap EnableExtension [
           TypeFamilies, FlexibleContexts] }
@@ -76,8 +77,8 @@ main = do
         TIO.writeFile (outdir ++ (maybe "anonymous" id (miName mi)) ++ ".html") $
           (BR.renderHtml . withHeader . untag (tagToBlaze$ miName mi) . fmap toBlaze)
             tagged
-        mapM_ (putStrBreak . show) ranges
-        putStrBreak$ prettish 0$ show tagged
+        --mapM_ (putStrBreak . show) ranges
+        --putStrBreak$ prettish 0$ show tagged
     break = putStrLn "---"
     putStrBreak x = break >> putStrLn x
 
@@ -338,6 +339,11 @@ collectDecl decl = case decl of
               rhsFun = \s -> collectRhs rhs (M.fromList (concat patSyms) `M.union` s)
           in ([matchSym], mergeCollect$ rhsFun:patFuns))
     in (concat syms, mergeCollect funs)
+  PatBind _l pat _typeTODO rhs _bindsTODO ->
+    let (patSyms, patFuns) = collectPat pat
+        -- TODO duplication with above
+        rhsFun = \s -> collectRhs rhs (M.fromList patSyms `M.union` s)
+    in (patSyms {- ?? restrict only to syms from PVar ?? -}, mergeCollect [rhsFun, patFuns])
   -- TODO
   other -> ([], const [LWarn$ "xDECL " ++ show other])
 
@@ -356,6 +362,7 @@ collectExp exp = case exp of
     let expLogs = collectExp exp s
         altLogs = mergeCollect (map collectAlt alts) s
     in expLogs ++ altLogs)
+  If _l c a b -> exps [c, a, b]
   other -> const [LWarn$ "Exp " ++ show exp]
   where
     exps ee = mergeCollect$ map collectExp ee
@@ -391,8 +398,8 @@ collectDeclHead dhead = case dhead of
 mkNameSym :: (forall a. a -> Ctx a) -> Name S -> SymKV
 mkNameSym ctxType name = (ctxType (nameVal name), namePos name)
 
-mkChild :: Ctx String -> (forall a. a -> Ctx a) -> Name S -> a -> Logs
-mkChild p ctx c = const [LChild p (ctx$ nameVal c)]
+mkChild :: Ctx String -> Ctx String -> a -> Logs
+mkChild p c = const [LChild p c]
 
 collectQualConDecl :: Ctx String -> QualConDecl S -> Collector
 collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
@@ -403,12 +410,14 @@ collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
     RecDecl _l name fields ->
       let ctorSym = mkNameSym CTerm name
           (fieldSyms, fs) = unzip $ map collectFieldDecl fields
-      in (ctorSym:(concat fieldSyms), mergeCollect fs)
+          flatSyms = concat fieldSyms
+          tyChildren = for flatSyms (\s -> mkChild tyname (fst s))
+      in (ctorSym:flatSyms, mergeCollect (fs ++ tyChildren))
   where
     bangCollect = mergeCollect . map (collectType . bangType)
     ctorBangs name bangs =
       ([mkNameSym CTerm name],
-        mergeCollect [mkChild tyname CTerm name, bangCollect bangs])
+        mergeCollect [mkChild tyname (CTerm$ nameVal name), bangCollect bangs])
 
 collectFieldDecl :: FieldDecl S -> Collector
 collectFieldDecl (FieldDecl l names bang) =
