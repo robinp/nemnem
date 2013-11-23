@@ -1,0 +1,4 @@
+NemNem - Haskell source hyperlinker.
+
+The goal of NemNem is to take .hs source files and parse crossreference
+information. Then hyperlinked HTMLs are made, which ease navigating sources.
