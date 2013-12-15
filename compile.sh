@@ -1,2 +1,6 @@
+#!/nin/bash
 rm deploy/*html
-ghc src/Main.hs src/Hier.hs && ./src/Main
+pushd src
+ghc Main.hs || rm src/Main
+popd
+./src/Main

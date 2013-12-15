@@ -156,13 +156,13 @@ importSyms modules = mconcat . map getImports
 
 collectModule :: Map MName ModuleInfo -> Module S -> ModuleInfo
 collectModule modules (Module _l mhead _pragmas imports decls) =
-  let (syms, funs) = unzip $ map collectDecl decls
+  let (declSyms, _, declLogs) = runRWS (mapM collectDecl decls) pctx ()
       mname = moduleName <$> mhead
-      symTab = M.map (\s -> s { symModule = mname }) $
-                 M.fromList$ concat syms
-      logs = mergeCollect funs
-               (symTab `mappend` importSyms modules imports)
-               ++ [LWarn . ("IMPORTS " ++ ) . show $ importSyms modules imports]
+      importSymTab = importSyms modules imports
+      moduleSymTab = M.map (\s -> s { symModule = mname }) $ M.unions declSyms
+      symTab = moduleSymTab `M.union` importSymTab
+      pctx = ParseCtx { inScope = symTab, parseOpts = () }
+      logs = declLogs ++ [LWarn . ("IMPORTS " ++ ) . show $ importSymTab]
       children =
         let pairs = map (\(p,c) -> (p, [c])) $ logs >>= getChild
         in M.unionsWith (++) (map (M.fromList . return) pairs)
@@ -192,8 +192,16 @@ collectModule modules (Module _l mhead _pragmas imports decls) =
 mergeCollect :: [SymTab -> Logs] -> SymTab -> Logs
 mergeCollect fs s = concatMap ($ s) fs
 
-collectDecl :: Decl S -> Collector
-collectDecl decl = case decl of
+collectDecl :: Decl S -> Parse SymTab
+collectDecl decl = do
+  syms <- asks inScope
+  let (topSymKvs, fun) = collectDecl' decl
+      subLogs = fun syms
+  tell subLogs
+  return . M.fromList $ topSymKvs
+
+collectDecl' :: Decl S -> Collector
+collectDecl' decl = case decl of
   DataDecl _l _dataOrNew _ctx dHead quals derivings ->
     let headSym@(headCtx,_) = collectDeclHead dHead
         (qualSyms, qualFuns) = unzip $ map (collectQualConDecl headCtx) quals
@@ -244,7 +252,7 @@ collectExp exp = case exp of
   If _l c a b -> exps [c, a, b]
   Let _l binds exp -> case binds of
     BDecls _l decls ->
-      let (dsyms, dfuns) = unzip $ map collectDecl decls
+      let (dsyms, dfuns) = unzip $ map collectDecl' decls
           syms = concat dsyms
       in (\s -> mergeCollect (collectExp exp:dfuns) $ M.fromList syms `M.union` s)
     IPBinds _l ipbinds -> error "no IPBind support"
