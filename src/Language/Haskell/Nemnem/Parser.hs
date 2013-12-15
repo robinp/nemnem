@@ -2,6 +2,7 @@
 module Language.Haskell.Nemnem.Parser where
 
 import Control.Applicative ((<$>), (<*>), pure)
+import Control.Monad.Identity
 import Control.Monad.Trans.RWS
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -11,21 +12,36 @@ import Language.Haskell.Exts.Annotated
 
 import Language.Haskell.Nemnem.Util
 
+data ParseCtx = ParseCtx
+  { inScope :: SymTab
+  , parseOpts :: ()
+  } 
+
+type ParseT m a = RWST ParseCtx Logs () m a
+type Parse a = ParseT Identity a
+
+-- * 
+
 type MName = String
 
-data Ctx a = CType a | CTerm a
+data Ctx = CType | CTerm
   deriving (Eq, Ord, Show)
 
-instance Functor Ctx where
-  fmap f (CType a) = CType (f a)
-  fmap f (CTerm a) = CTerm (f a)
+data Ctxed a = Ctxed
+  { ctx :: Ctx
+  , dropCtx :: a
+  }
+  deriving (Eq, Ord, Show)
+
+instance Functor Ctxed where
+  fmap f (Ctxed c a) = Ctxed c (f a)
 
 type S = SrcSpanInfo
 
 type LineCol = (Int,Int)
 type LineColRange = (LineCol,LineCol)
 
-type SymK = Ctx String
+type SymK = Ctxed String
 data SymV = SymV
   { symRange :: LineColRange
   , symModule :: Maybe String
@@ -59,7 +75,7 @@ for = flip fmap
 
 -- * Link collector part
 
-data Log = LRef Ref | LWarn String | LChild (Ctx String) (Ctx String)
+data Log = LRef Ref | LWarn String | LChild (Ctxed String) (Ctxed String)
   deriving Show
 type Logs = [Log]
 
@@ -80,7 +96,7 @@ data ModuleInfo = ModuleInfo
 
 type ChildMap = Map SymK [SymK]
 
-exportedKeys :: ChildMap -> [ExportSpec l] -> [Ctx String]
+exportedKeys :: ChildMap -> [ExportSpec l] -> [Ctxed String]
 exportedKeys children xs = xs >>= exports
   where
     exports x = case x of
@@ -90,12 +106,12 @@ exportedKeys children xs = xs >>= exports
         name <- getQName CType qname
         name : M.findWithDefault [] name children
       EThingWith _ qname cnames ->
-        getQName CType qname ++ map (CTerm . getCName) cnames
+        getQName CType qname ++ map (Ctxed CTerm . getCName) cnames
       EModuleContents _ (ModuleName _ mname) -> error "EModuleContents"
     getQName ctx =
       -- TODO maybe should drop module part instead flatten? what's the
       --    spec here?
-      maybeToList . fmap (ctx . snd) . flattenQName
+      maybeToList . fmap (Ctxed ctx . snd) . flattenQName
 
 getCName (VarName _ name) = nameVal name
 getCName (ConName _ name) = nameVal name
@@ -110,9 +126,9 @@ imports children is = case is of
     n <- getName CType name
     n : M.findWithDefault [] n children
   IThingWith _ name cnames ->
-    getName CType name ++ map (CTerm . getCName) cnames
+    getName CType name ++ map (Ctxed CTerm . getCName) cnames
   where
-    getName :: (forall a . a -> Ctx a) -> Name S -> [SymK]
+    getName :: Ctx -> Name S -> [SymK]
     getName ctx = return . fst . mkNameSym ctx
 
 importSyms :: Map MName ModuleInfo -> [ImportDecl S] -> SymTab
@@ -187,7 +203,7 @@ collectDecl decl = case decl of
     let nameFuns = map fname names
         tyFun = collectType ty
         fname name s = maybeToList$
-          LRef . Ref (namePos name) <$> M.lookup (CTerm$ nameVal name) s
+          LRef . Ref (namePos name) <$> M.lookup (Ctxed CTerm$ nameVal name) s
     in ([], mergeCollect$ tyFun:nameFuns)
   FunBind _l matches ->
     let (syms, funs) = unzip $ for matches (\m ->
@@ -267,13 +283,13 @@ collectDeclHead dhead = case dhead of
   DHInfix _hl _tyleft name _tyright -> mkNameSym CType name
   DHParen _hl innerHead -> collectDeclHead innerHead
 
-mkNameSym :: (forall a. a -> Ctx a) -> Name S -> SymKV
-mkNameSym ctxType name = (ctxType (nameVal name), namePos name)
+mkNameSym :: Ctx -> Name S -> SymKV
+mkNameSym ctx name = (Ctxed ctx (nameVal name), namePos name)
 
-mkChild :: Ctx String -> Ctx String -> a -> Logs
+mkChild :: Ctxed String -> Ctxed String -> a -> Logs
 mkChild p c = const [LChild p c]
 
-collectQualConDecl :: Ctx String -> QualConDecl S -> Collector
+collectQualConDecl :: Ctxed String -> QualConDecl S -> Collector
 collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
   -- TODO ctx
   case conDecl of
@@ -289,7 +305,8 @@ collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
     bangCollect = mergeCollect . map (collectType . bangType)
     ctorBangs name bangs =
       ([mkNameSym CTerm name],
-        mergeCollect [mkChild tyname (CTerm$ nameVal name), bangCollect bangs])
+        mergeCollect [mkChild tyname (Ctxed CTerm$ nameVal name),
+                      bangCollect bangs])
 
 collectFieldDecl :: FieldDecl S -> Collector
 collectFieldDecl (FieldDecl l names bang) =
@@ -310,11 +327,11 @@ collectType ty st = case ty of
   other -> [LWarn$ "xTyCon " ++ show ty]
   --where hush = fmap (const "")
 
-resolveQName :: (forall a. a -> Ctx a) -> QName S -> SymTab -> Logs
-resolveQName ct qname s = maybeToList $ do
+resolveQName :: Ctx -> QName S -> SymTab -> Logs
+resolveQName ctx qname s = maybeToList $ do
   (l, name) <- flattenQName qname
-  refPos <- M.lookup (ct name) s
-  return$ LRef (Ref (wrapLoc l) refPos)
+  refPos <- M.lookup (Ctxed ctx name) s
+  return . LRef $ Ref (wrapLoc l) refPos
 
 flattenQName :: QName l -> Maybe (l, String)
 flattenQName qname = case qname of
