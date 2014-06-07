@@ -20,8 +20,6 @@ data ParseCtx = ParseCtx
 type ParseT m a = RWST ParseCtx Logs () m a
 type Parse a = ParseT Identity a
 
--- * 
-
 type MName = String
 
 data Ctx = CType | CTerm
@@ -50,9 +48,6 @@ data SymLoc = SymLoc
 
 type SymbolAndLoc = (Symbol, SymLoc)
 type SymTab = Map Symbol SymLoc
-
-wrapLoc :: S -> SymLoc
-wrapLoc loc = SymLoc { symRange = lineCol loc, symModule = Nothing }
 
 -- Ref is now suitable with generating visual hyperrefs, but not much for
 -- searching / indexing / more intelligent displays. 
@@ -126,88 +121,110 @@ exportedKeys children xs = xs >>= exports
       --    spec here?
       maybeToList . fmap (Ctxed ctx . snd) . flattenQName
 
-getCName (VarName _ name) = nameVal name
-getCName (ConName _ name) = nameVal name
+getCName (VarName _ name) = hseSymOrIdentValue name
+getCName (ConName _ name) = hseSymOrIdentValue name
 
-imports :: ChildMap -> ImportSpec S -> [Symbol]
+getCPos (VarName l _) = wrapLoc l
+getCPos (ConName l _) = wrapLoc l
+
+imports :: ChildMap -> ImportSpec S -> [(Symbol, Maybe SymLoc)]
 imports children is = case is of
-  IVar _ name -> getName CTerm name
+  IVar _ name -> justSeconds [hseNameToSymbolAndLoc CTerm name]
   IAbs _ name ->
     -- See Haskell report 5.3.1 item 2
-    getName CType name ++ getName CTerm name
-  IThingAll _ name -> do
-    n <- getName CType name
-    n : M.findWithDefault [] n children
+    justSeconds $ 
+      [hseNameToSymbolAndLoc CType name, hseNameToSymbolAndLoc CTerm name]
+  IThingAll _ name ->
+    let n = hseNameToSymbolAndLoc CType name
+    in mapSnd Just n :
+         map (flip (,) Nothing) (M.findWithDefault [] (fst n) children)
   IThingWith _ name cnames ->
-    getName CType name ++ map (Ctxed CTerm . getCName) cnames
+    mapSnd Just (hseNameToSymbolAndLoc CType name) : 
+      map (\cn -> (Ctxed CTerm . getCName $ cn, Just . getCPos $ cn)) cnames
   where
-  getName :: Ctx -> Name S -> [Symbol]
-  getName ctx = return . fst . mkNameSym ctx
+  justSeconds = map (mapSnd Just)
 
-importSyms :: Map MName ModuleInfo -> [ImportDecl S] -> (SymTab, Logs)
-importSyms modules = mconcat . map getImports
+importSyms :: Map MName ModuleInfo -> [ImportDecl S] -> Parse SymTab
+importSyms modules decls = mconcat <$> mapM getImports decls
   where
   getImports (ImportDecl _l lmname isQual _src _pkg alias mb_specs) =
-    fromMaybe mempty $ for (M.lookup (mname lmname) modules) (\mi ->
-    let (refs, filtered) =
+    case M.lookup (mname lmname) modules of
+      Nothing -> return mempty  -- Imported module not yet processed?
+      Just mi -> do
+        filtered <-
           let exports = miExports mi
           in case mb_specs of
-            Just specs -> 
-              let symtab = filterImports (miChildren mi) specs exports
-                  refs = []
-              in (refs, symtab)
-            Nothing -> ([], exports)
-    in (case alias of
+            Just specs -> do
+              filterImports (miChildren mi) specs exports
+            Nothing -> return exports
+        return $ case alias of
          Just a -> aliased (mname a) filtered
                    `mappend` if isQual then M.empty else filtered
          Nothing -> applyIf isQual (aliased $mname lmname) filtered
-    , refs))
+  --
   applyIf :: Bool -> (a -> a) -> a -> a
   applyIf c f = if c then f else id
+  --
   aliased mAlias exps =
     let prefix = mAlias ++ "."
     in M.mapKeys (fmap (prefix ++)) exps
+  --
   mname (ModuleName _ m) = m
-  filterImports :: ChildMap -> ImportSpecList S -> SymTab -> SymTab
+  --
+  filterImports :: ChildMap -> ImportSpecList S -> SymTab -> Parse SymTab
   filterImports children (ImportSpecList _ isHiding iss) syms =
-    let selected = iss >>= imports children -- TODO use set
+    let specified = iss >>= imports children  :: [(Symbol, Maybe SymLoc)]
+        selected = map fst specified
         passes s = invertIf isHiding $ s `elem` selected
-    in M.filterWithKey (\s _ -> passes s) syms
+    in do
+      mapM_ (logImport syms) . map (mapSnd fromJust) . filter (isJust . snd) $
+        specified
+      return $ M.filterWithKey (\s _ -> passes s) syms
+  --
+  logImport :: SymTab -> SymbolAndLoc -> Parse ()
+  logImport import_syms (symbol, loc) = case M.lookup symbol import_syms of
+    Nothing -> return ()
+    Just remote_loc -> tell [LRef $ Ref loc remote_loc]
+
+moduleHeadName (ModuleHead _ (ModuleName _ mname) _ _) = mname
+
+parseModuleSymbols :: Map MName ModuleInfo -> Module S -> Parse SymTab
+parseModuleSymbols modules (Module _l mhead _pragmas imports decls) = do
+  decl_symtabs <- mapM collectDecl decls
+  let mname = moduleHeadName <$> mhead
+      module_symtab = M.map (\s -> s { symModule = mname }) $
+                        M.unions decl_symtabs
+  imported_symtab <- importSyms modules imports
+  return $ module_symtab `M.union` imported_symtab
 
 collectModule :: Map MName ModuleInfo -> Module S -> ModuleInfo
-collectModule modules (Module _l mhead _pragmas imports decls) =
-  let (declSyms, _, declLogs) = runRWS (mapM collectDecl decls) pctx ()
-      mname = moduleName <$> mhead
-      (importSymTab, importLogs) = importSyms modules imports
-      moduleSymTab = M.map (\s -> s { symModule = mname }) $ M.unions declSyms
-      symTab = moduleSymTab `M.union` importSymTab
-      pctx = ParseCtx { inScope = symTab, parseOpts = () }
-      logs = declLogs ++ [LWarn . ("IMPORTS " ++ ) . show $ importSymTab]
+collectModule modules m@(Module _l mhead _pragmas imports decls) =
+  let (symtab, _, logs) = runRWS (parseModuleSymbols modules m) pctx ()
+      pctx = ParseCtx { inScope = symtab, parseOpts = () }
       children =
         let pairs = map (\(p,c) -> (p, [c])) $ logs >>= getChild
         in M.unionsWith (++) (map (M.fromList . return) pairs)
-      exports = fromMaybe M.empty $ headExports symTab children <$> mhead
+      exports = fromMaybe M.empty $ headExports symtab children <$> mhead
   in ModuleInfo
-      { miName = mname
-      , miSymbols = symTab
+      { miName = moduleHeadName <$> mhead
+      , miSymbols = symtab
       , miExports = exports
       , miChildren = exportedChildren exports children
       , miRefs = logs >>= getRef
       , miWarns = logs >>= getWarn
       }
   where
-    moduleName (ModuleHead _ (ModuleName _ mname) _ _) = mname
-    headExports symTab children (ModuleHead _ _ _ exportSpecs) =
-      case exportSpecs of
-        Nothing -> symTab
-        Just (ExportSpecList _ xs) ->
-          let keySet = exportedKeys children xs
-             -- TODO improve lookup efficiency
-          in M.filterWithKey (\k _ -> k `elem` keySet) symTab
-    exportedChildren :: SymTab -> ChildMap -> ChildMap
-    exportedChildren exports =
-      let exported = flip M.member exports
-      in M.map (filter exported) . M.filterWithKey (\s _ -> exported s)
+  headExports symTab children (ModuleHead _ _ _ exportSpecs) =
+    case exportSpecs of
+      Nothing -> symTab
+      Just (ExportSpecList _ xs) ->
+        let keySet = exportedKeys children xs
+           -- TODO improve lookup efficiency
+        in M.filterWithKey (\k _ -> k `elem` keySet) symTab
+  exportedChildren :: SymTab -> ChildMap -> ChildMap
+  exportedChildren exports =
+    let exported = flip M.member exports
+    in M.map (filter exported) . M.filterWithKey (\s _ -> exported s)
 
 mergeCollect :: [SymTab -> Logs] -> SymTab -> Logs
 mergeCollect fs s = concatMap ($ s) fs
@@ -231,14 +248,14 @@ collectDecl' decl = case decl of
     let nameFuns = map fname names
         tyFun = collectType ty
         fname name s = maybeToList$
-          LRef . Ref (namePos name) <$> M.lookup (Ctxed CTerm$ nameVal name) s
+          LRef . Ref (hseSymOrIdentPos name) <$> M.lookup (Ctxed CTerm$ hseSymOrIdentValue name) s
     in ([], mergeCollect$ tyFun:nameFuns)
   FunBind _l matches ->
     let (syms, funs) = unzip $ for matches (\m ->
           let (name, pats, rhs, binds) = case m of
                 Match _l nm ps r bs -> (nm, ps, r, bs)
                 InfixMatch _l p nm ps r bs -> (nm, p:ps, r, bs)
-              matchSym = mkNameSym CTerm name
+              matchSym = hseNameToSymbolAndLoc CTerm name
               (patSyms, patFuns) = unzip $ map collectPat pats
               -- patSyms are not returned to the global scope, just
               -- used when resolving rhs and binds
@@ -297,7 +314,7 @@ collectGuardedAlts gas = case gas of
 
 collectPat :: Pat S -> Collector
 collectPat p = case p of
-  PVar _l name -> (return$ mkNameSym CTerm name, const [])
+  PVar _l name -> (return$ hseNameToSymbolAndLoc CTerm name, const [])
   PApp _l qname pats ->
     let qnameFun = resolveQName CTerm qname
         (psyms, pfuns) = unzip $ map collectPat pats
@@ -307,15 +324,9 @@ collectPat p = case p of
 
 collectDeclHead :: DeclHead S -> SymbolAndLoc
 collectDeclHead dhead = case dhead of
-  DHead _hl name _tyvarbinds -> mkNameSym CType name
-  DHInfix _hl _tyleft name _tyright -> mkNameSym CType name
+  DHead _hl name _tyvarbinds -> hseNameToSymbolAndLoc CType name
+  DHInfix _hl _tyleft name _tyright -> hseNameToSymbolAndLoc CType name
   DHParen _hl innerHead -> collectDeclHead innerHead
-
-mkNameSym :: Ctx -> Name S -> SymbolAndLoc
-mkNameSym ctx name = (Ctxed ctx (nameVal name), namePos name)
-
-mkChild :: Ctxed String -> Ctxed String -> a -> Logs
-mkChild p c = const [LChild p c]
 
 collectQualConDecl :: Ctxed String -> QualConDecl S -> Collector
 collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
@@ -324,7 +335,7 @@ collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
     ConDecl _l name bangs -> ctorBangs name bangs
     InfixConDecl _l lbang name rbang -> ctorBangs name [lbang, rbang]
     RecDecl _l name fields ->
-      let ctorSym = mkNameSym CTerm name
+      let ctorSym = hseNameToSymbolAndLoc CTerm name
           (fieldSyms, fs) = unzip $ map collectFieldDecl fields
           flatSyms = concat fieldSyms
           tyChildren = for flatSyms (mkChild tyname . fst)
@@ -332,13 +343,13 @@ collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
   where
     bangCollect = mergeCollect . map (collectType . bangType)
     ctorBangs name bangs =
-      ([mkNameSym CTerm name],
-        mergeCollect [mkChild tyname (Ctxed CTerm$ nameVal name),
+      ([hseNameToSymbolAndLoc CTerm name],
+        mergeCollect [mkChild tyname (Ctxed CTerm$ hseSymOrIdentValue name),
                       bangCollect bangs])
 
 collectFieldDecl :: FieldDecl S -> Collector
 collectFieldDecl (FieldDecl l names bang) =
-  let fsyms = map (mkNameSym CTerm) names
+  let fsyms = map (hseNameToSymbolAndLoc CTerm) names
       f = collectType (bangType bang)
   in (fsyms, f)
 
@@ -364,12 +375,27 @@ resolveQName ctx qname s = maybeToList $ do
 flattenQName :: QName l -> Maybe (l, String)
 flattenQName qname = case qname of
   -- TODO does this impl fit all uses?
-  Qual l (ModuleName _ mname) name -> Just (l, mname ++ "." ++ nameVal name)
-  UnQual l name -> Just (l, nameVal name)
-  Special _ _ -> Nothing
+  Qual l (ModuleName _ mname) name ->
+    Just (l, mname ++ "." ++ hseSymOrIdentValue name)
+  UnQual l name ->
+    Just (l, hseSymOrIdentValue name)
+  Special _ _ ->
+    Nothing
 
-namePos (Symbol p _) = wrapLoc p
-namePos (Ident p _) = wrapLoc p
+hseSymOrIdentPos (Symbol p _) = wrapLoc p
+hseSymOrIdentPos (Ident p _) = wrapLoc p
 
-nameVal (Symbol _ v) = v
-nameVal (Ident _ v) = v
+hseSymOrIdentValue (Symbol _ v) = v
+hseSymOrIdentValue (Ident _ v) = v
+
+wrapLoc :: S -> SymLoc
+wrapLoc loc = SymLoc { symRange = lineCol loc, symModule = Nothing }
+
+hseNameToSymbolAndLoc :: Ctx -> Name S -> SymbolAndLoc
+hseNameToSymbolAndLoc ctx name = (Ctxed ctx (hseSymOrIdentValue name), hseSymOrIdentPos name)
+
+hseNameToSymbol :: Ctx -> Name S -> Symbol
+hseNameToSymbol ctx = fst . hseNameToSymbolAndLoc ctx
+
+mkChild :: Ctxed String -> Ctxed String -> a -> Logs
+mkChild p c = const [LChild p c]
