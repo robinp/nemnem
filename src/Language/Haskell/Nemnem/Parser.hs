@@ -13,7 +13,7 @@ import Language.Haskell.Exts.Annotated
 import Language.Haskell.Nemnem.Util
 
 data ParseCtx = ParseCtx
-  { inScope :: SymTab
+  { inScope :: SymTab  -- ^ Tied recursively.
   , parseOpts :: ()
   } 
 
@@ -41,21 +41,27 @@ type S = SrcSpanInfo
 type LineCol = (Int,Int)
 type LineColRange = (LineCol,LineCol)
 
-type SymK = Ctxed String
-data SymV = SymV
+type Symbol = Ctxed String
+data SymLoc = SymLoc
   { symRange :: LineColRange
-  , symModule :: Maybe String
-  } deriving (Eq, Show)
-type SymKV = (SymK, SymV)
-type SymTab = Map SymK SymV
+  , symModule :: Maybe String  -- TODO these Strings are ugly
+  }
+  deriving (Eq, Show)
 
-wrapLoc :: S -> SymV
-wrapLoc loc = SymV { symRange = lineCol loc, symModule = Nothing }
+type SymbolAndLoc = (Symbol, SymLoc)
+type SymTab = Map Symbol SymLoc
 
+wrapLoc :: S -> SymLoc
+wrapLoc loc = SymLoc { symRange = lineCol loc, symModule = Nothing }
+
+-- Ref is now suitable with generating visual hyperrefs, but not much for
+-- searching / indexing / more intelligent displays. 
+-- TODO should rather be SymbolAndLoc? 
 data Ref = Ref
-  { refSource :: SymV
-  , refTarget :: SymV
-  } deriving Show
+  { refSource :: SymLoc
+  , refTarget :: SymLoc
+  }
+  deriving Show
 
 getRef (LRef r) = [r]
 getRef _ = []
@@ -63,6 +69,8 @@ getWarn (LWarn s) = [s]
 getWarn _ = []
 getChild (LChild p c) = [(p, c)]
 getChild _ = []
+getAnnotation (LAnotate l s) = [(l, s)]
+getAnnotation _ = []
 
 lineCol :: S -> LineColRange
 lineCol src = 
@@ -75,15 +83,22 @@ for = flip fmap
 
 -- * Link collector part
 
-data Log = LRef Ref | LWarn String | LChild (Ctxed String) (Ctxed String)
+-- TODO add module references, where imported module name points to module
+--      source
+data Log
+  = LRef Ref
+  | LWarn String
+  | LChild (Ctxed String) (Ctxed String)
+  | LAnotate SymLoc String  -- for visual debugging
   deriving Show
 type Logs = [Log]
 
-type Collector = ([SymKV], SymTab -> Logs)
+type Collector = ([SymbolAndLoc], SymTab -> Logs)
+type ChildMap = Map Symbol [Symbol]
 
 data ModuleInfo = ModuleInfo
   { miName :: Maybe MName
-    -- newly defined top-level symbols (may not be exported)
+    -- newly defined top-level symbols (regardless of being exported or not)
   , miSymbols :: SymTab
     -- exported symbols
   , miExports :: SymTab
@@ -93,8 +108,6 @@ data ModuleInfo = ModuleInfo
     -- warnings while processing AST (likely todos)
   , miWarns :: [String]
   }
-
-type ChildMap = Map SymK [SymK]
 
 exportedKeys :: ChildMap -> [ExportSpec l] -> [Ctxed String]
 exportedKeys children xs = xs >>= exports
@@ -116,7 +129,7 @@ exportedKeys children xs = xs >>= exports
 getCName (VarName _ name) = nameVal name
 getCName (ConName _ name) = nameVal name
 
-imports :: ChildMap -> ImportSpec S -> [SymK]
+imports :: ChildMap -> ImportSpec S -> [Symbol]
 imports children is = case is of
   IVar _ name -> getName CTerm name
   IAbs _ name ->
@@ -128,37 +141,44 @@ imports children is = case is of
   IThingWith _ name cnames ->
     getName CType name ++ map (Ctxed CTerm . getCName) cnames
   where
-    getName :: Ctx -> Name S -> [SymK]
-    getName ctx = return . fst . mkNameSym ctx
+  getName :: Ctx -> Name S -> [Symbol]
+  getName ctx = return . fst . mkNameSym ctx
 
-importSyms :: Map MName ModuleInfo -> [ImportDecl S] -> SymTab
+importSyms :: Map MName ModuleInfo -> [ImportDecl S] -> (SymTab, Logs)
 importSyms modules = mconcat . map getImports
   where
-    getImports (ImportDecl _l lmname isQual _src _pkg alias specs) =
-      fromMaybe M.empty $ for (M.lookup (mname lmname) modules) (\mi ->
-      let exports = miExports mi
-          filtered = maybe id (filterImports$ miChildren mi) specs exports
-          ifNotQualFilteredElse r = cond isQual r filtered
-          aliased mAlias =
-            let prefix = mAlias ++ "."
-            in M.mapKeys (fmap (prefix ++)) filtered
-      in case alias of
-           Just a -> aliased (mname a) `mappend`
-                       ifNotQualFilteredElse M.empty
-           Nothing -> ifNotQualFilteredElse . aliased $ mname lmname
-      )
-    mname (ModuleName _ m) = m
-    filterImports :: ChildMap -> ImportSpecList S -> SymTab -> SymTab
-    filterImports children (ImportSpecList _ isHiding iss) syms =
-      let selected = iss >>= imports children -- TODO use set
-          passes s = invertIf isHiding $ s `elem` selected
-      in M.filterWithKey (\s _ -> passes s) syms
+  getImports (ImportDecl _l lmname isQual _src _pkg alias mb_specs) =
+    fromMaybe mempty $ for (M.lookup (mname lmname) modules) (\mi ->
+    let (refs, filtered) =
+          let exports = miExports mi
+          in case mb_specs of
+            Just specs -> 
+              let symtab = filterImports (miChildren mi) specs exports
+                  refs = []
+              in (refs, symtab)
+            Nothing -> ([], exports)
+    in (case alias of
+         Just a -> aliased (mname a) filtered
+                   `mappend` if isQual then M.empty else filtered
+         Nothing -> applyIf isQual (aliased $mname lmname) filtered
+    , refs))
+  applyIf :: Bool -> (a -> a) -> a -> a
+  applyIf c f = if c then f else id
+  aliased mAlias exps =
+    let prefix = mAlias ++ "."
+    in M.mapKeys (fmap (prefix ++)) exps
+  mname (ModuleName _ m) = m
+  filterImports :: ChildMap -> ImportSpecList S -> SymTab -> SymTab
+  filterImports children (ImportSpecList _ isHiding iss) syms =
+    let selected = iss >>= imports children -- TODO use set
+        passes s = invertIf isHiding $ s `elem` selected
+    in M.filterWithKey (\s _ -> passes s) syms
 
 collectModule :: Map MName ModuleInfo -> Module S -> ModuleInfo
 collectModule modules (Module _l mhead _pragmas imports decls) =
   let (declSyms, _, declLogs) = runRWS (mapM collectDecl decls) pctx ()
       mname = moduleName <$> mhead
-      importSymTab = importSyms modules imports
+      (importSymTab, importLogs) = importSyms modules imports
       moduleSymTab = M.map (\s -> s { symModule = mname }) $ M.unions declSyms
       symTab = moduleSymTab `M.union` importSymTab
       pctx = ParseCtx { inScope = symTab, parseOpts = () }
@@ -195,10 +215,10 @@ mergeCollect fs s = concatMap ($ s) fs
 collectDecl :: Decl S -> Parse SymTab
 collectDecl decl = do
   syms <- asks inScope
-  let (topSymKvs, fun) = collectDecl' decl
+  let (topSymAndLocs, fun) = collectDecl' decl
       subLogs = fun syms
   tell subLogs
-  return . M.fromList $ topSymKvs
+  return . M.fromList $ topSymAndLocs
 
 collectDecl' :: Decl S -> Collector
 collectDecl' decl = case decl of
@@ -285,13 +305,13 @@ collectPat p = case p of
   PParen _l pat -> collectPat pat
   other -> ([], const [LWarn$ "xPat" ++ show other])
 
-collectDeclHead :: DeclHead S -> SymKV
+collectDeclHead :: DeclHead S -> SymbolAndLoc
 collectDeclHead dhead = case dhead of
   DHead _hl name _tyvarbinds -> mkNameSym CType name
   DHInfix _hl _tyleft name _tyright -> mkNameSym CType name
   DHParen _hl innerHead -> collectDeclHead innerHead
 
-mkNameSym :: Ctx -> Name S -> SymKV
+mkNameSym :: Ctx -> Name S -> SymbolAndLoc
 mkNameSym ctx name = (Ctxed ctx (nameVal name), namePos name)
 
 mkChild :: Ctxed String -> Ctxed String -> a -> Logs

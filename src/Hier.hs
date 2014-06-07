@@ -82,13 +82,14 @@ tlength (Tagged ut t) =
         Just (TagTail _ r s) -> tlength r + tlength s
   in hlen + tlen
 
+-- TODO make untagging go through third type (BS.Builder for example)
 untag :: (Monoid e) => (a -> e -> e) -> Tagged a e -> e
 untag f (Tagged ut t) = case t of
   Nothing -> ut
   Just (TagTail a reg rst) ->
     ut `mappend` f a (untag f reg) `mappend` untag f rst
 
--- | Assumes non-overlapping regions, good boundaries
+-- | Assumes non-crossing regions, good boundaries. Subregions are allowed.
 tagRegions :: (LengthSplitAt e) =>[TaggedRange e a] -> e -> Tagged a e
 tagRegions ranges elems =
   let ordered = sortBy (comparing (\x -> rangeStart x - rangeEnd x)) ranges

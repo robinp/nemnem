@@ -1,9 +1,10 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, RankNTypes,
              OverloadedStrings #-}
-
 module Main where
 
 import Control.Applicative ((<$>))
+import Control.Monad (foldM_)
+import qualified Data.List as L
 import qualified Data.Map as M
 import Data.Maybe
 import qualified Data.Text.Lazy.IO as TIO
@@ -32,47 +33,45 @@ prettish lvl (x:xs) = case x of
   where spaces x = replicate x ' '
 
 main = do
-  let path1 = "src/Hier.hs"
-  --let path1 = "tsrc/Test4.hs"
-  let path2 = "tsrc/Test3.hs"
-  let outdir = "deploy/"
-  src1 <- readFile path1
-  src2 <- readFile path2
-  ast1 <- fromParseResult <$> parseFile path1
-  ast2 <- fromParseResult <$> parseFile path2
-  putStrBreak . ("AST1 " ++) . prettish 0 . show $ fmap (const "") ast1
-  putStrBreak . ("AST2 " ++) . prettish 0 . show $ fmap (const "") ast2
-  {- let parseMode = defaultParseMode {
-        extensions = extensions defaultParseMode ++ fmap EnableExtension [
-          TypeFamilies, FlexibleContexts] }
-  let ast = fromParseResult $
-              parseModuleWithMode parseMode {parseFilename="stdin"} src -}
-  let mi1 = collectModule M.empty ast1
-  putStrBreak $ "exports1: " ++ show (miExports mi1)
-  putStrBreak $ "refs1: " ++ show (miRefs mi1)
-  -- TODO add renamed variants of imports
-  let mi2 = collectModule (M.insert "Test4" mi1 M.empty) ast2
-  putStrBreak $ "exports2: " ++ show (miExports mi2)
-  putStrBreak $ "refs2: " ++ show (miRefs mi2)
-  mapM_ putStrBreak $ miWarns mi2
-  putStrLn "-----------------"
-  writeLinked outdir src1 mi1
-  writeLinked outdir src2 mi2
+  -- in DAG order
+  let paths =
+        [ "tsrc/DataTextInternal.hs"
+        , "tsrc/DataText.hs"
+        , "tsrc/DataTextIO.hs"
+        , "tsrc/Test4.hs"
+        , "tsrc/Test3.hs" ]
+      path1 = "tsrc/Test4.hs"
+      path2 = "tsrc/Test3.hs"
+      outdir = "deploy/"
+  foldM_ (processModule outdir) M.empty paths
   where
-    writeLinked outdir src mi =
-      -- assumes newline is \n (single char)
-      let lineLens = map ((+1) . length) (lines src)
-          bases = basesOf (miRefs mi)
-          ranges = map (refToRange lineLens) (miRefs mi) ++
-                     mapMaybe (baseToRange lineLens (miName mi)) bases
-      in do
-        let tagged = tagRegions ranges src
-        TIO.writeFile (outdir ++ fromMaybe "anonymous" (miName mi) ++ ".html") $
-          (BR.renderHtml . withHeader . untag (tagToBlaze$ miName mi) . fmap toBlaze)
-            tagged
-        --mapM_ (putStrBreak . show) ranges
-        --putStrBreak$ prettish 0$ show tagged
-    break = putStrLn "---"
-    putStrBreak x = break >> putStrLn x
+  processModule outdir modules path = do
+    src <- uncpp <$> readFile path  -- TODO using text
+    let ast = fromParseResult . parseFileContents $ src
+        mi = collectModule modules ast
+    print . miName $ mi
+    putStrLn "====exports===="
+    print . miExports $ mi
+    writeLinked outdir src mi
+    return (M.insert (fromMaybe "anonymous" . miName $ mi) mi modules)
+  --
+  uncpp = unlines . map (\l -> if "#" `L.isPrefixOf` l then "" else l) . lines
+  --
+  writeLinked :: String -> String -> ModuleInfo -> IO ()
+  writeLinked outdir src mi =
+    -- assumes newline is \n (single char)
+    let lineLens = map ((+1) . length) (lines src)
+        bases = basesOf (miRefs mi)
+        ranges = map (refToRange lineLens) (miRefs mi) ++
+                   mapMaybe (tagEntitiesOfCurrentModule lineLens (miName mi)) bases
+    in do
+      let tagged = tagRegions ranges src
+      TIO.writeFile (outdir ++ fromMaybe "anonymous" (miName mi) ++ ".html") $
+        (BR.renderHtml . withHeader . untag (tagToBlaze$ miName mi) . fmap toBlaze)
+          tagged
+      --mapM_ (putStrBreak . show) ranges
+      --putStrBreak$ prettish 0$ show tagged
+  break = putStrLn "---"
+  putStrBreak x = break >> putStrLn x
 
 

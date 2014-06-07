@@ -51,24 +51,24 @@ preStyle = BH.span ! BA.class_ "mpre"
 -----------
 
 -- | Line and column numbers assumed from one
-mapLineCol :: [Int] -> (Int, Int) -> Int
-mapLineCol lineLens (line, col) =
+lineAndColumnToOffset :: [Int] -> (Int, Int) -> Int
+lineAndColumnToOffset lineLens (line, col) =
   sum (take (line-1) lineLens) + (col-1)
 
 refToRange :: [Int] -> Ref -> TaggedRange String Tag
-refToRange lineLens (Ref (SymV (srcStart, srcEnd) _) dst) =
+refToRange lineLens (Ref (SymLoc (srcStart, srcEnd) _) dst) =
   mkRange (LinkTo (symModule dst) (idfy dst)) (lc srcStart) (lc srcEnd)
-  where lc = mapLineCol lineLens
+  where lc = lineAndColumnToOffset lineLens
 
-baseToRange :: [Int] -> Maybe MName -> SymV -> Maybe (TaggedRange String Tag)
-baseToRange lineLens curModule sym@(SymV (s,e) sModule) =
+tagEntitiesOfCurrentModule :: [Int] -> Maybe MName -> SymLoc -> Maybe (TaggedRange String Tag)
+tagEntitiesOfCurrentModule lineLens curModule sym@(SymLoc (s,e) sModule) =
   -- sModule is Nothing is a local var? TODO explain
   if sModule == curModule || isNothing sModule
     then Just $ mkRange (Entity$ idfy sym) (lc s) (lc e)
     else Nothing
-  where lc = mapLineCol lineLens
+  where lc = lineAndColumnToOffset lineLens
 
-idfy :: SymV -> Text
+idfy :: SymLoc -> Text
 idfy s = T.pack $
   "loc_" ++ show (fst$a$s) ++ "_" ++ show (snd$a$s) ++ "_" ++
     show (fst$b$s) ++ "_" ++ show (snd$b$s)
@@ -76,7 +76,7 @@ idfy s = T.pack $
         b = snd . symRange
 
 -- the base is the destination of a reference
-basesOf :: [Ref] -> [SymV]
+basesOf :: [Ref] -> [SymLoc]
 basesOf = nub . map (\(Ref _ dst) -> dst)
 
 
