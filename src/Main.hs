@@ -52,10 +52,16 @@ main = do
     print . miName $ mi
     putStrLn "====exports===="
     print . miExports $ mi
+    putStrLn "====warns====="
+    putStrLn . prettish 0 . show .  miWarns $ mi
     writeLinked outdir src mi
     return (M.insert (fromMaybe "anonymous" . miName $ mi) mi modules)
   --
-  uncpp = unlines . map (\l -> if "#" `L.isPrefixOf` l then "" else l) . lines
+  uncpp = unlines . map replace_cpp . lines
+  replace_cpp l =
+    if "#" `L.isPrefixOf` l
+    then "-- " ++ l ++ " !!NOT COMMENTED IN ORIGINAL!!"
+    else l
   --
   writeLinked :: String -> String -> ModuleInfo -> IO ()
   writeLinked outdir src mi =

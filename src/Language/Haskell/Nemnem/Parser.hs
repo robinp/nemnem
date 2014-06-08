@@ -274,7 +274,13 @@ collectDecl' decl = case decl of
 collectRhs :: Rhs S -> SymTab -> Logs
 collectRhs rhs = case rhs of
   UnGuardedRhs _l exp -> collectExp exp
-  other -> const [LWarn$ "GuardedRhs " ++ show other]
+  GuardedRhss _l grhss ->
+    mergeCollect . map collectExp $ concat (map expsFrom grhss)
+  where
+  expsFrom (GuardedRhs _l stmts exp) = exp : (stmts >>= stmtExps)
+  stmtExps stmt = case stmt of
+    Qualifier _l exp -> [exp]
+    other -> error $ "GuardedRhs statement " ++ show other
 
 collectExp :: Exp S -> SymTab -> Logs
 collectExp exp = case exp of
@@ -282,6 +288,7 @@ collectExp exp = case exp of
   Con _l qname -> resolveQName CTerm qname
   InfixApp _l lexp _op rexp -> exps [lexp, rexp]
   App _l exp1 exp2 -> exps [exp1, exp2]
+  NegApp _l exp -> collectExp exp
   Case _l exp alts -> \s ->
     let expLogs = collectExp exp s
         altLogs = mergeCollect (map collectAlt alts) s
@@ -293,6 +300,7 @@ collectExp exp = case exp of
           syms = concat dsyms
       in (\s -> mergeCollect (collectExp exp:dfuns) $ M.fromList syms `M.union` s)
     IPBinds _l ipbinds -> error "no IPBind support"
+  Paren _l exp -> collectExp exp
   --Lambda pats exp -> 
   --  let (psyms, pfuns) = unzip $ map collectPat pats
   --      syms = concat psyms
