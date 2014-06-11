@@ -33,7 +33,7 @@ prettish lvl (x:xs) = case x of
   where spaces x = replicate x ' '
 
 main = do
-  -- in DAG order
+  -- in DAG order (no recursive module support)
   let paths =
         [ "tsrc/DataTextInternal.hs"
         , "tsrc/DataText.hs"
@@ -46,7 +46,7 @@ main = do
   foldM_ (processModule outdir) M.empty paths
   where
   processModule outdir modules path = do
-    src <- uncpp <$> readFile path  -- TODO using text
+    src <- uncpp <$> readFile path  -- TODO use text
     let ast = fromParseResult . parseFileContents $ src
         mi = collectModule modules ast
     print . miName $ mi

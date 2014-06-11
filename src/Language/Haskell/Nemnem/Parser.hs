@@ -86,6 +86,7 @@ data Log
   | LChild (Ctxed String) (Ctxed String)
   | LAnotate SymLoc String  -- for visual debugging
   deriving Show
+
 type Logs = [Log]
 
 type Collector = ([SymbolAndLoc], SymTab -> Logs)
@@ -93,14 +94,15 @@ type ChildMap = Map Symbol [Symbol]
 
 data ModuleInfo = ModuleInfo
   { miName :: Maybe MName
-    -- newly defined top-level symbols (regardless of being exported or not)
+    -- | newly defined top-level symbols (regardless of being exported or not)
   , miSymbols :: SymTab
-    -- exported symbols
+    -- | exported symbols
   , miExports :: SymTab
+    -- | exported parent-child relations (for example type -> constructors)
   , miChildren :: ChildMap
-    -- references from this module
+    -- | references from this module
   , miRefs :: [Ref]
-    -- warnings while processing AST (likely todos)
+    -- | warnings while processing AST (likely todos)
   , miWarns :: [String]
   }
 
@@ -115,7 +117,7 @@ exportedKeys children xs = xs >>= exports
         name : M.findWithDefault [] name children
       EThingWith _ qname cnames ->
         getQName CType qname ++ map (Ctxed CTerm . getCName) cnames
-      EModuleContents _ (ModuleName _ mname) -> error "EModuleContents"
+      EModuleContents _ (ModuleName _ mname) -> error "TODO EModuleContents"
     getQName ctx =
       -- TODO maybe should drop module part instead flatten? what's the
       --    spec here?
@@ -127,7 +129,16 @@ getCName (ConName _ name) = hseSymOrIdentValue name
 getCPos (VarName l _) = wrapLoc l
 getCPos (ConName l _) = wrapLoc l
 
-imports :: ChildMap -> ImportSpec S -> [(Symbol, Maybe SymLoc)]
+-- | Resolves imports specified by ImportSpec.
+--
+--  The ChildMap is that of the imported module, and is needed to resolve
+--  the `Thing(..)` style imports.
+--
+--  Returns the symbols imported from that module, along with reference
+--  locations inside the ImportSpec (not present for the (..) scheme).
+imports :: ChildMap
+        -> ImportSpec S
+        -> [(Symbol, Maybe SymLoc)]
 imports children is = case is of
   IVar _ name -> justSeconds [hseNameToSymbolAndLoc CTerm name]
   IAbs _ name ->
@@ -154,13 +165,12 @@ importSyms modules decls = mconcat <$> mapM getImports decls
         filtered <-
           let exports = miExports mi
           in case mb_specs of
-            Just specs -> do
-              filterImports (miChildren mi) specs exports
+            Just specs -> filterImports (miChildren mi) specs exports
             Nothing -> return exports
         return $ case alias of
-         Just a -> aliased (mname a) filtered
-                   `mappend` if isQual then M.empty else filtered
-         Nothing -> applyIf isQual (aliased $mname lmname) filtered
+          Just a -> aliased (mname a) filtered
+                    `mappend` if isQual then M.empty else filtered
+          Nothing -> applyIf isQual (aliased $ mname lmname) filtered
   --
   applyIf :: Bool -> (a -> a) -> a -> a
   applyIf c f = if c then f else id
@@ -172,14 +182,14 @@ importSyms modules decls = mconcat <$> mapM getImports decls
   mname (ModuleName _ m) = m
   --
   filterImports :: ChildMap -> ImportSpecList S -> SymTab -> Parse SymTab
-  filterImports children (ImportSpecList _ isHiding iss) syms =
+  filterImports children (ImportSpecList _ is_hiding iss) exported_syms =
     let specified = iss >>= imports children  :: [(Symbol, Maybe SymLoc)]
         selected = map fst specified
-        passes s = invertIf isHiding $ s `elem` selected
+        passes s = invertIf is_hiding $ s `elem` selected
     in do
-      mapM_ (logImport syms) . map (mapSnd fromJust) . filter (isJust . snd) $
-        specified
-      return $ M.filterWithKey (\s _ -> passes s) syms
+      mapM_ (logImport exported_syms) 
+        . map (mapSnd fromJust) . filter (isJust . snd) $ specified
+      return $ M.filterWithKey (\s _ -> passes s) exported_syms
   --
   logImport :: SymTab -> SymbolAndLoc -> Parse ()
   logImport import_syms (symbol, loc) = case M.lookup symbol import_syms of
@@ -214,13 +224,13 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
       , miWarns = logs >>= getWarn
       }
   where
-  headExports symTab children (ModuleHead _ _ _ exportSpecs) =
+  headExports symtab children (ModuleHead _ _ _ exportSpecs) =
     case exportSpecs of
-      Nothing -> symTab
+      Nothing -> symtab
       Just (ExportSpecList _ xs) ->
-        let keySet = exportedKeys children xs
+        let key_set = exportedKeys children xs
            -- TODO improve lookup efficiency
-        in M.filterWithKey (\k _ -> k `elem` keySet) symTab
+        in M.filterWithKey (\k _ -> k `elem` key_set) symtab
   exportedChildren :: SymTab -> ChildMap -> ChildMap
   exportedChildren exports =
     let exported = flip M.member exports
@@ -336,6 +346,7 @@ collectDeclHead dhead = case dhead of
   DHInfix _hl _tyleft name _tyright -> hseNameToSymbolAndLoc CType name
   DHParen _hl innerHead -> collectDeclHead innerHead
 
+-- | Parses a constructor declaration.
 collectQualConDecl :: Ctxed String -> QualConDecl S -> Collector
 collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
   -- TODO ctx

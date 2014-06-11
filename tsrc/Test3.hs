@@ -22,6 +22,15 @@ f :: MyData -> String
 f Case1 = "Found one"
 f (Case2 x _) = "Found " ++ x
 
+rec1 x = rec2 (x+1)
+
+rec2 x = rec1 (x-1)
+
+localRec x =
+  let y = x+z
+      z = y
+  in undefined
+
 g,h :: MyData -> Int -> Int
 g x y = case x of
   Case1 -> 1
