@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, RankNTypes #-}
+{-# LANGUAGE RecursiveDo, FlexibleContexts, FlexibleInstances, RankNTypes #-}
 module Language.Haskell.Nemnem.Parser where
 
 import Control.Applicative ((<$>), (<*>), pure)
@@ -15,7 +15,12 @@ import Language.Haskell.Nemnem.Util
 data ParseCtx = ParseCtx
   { inScope :: SymTab  -- ^ Tied recursively.
   , parseOpts :: ()
-  } 
+  }
+
+withLocalSymtab :: SymTab -> ParseCtx -> ParseCtx
+withLocalSymtab symtab pctx =
+  -- M.union is left-biased, which is what we want here.
+  pctx { inScope = symtab `M.union` inScope pctx } 
 
 type ParseT m a = RWST ParseCtx Logs () m a
 type Parse a = ParseT Identity a
@@ -83,7 +88,7 @@ for = flip fmap
 data Log
   = LRef Ref
   | LWarn String
-  | LChild (Ctxed String) (Ctxed String)
+  | LChild Symbol Symbol
   | LAnotate SymLoc String  -- for visual debugging
   deriving Show
 
@@ -106,7 +111,7 @@ data ModuleInfo = ModuleInfo
   , miWarns :: [String]
   }
 
-exportedKeys :: ChildMap -> [ExportSpec l] -> [Ctxed String]
+exportedKeys :: ChildMap -> [ExportSpec l] -> [Symbol]
 exportedKeys children xs = xs >>= exports
   where
     exports x = case x of
@@ -236,109 +241,125 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
     let exported = flip M.member exports
     in M.map (filter exported) . M.filterWithKey (\s _ -> exported s)
 
+-- TODO remove
 mergeCollect :: [SymTab -> Logs] -> SymTab -> Logs
 mergeCollect fs s = concatMap ($ s) fs
 
 collectDecl :: Decl S -> Parse SymTab
-collectDecl decl = do
-  syms <- asks inScope
-  let (topSymAndLocs, fun) = collectDecl' decl
-      subLogs = fun syms
-  tell subLogs
-  return . M.fromList $ topSymAndLocs
+collectDecl decl = case decl of
+  DataDecl _l _dataOrNew _ctx dHead quals derivings -> do
+    -- TODO derivings
+    let head_symloc@(head_sym, _) = collectDeclHead dHead
+    ctor_symtab <- M.unions <$> mapM (collectQualConDecl head_sym) quals
+    return $ insertPair head_symloc ctor_symtab
 
-collectDecl' :: Decl S -> Collector
-collectDecl' decl = case decl of
-  DataDecl _l _dataOrNew _ctx dHead quals derivings ->
-    let headSym@(headCtx,_) = collectDeclHead dHead
-        (qualSyms, qualFuns) = unzip $ map (collectQualConDecl headCtx) quals
-    in (headSym : concat qualSyms, mergeCollect qualFuns)
-  TypeSig _l names ty ->
+  TypeSig _l names ty -> do
     -- we want names in signatures to point to the definitions
-    let nameFuns = map fname names
-        tyFun = collectType ty
-        fname name s = maybeToList$
-          LRef . Ref (hseSymOrIdentPos name) <$> M.lookup (Ctxed CTerm$ hseSymOrIdentValue name) s
-    in ([], mergeCollect$ tyFun:nameFuns)
-  FunBind _l matches ->
-    let (syms, funs) = unzip $ for matches (\m ->
-          let (name, pats, rhs, binds) = case m of
-                Match _l nm ps r bs -> (nm, ps, r, bs)
-                InfixMatch _l p nm ps r bs -> (nm, p:ps, r, bs)
-              matchSym = hseNameToSymbolAndLoc CTerm name
-              (patSyms, patFuns) = unzip $ map collectPat pats
-              -- patSyms are not returned to the global scope, just
-              -- used when resolving rhs and binds
-              -- TODO rhs, binds
-              rhsFun = collectRhs rhs . (M.fromList (concat patSyms) `M.union`)
-          in ([matchSym], mergeCollect$ rhsFun:patFuns))
-    in (concat syms, mergeCollect funs)
-  PatBind _l pat _typeTODO rhs _bindsTODO ->
-    let (patSyms, patFuns) = collectPat pat
-        -- TODO duplication with above
-        rhsFun = collectRhs rhs . (M.fromList patSyms `M.union`)
-    in (patSyms, mergeCollect [rhsFun, patFuns])
-  -- TODO
-  other -> ([], const [LWarn$ "xDECL " ++ show other])
+    collectType ty
+    symtab <- asks inScope
+    tell . catMaybes . for names $ \name ->
+      LRef . Ref (hseSymOrIdentPos name) <$>
+        M.lookup (Ctxed CTerm $ hseSymOrIdentValue name) symtab
+    return M.empty
 
-collectRhs :: Rhs S -> SymTab -> Logs
+  FunBind _l matches ->
+    M.unions <$> mapM parseMatch matches
+
+  PatBind _l pat _typeTODO rhs _bindsTODO -> do
+    collectRhs rhs
+    collectPat pat
+
+  -- TODO
+  other -> tell [LWarn$ "xDECL " ++ show other] >> return M.empty
+
+collectRhs :: Rhs S -> Parse ()
 collectRhs rhs = case rhs of
   UnGuardedRhs _l exp -> collectExp exp
   GuardedRhss _l grhss ->
-    mergeCollect . map collectExp $ concat (map expsFrom grhss)
+    mapM_ collectExp $ concat (map expsFrom grhss)
   where
   expsFrom (GuardedRhs _l stmts exp) = exp : (stmts >>= stmtExps)
   stmtExps stmt = case stmt of
     Qualifier _l exp -> [exp]
     other -> error $ "GuardedRhs statement " ++ show other
 
-collectExp :: Exp S -> SymTab -> Logs
+collectExp :: Exp S -> Parse ()
 collectExp exp = case exp of
-  Var _l qname -> resolveQName CTerm qname
-  Con _l qname -> resolveQName CTerm qname
+  Var _l qname -> parseQName CTerm qname
+  Con _l qname -> parseQName CTerm qname
   InfixApp _l lexp _op rexp -> exps [lexp, rexp]
   App _l exp1 exp2 -> exps [exp1, exp2]
   NegApp _l exp -> collectExp exp
-  Case _l exp alts -> \s ->
-    let expLogs = collectExp exp s
-        altLogs = mergeCollect (map collectAlt alts) s
-    in expLogs ++ altLogs
+  Case _l exp alts -> do
+    collectExp exp
+    mapM_ collectAlt alts
+  --Do _l statements ->
   If _l c a b -> exps [c, a, b]
-  Let _l binds exp -> case binds of
-    BDecls _l decls ->
-      let (dsyms, dfuns) = unzip $ map collectDecl' decls
-          syms = concat dsyms
-      in (\s -> mergeCollect (collectExp exp:dfuns) $ M.fromList syms `M.union` s)
-    IPBinds _l ipbinds -> error "no IPBind support"
+  Let _l binds exp -> do
+    binds_symtab <- parseBinds binds
+    local (withLocalSymtab binds_symtab) $ collectExp exp
   Paren _l exp -> collectExp exp
+  Tuple _l _boxed es -> exps es 
   --Lambda pats exp -> 
   --  let (psyms, pfuns) = unzip $ map collectPat pats
   --      syms = concat psyms
-  other -> const [LWarn$ "Exp " ++ show exp]
+  other -> tell [LWarn$ "Exp " ++ show exp]
   where
-    exps ee = mergeCollect$ map collectExp ee
+  exps ee = mapM_ collectExp ee
 
-collectAlt :: Alt S -> SymTab -> Logs
-collectAlt (Alt _l pat guardedAlts binds) =
-  let (patSyms, patFun) = collectPat pat
-      -- patSyms only used in guardedAlts
-      altFun s = collectGuardedAlts guardedAlts (M.fromList patSyms `M.union` s)
-  in mergeCollect [patFun, altFun]
+collectAlt :: Alt S -> Parse ()
+collectAlt (Alt _l pat guarded_alts binds) = do
+  -- only used in guarded_alts
+  pattern_symtab <- collectPat pat
+  local (withLocalSymtab pattern_symtab) $ collectGuardedAlts guarded_alts
 
-collectGuardedAlts :: GuardedAlts S -> SymTab -> Logs
+collectGuardedAlts :: GuardedAlts S -> Parse ()
 collectGuardedAlts gas = case gas of
   UnGuardedAlt _l exp -> collectExp exp
-  other -> const [LWarn$ "Guarded case alternative: " ++ show other]
+  other -> tell [LWarn$ "Guarded case alternative: " ++ show other]
 
-collectPat :: Pat S -> Collector
+collectPat :: Pat S -> Parse SymTab
 collectPat p = case p of
-  PVar _l name -> (return$ hseNameToSymbolAndLoc CTerm name, const [])
-  PApp _l qname pats ->
-    let qnameFun = resolveQName CTerm qname
-        (psyms, pfuns) = unzip $ map collectPat pats
-    in (concat psyms, mergeCollect (qnameFun:pfuns))
+  PVar _l name -> return . singletonPair $ hseNameToSymbolAndLoc CTerm name
+  PApp _l qname pats -> do
+    parseQName CTerm qname
+    M.unions <$> mapM collectPat pats
+  PAsPat _l name pat -> do
+    rest_symtab <- collectPat pat
+    return . insertPair (hseNameToSymbolAndLoc CTerm name) $ rest_symtab
   PParen _l pat -> collectPat pat
-  other -> ([], const [LWarn$ "xPat" ++ show other])
+  PList _l pats -> M.unions <$> mapM collectPat pats
+  PInfixApp _l p1 qname p2 -> do
+    parseQName CTerm qname
+    M.union <$> collectPat p1 <*> collectPat p2
+  PTuple _l _boxed pats ->
+    M.unions <$> mapM collectPat pats
+  other -> tell [LWarn$ "xPat" ++ show other] >> return M.empty
+
+parseMatch :: Match S -> Parse SymTab
+parseMatch m = do
+  let (name, patterns, rhs, mb_binds) = case m of
+        Match _l nm ps r bs -> (nm, ps, r, bs)
+        InfixMatch _l p nm ps r bs -> (nm, p:ps, r, bs)
+  -- pattern symbols are not returned to the global scope, but used
+  -- in resolving RHS and Binds
+  pattern_symtab <- M.unions <$> mapM collectPat patterns
+  -- bind symbols are used only for resolving RHS
+  binds_symtab <- case mb_binds of
+    Nothing -> return M.empty
+    Just binds -> local (withLocalSymtab pattern_symtab) $ parseBinds binds
+  -- TODO is there precedence order between binds and patterns?
+  local (withLocalSymtab (binds_symtab `M.union` pattern_symtab)) $
+    collectRhs rhs
+  return . singletonPair $ hseNameToSymbolAndLoc CTerm name
+
+parseBinds :: Binds S -> Parse SymTab
+parseBinds binds = case binds of
+  BDecls _l decls -> do
+    rec decl_symtab <- local (withLocalSymtab decl_symtab) $
+                         M.unions <$> mapM collectDecl decls
+    return decl_symtab
+  IPBinds _l ipbinds -> error "no IPBind support"
 
 collectDeclHead :: DeclHead S -> SymbolAndLoc
 collectDeclHead dhead = case dhead of
@@ -347,49 +368,46 @@ collectDeclHead dhead = case dhead of
   DHParen _hl innerHead -> collectDeclHead innerHead
 
 -- | Parses a constructor declaration.
-collectQualConDecl :: Ctxed String -> QualConDecl S -> Collector
-collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx conDecl) =
+collectQualConDecl :: Symbol -> QualConDecl S -> Parse SymTab
+collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx ctor_decl) =
   -- TODO ctx
-  case conDecl of
+  case ctor_decl of
     ConDecl _l name bangs -> ctorBangs name bangs
     InfixConDecl _l lbang name rbang -> ctorBangs name [lbang, rbang]
-    RecDecl _l name fields ->
-      let ctorSym = hseNameToSymbolAndLoc CTerm name
-          (fieldSyms, fs) = unzip $ map collectFieldDecl fields
-          flatSyms = concat fieldSyms
-          tyChildren = for flatSyms (mkChild tyname . fst)
-      in (ctorSym:flatSyms, mergeCollect (fs ++ tyChildren))
+    RecDecl _l name field_decls -> do
+      let ctor_symloc = hseNameToSymbolAndLoc CTerm name
+      field_symlocs <- M.unions <$> mapM collectFieldDecl field_decls
+      mapM_ (tell . mkChild' tyname) (M.keys field_symlocs)
+      return $ insertPair ctor_symloc field_symlocs
   where
-    bangCollect = mergeCollect . map (collectType . bangType)
-    ctorBangs name bangs =
-      ([hseNameToSymbolAndLoc CTerm name],
-        mergeCollect [mkChild tyname (Ctxed CTerm$ hseSymOrIdentValue name),
-                      bangCollect bangs])
+  ctorBangs name bangs = do
+    tell . mkChild' tyname $ Ctxed CTerm (hseSymOrIdentValue name)
+    mapM_ (collectType . bangType) bangs
+    return . M.fromList $ [hseNameToSymbolAndLoc CTerm name]
 
-collectFieldDecl :: FieldDecl S -> Collector
-collectFieldDecl (FieldDecl l names bang) =
-  let fsyms = map (hseNameToSymbolAndLoc CTerm) names
-      f = collectType (bangType bang)
-  in (fsyms, f)
+collectFieldDecl :: FieldDecl S -> Parse SymTab
+collectFieldDecl (FieldDecl l names bang) = do
+  collectType . bangType $ bang
+  return . M.fromList . map (hseNameToSymbolAndLoc CTerm) $ names
 
 bangType :: BangType l -> Type l
 bangType (BangedTy _ t) = t
 bangType (UnBangedTy _ t) = t
 bangType (UnpackedTy _ t) = t
 
-collectType :: Type S -> SymTab -> Logs
-collectType ty st = case ty of
-  TyCon _l qname -> resolveQName CType qname st -- ++ 
-                      --[LWarn$ prettish 5 $ "xTTT" ++ show (hush qname) ++ "|| " ++ show st]
-  TyFun _l t1 t2 -> mergeCollect (map collectType [t1, t2]) st
-  other -> [LWarn$ "xTyCon " ++ show ty]
-  --where hush = fmap (const "")
+collectType :: Type S -> Parse ()
+collectType ty = case ty of
+  TyCon _l qname -> parseQName CType qname
+  TyFun _l t1 t2 -> mapM_ collectType [t1, t2]
+  other -> tell [LWarn$ "xTyCon " ++ show ty]
 
-resolveQName :: Ctx -> QName S -> SymTab -> Logs
-resolveQName ctx qname s = maybeToList $ do
-  (l, name) <- flattenQName qname
-  refPos <- M.lookup (Ctxed ctx name) s
-  return . LRef $ Ref (wrapLoc l) refPos
+parseQName :: Ctx -> QName S -> Parse ()
+parseQName ctx qname = do
+  s <- asks inScope
+  tell . maybeToList $ do  -- in Maybe
+        (l, name) <- flattenQName qname
+        refPos <- M.lookup (Ctxed ctx name) s
+        return . LRef $ Ref (wrapLoc l) refPos
 
 flattenQName :: QName l -> Maybe (l, String)
 flattenQName qname = case qname of
@@ -416,5 +434,11 @@ hseNameToSymbolAndLoc ctx name = (Ctxed ctx (hseSymOrIdentValue name), hseSymOrI
 hseNameToSymbol :: Ctx -> Name S -> Symbol
 hseNameToSymbol ctx = fst . hseNameToSymbolAndLoc ctx
 
-mkChild :: Ctxed String -> Ctxed String -> a -> Logs
+mkChild' p c = [LChild p c]
+
+-- TODO remove
+mkChild :: Symbol -> Symbol -> a -> Logs
 mkChild p c = const [LChild p c]
+
+insertPair (a,b) = M.insert a b
+singletonPair p = insertPair p M.empty

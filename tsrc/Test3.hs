@@ -27,9 +27,12 @@ rec1 x = rec2 (x+1)
 rec2 x = rec1 (x-1)
 
 localRec x =
-  let y = x+z
-      z = y
-  in undefined
+  let y = x+y+z
+      z = y+a
+      (u,v) = let x = 3
+              in (x,z)
+      (a:bs) = replicate 5 x
+  in z+y+length bs+v
 
 g,h :: MyData -> Int -> Int
 g x y = case x of
