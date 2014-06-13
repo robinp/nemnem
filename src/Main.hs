@@ -39,7 +39,12 @@ main = do
         , "tsrc/DataText.hs"
         , "tsrc/DataTextIO.hs"
         , "tsrc/Test4.hs"
-        , "tsrc/Test3.hs" ]
+        , "tsrc/Test3.hs"
+        , "src/Language/Haskell/Nemnem/Util.hs"
+        , "src/Language/Haskell/Nemnem/Parser.hs"
+        , "src/Hier.hs"
+        , "src/Language/Haskell/Nemnem/Printer.hs"
+        ]
       path1 = "tsrc/Test4.hs"
       path2 = "tsrc/Test3.hs"
       outdir = "deploy/"
@@ -47,8 +52,12 @@ main = do
   where
   processModule outdir modules path = do
     src <- uncpp <$> readFile path  -- TODO use text
-    let ast = fromParseResult . parseFileContents $ src
+    let ast = fromParseResult . parse $ src
         mi = collectModule modules ast
+        -- switch of fixities - this results in possibly incorrect AST, but
+        -- on the source highlighting / indexing level we don't care about
+        -- larger expressions anyway.
+        parse = parseFileContentsWithMode (defaultParseMode {fixities = Nothing})
     print . miName $ mi
     putStrLn "====exports===="
     print . miExports $ mi

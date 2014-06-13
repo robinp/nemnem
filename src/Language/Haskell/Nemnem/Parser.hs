@@ -1,4 +1,7 @@
 {-# LANGUAGE RecursiveDo, FlexibleContexts, FlexibleInstances, RankNTypes #-}
+-- TODO remove this once HSE 0.15.0.2 is out
+-- See https://github.com/haskell-suite/haskell-src-exts/issues/42
+{-# LANGUAGE Arrows #-} 
 module Language.Haskell.Nemnem.Parser where
 
 import Control.Applicative ((<$>), (<*>), pure)
@@ -21,6 +24,9 @@ withLocalSymtab :: SymTab -> ParseCtx -> ParseCtx
 withLocalSymtab symtab pctx =
   -- M.union is left-biased, which is what we want here.
   pctx { inScope = symtab `M.union` inScope pctx } 
+
+setSymtab :: SymTab -> ParseCtx -> ParseCtx
+setSymtab symtab pctx = pctx { inScope = symtab }
 
 type ParseT m a = RWST ParseCtx Logs () m a
 type Parse a = ParseT Identity a
@@ -177,9 +183,6 @@ importSyms modules decls = mconcat <$> mapM getImports decls
                     `mappend` if isQual then M.empty else filtered
           Nothing -> applyIf isQual (aliased $ mname lmname) filtered
   --
-  applyIf :: Bool -> (a -> a) -> a -> a
-  applyIf c f = if c then f else id
-  --
   aliased mAlias exps =
     let prefix = mAlias ++ "."
     in M.mapKeys (fmap (prefix ++)) exps
@@ -293,19 +296,23 @@ collectExp exp = case exp of
   Case _l exp alts -> do
     collectExp exp
     mapM_ collectAlt alts
-  --Do _l statements ->
+  Do _l statements -> void $ parseStatementsNonRecursive statements
   If _l c a b -> exps [c, a, b]
   Let _l binds exp -> do
     binds_symtab <- parseBinds binds
     local (withLocalSymtab binds_symtab) $ collectExp exp
   Paren _l exp -> collectExp exp
   Tuple _l _boxed es -> exps es 
-  --Lambda pats exp -> 
-  --  let (psyms, pfuns) = unzip $ map collectPat pats
-  --      syms = concat psyms
+  List _l ee -> exps ee
+  Lambda _l pats exp -> do
+    pattern_symtab <- M.unions <$> mapM collectPat pats
+    local (withLocalSymtab pattern_symtab) $ collectExp exp
+  LeftSection _l exp qop -> parseSection qop exp
+  RightSection _l qop exp -> parseSection qop exp
   other -> tell [LWarn$ "Exp " ++ show exp]
   where
   exps ee = mapM_ collectExp ee
+  parseSection qop exp = parseQOp CTerm qop >> collectExp exp
 
 collectAlt :: Alt S -> Parse ()
 collectAlt (Alt _l pat guarded_alts binds) = do
@@ -361,6 +368,27 @@ parseBinds binds = case binds of
     return decl_symtab
   IPBinds _l ipbinds -> error "no IPBind support"
 
+parseStatementsRecursive :: [Stmt S] -> Parse SymTab
+parseStatementsRecursive stmts = do
+  rec actions_symtab <- local (withLocalSymtab actions_symtab) $
+                          M.unions <$> mapM parseStatement stmts
+  return actions_symtab
+
+parseStatementsNonRecursive :: [Stmt S] -> Parse SymTab
+parseStatementsNonRecursive stmts = do
+  -- add new symbols linearly to the symtab
+  symtab <- asks inScope
+  foldM (\syms stmt -> (`M.union` syms) <$>
+                          local (setSymtab syms) (parseStatement stmt))
+        symtab stmts
+ 
+parseStatement :: Stmt S -> Parse SymTab
+parseStatement stmt = case stmt of
+  Generator _l pat exp -> collectExp exp >> collectPat pat
+  Qualifier _l exp -> collectExp exp >> return M.empty
+  LetStmt _l binds -> parseBinds binds
+  RecStmt _l stmts -> parseStatementsRecursive stmts
+
 collectDeclHead :: DeclHead S -> SymbolAndLoc
 collectDeclHead dhead = case dhead of
   DHead _hl name _tyvarbinds -> hseNameToSymbolAndLoc CType name
@@ -400,6 +428,13 @@ collectType ty = case ty of
   TyCon _l qname -> parseQName CType qname
   TyFun _l t1 t2 -> mapM_ collectType [t1, t2]
   other -> tell [LWarn$ "xTyCon " ++ show ty]
+
+parseQOp :: Ctx -> QOp S -> Parse ()
+parseQOp ctx op = 
+  let qname = case op of
+        QVarOp _l q -> q
+        QConOp _l q -> q  -- TODO what is the difference?
+  in parseQName ctx qname
 
 parseQName :: Ctx -> QName S -> Parse ()
 parseQName ctx qname = do
@@ -442,3 +477,6 @@ mkChild p c = const [LChild p c]
 
 insertPair (a,b) = M.insert a b
 singletonPair p = insertPair p M.empty
+  
+applyIf :: Bool -> (a -> a) -> a -> a
+applyIf c f = if c then f else id
