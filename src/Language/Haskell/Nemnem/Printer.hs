@@ -27,21 +27,24 @@ data Tag = LinkTo (Maybe MName) Text
 tagToBlaze :: Maybe MName -> Tag -> B.Markup -> B.Markup
 tagToBlaze mname t = case t of
   LinkTo mod ref ->
-    modifyIf (mod == mname || isNothing mod) (! hoverAttrib) $
-      BH.a ! BA.href (B.toValue fullRef)
-    where
-      hoverAttrib = BA.onmouseover (B.toValue$
-                      mconcat ["nemnem.highlight('", ref, "')"])
-      fullRef = mconcat [maybe mempty (T.pack . (++ ".html")) mod, "#", ref]
+    BH.a
+      ! BA.href (B.toValue ref)
+      ! hoverAttrib ref
   LineEnd -> const BH.br
-  Entity ref -> BH.a ! BA.name (B.toValue ref)
+  Entity ref -> 
+    BH.a
+      ! BA.name (B.toValue ref)
+      ! hoverAttrib ref
+  where
+  hoverAttrib ref = BA.onmouseover (B.toValue$
+                      mconcat ["nemnem.highlight('", ref, "')"])
 
 withHeader m = BH.html $ do
   BH.head $ do
     BH.title "NemNem"
-    BH.link ! BA.rel "stylesheet" ! BA.type_ "text/css" ! BA.href "nemnem.css"
-    BH.script ! BA.src "jquery-2.0.3.min.js" $ mempty
-    BH.script ! BA.src "nemnem.js" $ mempty
+    BH.link ! BA.rel "stylesheet" ! BA.type_ "text/css" ! BA.href "/static/nemnem.css"
+    BH.script ! BA.src "/static/jquery-2.0.3.min.js" $ mempty
+    BH.script ! BA.src "/static/nemnem.js" $ mempty
   BH.body $
     BH.div ! BA.id "code" $ m
 
@@ -62,14 +65,13 @@ refToRange lineLens (Ref (SymLoc (srcStart, srcEnd) _) dst) =
 
 tagEntitiesOfCurrentModule :: [Int] -> Maybe MName -> SymLoc -> Maybe (TaggedRange String Tag)
 tagEntitiesOfCurrentModule lineLens curModule sym@(SymLoc (s,e) sModule) =
-  -- sModule is Nothing is a local var? TODO explain
-  if sModule == curModule || isNothing sModule
+  if sModule == curModule
     then Just $ mkRange (Entity$ idfy sym) (lc s) (lc e)
     else Nothing
   where lc = lineAndColumnToOffset lineLens
 
 idfy :: SymLoc -> Text
-idfy s = T.pack $
+idfy s = T.pack $ maybe "" (++ "#") (symModule s) ++
   "loc_" ++ show (fst$a$s) ++ "_" ++ show (snd$a$s) ++ "_" ++
     show (fst$b$s) ++ "_" ++ show (snd$b$s)
   where a = fst . symRange

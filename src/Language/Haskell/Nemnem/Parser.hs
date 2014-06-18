@@ -1,4 +1,5 @@
 {-# LANGUAGE RecursiveDo, FlexibleContexts, FlexibleInstances, RankNTypes #-}
+{-# LANGUAGE OverloadedStrings #-}
 -- TODO remove this once HSE 0.15.0.2 is out
 -- See https://github.com/haskell-suite/haskell-src-exts/issues/42
 {-# LANGUAGE Arrows #-} 
@@ -7,10 +8,12 @@ module Language.Haskell.Nemnem.Parser where
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Monad.Identity
 import Control.Monad.Trans.RWS
+import Data.Aeson.Types as A
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
 import Data.Monoid
+import qualified Data.Text as T
 import Language.Haskell.Exts.Annotated
 
 import Language.Haskell.Nemnem.Util
@@ -53,14 +56,24 @@ type LineColRange = (LineCol,LineCol)
 type Symbol = Ctxed String
 data SymLoc = SymLoc
   { symRange :: LineColRange
+  -- | When parsing the module AST, initially filled with Nothing,
+  -- which is substituted later by parseModuleSymbols / collectModule
+  -- before tying back the knot.
   , symModule :: Maybe String  -- TODO these Strings are ugly
   }
   deriving (Eq, Show)
 
+-- TODO rather transform these structures in the serving code and add
+-- instances there? 
+instance ToJSON SymLoc where
+  toJSON (SymLoc sym_range sym_module) = object
+    [ "range" .= sym_range
+    , "module" .= sym_module ]
+
 type SymbolAndLoc = (Symbol, SymLoc)
 type SymTab = Map Symbol SymLoc
 
--- Ref is now suitable with generating visual hyperrefs, but not much for
+-- Ref is now suitable for generating visual hyperrefs, but not much for
 -- searching / indexing / more intelligent displays. 
 -- TODO should rather be SymbolAndLoc? 
 data Ref = Ref
@@ -68,6 +81,11 @@ data Ref = Ref
   , refTarget :: SymLoc
   }
   deriving Show
+
+instance ToJSON Ref where
+  toJSON (Ref s t) = object
+    [ "source" .= s
+    , "target" .= t ]
 
 getRef (LRef r) = [r]
 getRef _ = []
@@ -115,6 +133,7 @@ data ModuleInfo = ModuleInfo
   , miRefs :: [Ref]
     -- | warnings while processing AST (likely todos)
   , miWarns :: [String]
+  , miOriginalPath :: Maybe String
   }
 
 exportedKeys :: ChildMap -> [ExportSpec l] -> [Symbol]
@@ -218,18 +237,23 @@ parseModuleSymbols modules (Module _l mhead _pragmas imports decls) = do
 collectModule :: Map MName ModuleInfo -> Module S -> ModuleInfo
 collectModule modules m@(Module _l mhead _pragmas imports decls) =
   let (symtab, _, logs) = runRWS (parseModuleSymbols modules m) pctx ()
-      pctx = ParseCtx { inScope = symtab, parseOpts = () }
+      pctx = ParseCtx
+              { inScope = symtab
+              , parseOpts = () 
+              }
       children =
         let pairs = map (\(p,c) -> (p, [c])) $ logs >>= getChild
         in M.unionsWith (++) (map (M.fromList . return) pairs)
       exports = fromMaybe M.empty $ headExports symtab children <$> mhead
+      module_name = moduleHeadName <$> mhead
   in ModuleInfo
-      { miName = moduleHeadName <$> mhead
+      { miName = module_name
       , miSymbols = symtab
       , miExports = exports
       , miChildren = exportedChildren exports children
-      , miRefs = logs >>= getRef
+      , miRefs = map (fillModuleName module_name)$ logs >>= getRef
       , miWarns = logs >>= getWarn
+      , miOriginalPath = Nothing
       }
   where
   headExports symtab children (ModuleHead _ _ _ exportSpecs) =
@@ -243,6 +267,11 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
   exportedChildren exports =
     let exported = flip M.member exports
     in M.map (filter exported) . M.filterWithKey (\s _ -> exported s)
+  fillModuleName module_name (Ref s t) =
+    Ref (fill s) (fill t)
+    where
+    fill loc@(SymLoc _ Nothing) = loc { symModule = module_name }
+    fill loc = loc
 
 -- TODO remove
 mergeCollect :: [SymTab -> Logs] -> SymTab -> Logs

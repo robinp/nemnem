@@ -12,7 +12,9 @@ nemnem = {
     if (nemnem.highlit_ != null) {
       nemnem.highlit_.toggleClass(nemnem.highliteClass_);
     }
-    nemnem.highlit_ = $('a[name="' + idname + '"],a[href="#' + idname + '"]');
+    console.log("idname: " + idname);
+    nemnem.highlit_ = $('a[name="' + idname + '"],a[href="' + idname + '"]');
+    console.log("highlit: " + nemnem.highlit_);
     nemnem.highlit_.toggleClass(nemnem.highliteClass_);
   }
 }
