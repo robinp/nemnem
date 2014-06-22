@@ -19,25 +19,36 @@ instance Show (TaggedRange String Tag) where
   show = showTaggedRange
 
 ----------- Blaze stuff
-data Tag = LinkTo (Maybe MName) Text
+data Tag = LinkTo (Maybe MName) Text  -- ^ Module and location name
          | LineEnd
-         | Entity Text
+         | Entity Text  -- ^ Location name (implicitly local)
   deriving Show
 
+-- TODO add option to specify module -> path transform
 tagToBlaze :: Maybe MName -> Tag -> B.Markup -> B.Markup
-tagToBlaze mname t = case t of
-  LinkTo mod ref ->
-    BH.a
-      ! BA.href (B.toValue ref)
-      ! hoverAttrib ref
+tagToBlaze current_module t = case t of
+  LinkTo link_module location ->
+    if current_module == link_module
+    then BH.a
+           ! BA.href (B.toValue$ "#" <> location)
+           ! highlightOnHover True location
+    else let mname = maybe "Anonymouse" T.pack link_module
+             href = mname <> "#" <> location
+         in BH.a
+              ! BA.href (B.toValue href)
+              ! highlightOnHover False href
   LineEnd -> const BH.br
-  Entity ref -> 
+  Entity location -> 
     BH.a
-      ! BA.name (B.toValue ref)
-      ! hoverAttrib ref
+      ! BA.name (B.toValue location)
+      ! highlightOnHover True location
   where
-  hoverAttrib ref = BA.onmouseover (B.toValue$
-                      mconcat ["nemnem.highlight('", ref, "')"])
+  highlightOnHover is_local arg =
+    let function = if is_local
+          then "highlightLocalToLocal"
+          else "highlightLocalToRemote"
+    in BA.onmouseover . B.toValue . mconcat $
+         ["nemnem.", function, "('", arg, "')"]
 
 withHeader m = BH.html $ do
   BH.head $ do
@@ -58,9 +69,10 @@ lineAndColumnToOffset :: [Int] -> (Int, Int) -> Int
 lineAndColumnToOffset lineLens (line, col) =
   sum (take (line-1) lineLens) + (col-1)
 
-refToRange :: [Int] -> Ref -> TaggedRange String Tag
-refToRange lineLens (Ref (SymLoc (srcStart, srcEnd) _) dst) =
-  mkRange (LinkTo (symModule dst) (idfy dst)) (lc srcStart) (lc srcEnd)
+refToRange :: [Int] -> Maybe MName -> Ref -> TaggedRange String Tag
+refToRange lineLens cur_module (Ref (SymLoc (srcStart, srcEnd) _) dst) =
+  mkRange (LinkTo (symModule dst) (idfy dst))
+          (lc srcStart) (lc srcEnd)
   where lc = lineAndColumnToOffset lineLens
 
 tagEntitiesOfCurrentModule :: [Int] -> Maybe MName -> SymLoc -> Maybe (TaggedRange String Tag)
@@ -71,11 +83,13 @@ tagEntitiesOfCurrentModule lineLens curModule sym@(SymLoc (s,e) sModule) =
   where lc = lineAndColumnToOffset lineLens
 
 idfy :: SymLoc -> Text
-idfy s = T.pack $ maybe "" (++ "#") (symModule s) ++
-  "loc_" ++ show (fst$a$s) ++ "_" ++ show (snd$a$s) ++ "_" ++
-    show (fst$b$s) ++ "_" ++ show (snd$b$s)
-  where a = fst . symRange
-        b = snd . symRange
+idfy s = 
+  "loc_" <> tshow (fst$a$s) <> "_" <> tshow (snd$a$s)
+    <> "_" <> tshow (fst$b$s) <> "_" <> tshow (snd$b$s)
+  where
+  a = fst . symRange
+  b = snd . symRange
+  tshow = T.pack . show
 
 -- the base is the destination of a reference
 basesOf :: [Ref] -> [SymLoc]
