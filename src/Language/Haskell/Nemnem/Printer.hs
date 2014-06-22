@@ -70,10 +70,11 @@ lineAndColumnToOffset lineLens (line, col) =
   sum (take (line-1) lineLens) + (col-1)
 
 refToRange :: [Int] -> Ref -> TaggedRange String Tag
-refToRange lineLens (Ref (SymLoc (srcStart, srcEnd) _) dst) =
+refToRange lineLens (Ref (SymLoc (srcStart, srcEnd) _) dst stack) =
   mkRange (LinkTo (symModule dst) (idfy dst))
           (lc srcStart) (lc srcEnd)
-  where lc = lineAndColumnToOffset lineLens
+  where
+  lc = lineAndColumnToOffset lineLens
 
 tagEntitiesOfCurrentModule :: [Int] -> Maybe MName -> SymLoc -> Maybe (TaggedRange String Tag)
 tagEntitiesOfCurrentModule lineLens curModule sym@(SymLoc (s,e) sModule) =
@@ -93,6 +94,6 @@ idfy s =
 
 -- the base is the destination of a reference
 basesOf :: [Ref] -> [SymLoc]
-basesOf = nub . map (\(Ref _ dst) -> dst)
+basesOf = nub . map (\(Ref _ dst _) -> dst)
 
 

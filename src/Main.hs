@@ -57,6 +57,7 @@ main = do
   scotty 8080 $ do
     get "/static/:resource" $ do
       -- TODO this is possibly unsecure
+      -- TODO mime types
       resource_path <- param "resource"
       file $ "deploy/" ++ resource_path  -- TODO
     get "/module/list" $ do

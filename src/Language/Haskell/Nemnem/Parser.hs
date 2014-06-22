@@ -9,6 +9,8 @@ import Control.Applicative ((<$>), (<*>), pure)
 import Control.Monad.Identity
 import Control.Monad.Trans.RWS
 import Data.Aeson.Types as A
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
@@ -18,15 +20,30 @@ import Language.Haskell.Exts.Annotated
 
 import Language.Haskell.Nemnem.Util
 
+type LhsSymbols = [SymbolAndLoc]
+
 data ParseCtx = ParseCtx
   { inScope :: SymTab  -- ^ Tied recursively.
+  -- | TODO make a bit more versatile, able to represent contexts such as
+  -- comments, RULES pragmas, imports/exports..
+  , definitionStack :: [LhsSymbols]
   , parseOpts :: ()
   }
+
+showDefinitionStack =
+  T.intercalate "/" . reverse . map (
+    T.intercalate "," . map (T.pack . dropCtx . fst) ) 
 
 withLocalSymtab :: SymTab -> ParseCtx -> ParseCtx
 withLocalSymtab symtab pctx =
   -- M.union is left-biased, which is what we want here.
-  pctx { inScope = symtab `M.union` inScope pctx } 
+  pctx { inScope = symtab `M.union` inScope pctx }
+
+pushDefs :: LhsSymbols -> ParseCtx -> ParseCtx
+pushDefs lhss pctx =
+  pctx { definitionStack = lhss:definitionStack pctx }
+
+pushDef a = pushDefs [a] 
 
 setSymtab :: SymTab -> ParseCtx -> ParseCtx
 setSymtab symtab pctx = pctx { inScope = symtab }
@@ -79,13 +96,15 @@ type SymTab = Map Symbol SymLoc
 data Ref = Ref
   { refSource :: SymLoc
   , refTarget :: SymLoc
+  , refDefinitionStack :: [LhsSymbols]
   }
   deriving Show
 
 instance ToJSON Ref where
-  toJSON (Ref s t) = object
+  toJSON (Ref s t stack) = object
     [ "source" .= s
-    , "target" .= t ]
+    , "target" .= t
+    , "stack" .= showDefinitionStack stack ]
 
 getRef (LRef r) = [r]
 getRef _ = []
@@ -219,9 +238,11 @@ importSyms modules decls = mconcat <$> mapM getImports decls
       return $ M.filterWithKey (\s _ -> passes s) exported_syms
   --
   logImport :: SymTab -> SymbolAndLoc -> Parse ()
-  logImport import_syms (symbol, loc) = case M.lookup symbol import_syms of
-    Nothing -> return ()
-    Just remote_loc -> tell [LRef $ Ref loc remote_loc]
+  logImport import_syms sym_and_loc@(symbol, loc) =
+    case M.lookup symbol import_syms of
+      Nothing -> return ()
+      -- TODO represent the module-import correctly, not mixed with stack
+      Just remote_loc -> tell [LRef $ Ref loc remote_loc [[sym_and_loc]]]
 
 moduleHeadName (ModuleHead _ (ModuleName _ mname) _ _) = mname
 
@@ -239,6 +260,7 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
   let (symtab, _, logs) = runRWS (parseModuleSymbols modules m) pctx ()
       pctx = ParseCtx
               { inScope = symtab
+              , definitionStack = []
               , parseOpts = () 
               }
       children =
@@ -267,8 +289,8 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
   exportedChildren exports =
     let exported = flip M.member exports
     in M.map (filter exported) . M.filterWithKey (\s _ -> exported s)
-  fillModuleName module_name (Ref s t) =
-    Ref (fill s) (fill t)
+  fillModuleName module_name (Ref s t stack) =
+    Ref (fill s) (fill t) stack
     where
     fill loc@(SymLoc _ Nothing) = loc { symModule = module_name }
     fill loc = loc
@@ -289,17 +311,20 @@ collectDecl decl = case decl of
     -- we want names in signatures to point to the definitions
     collectType ty
     symtab <- asks inScope
+    stack <- asks definitionStack
     tell . catMaybes . for names $ \name ->
-      LRef . Ref (hseSymOrIdentPos name) <$>
+      LRef . (\remote_loc -> Ref (hseSymOrIdentPos name) remote_loc stack) <$>
         M.lookup (Ctxed CTerm $ hseSymOrIdentValue name) symtab
     return M.empty
 
   FunBind _l matches ->
+    -- Left-biased `M.unions` keeps first match as symbol.
     M.unions <$> mapM parseMatch matches
 
   PatBind _l pat _typeTODO rhs _bindsTODO -> do
-    collectRhs rhs
-    collectPat pat
+    defined_sym_and_locs <- collectPat pat
+    local (pushDefs . M.toList $ defined_sym_and_locs) $ collectRhs rhs
+    return defined_sym_and_locs
 
   -- TODO
   other -> tell [LWarn$ "xDECL " ++ show other] >> return M.empty
@@ -334,6 +359,7 @@ collectExp exp = case exp of
   Tuple _l _boxed es -> exps es 
   List _l ee -> exps ee
   Lambda _l pats exp -> do
+    -- TODO would it useful to make lambda part of the definitionStack?
     pattern_symtab <- M.unions <$> mapM collectPat pats
     local (withLocalSymtab pattern_symtab) $ collectExp exp
   LeftSection _l exp qop -> parseSection qop exp
@@ -372,22 +398,26 @@ collectPat p = case p of
     M.unions <$> mapM collectPat pats
   other -> tell [LWarn$ "xPat" ++ show other] >> return M.empty
 
+-- | Parses the subtree by pushing the Match under definition to the
+-- `definitionStack`.
 parseMatch :: Match S -> Parse SymTab
 parseMatch m = do
   let (name, patterns, rhs, mb_binds) = case m of
         Match _l nm ps r bs -> (nm, ps, r, bs)
         InfixMatch _l p nm ps r bs -> (nm, p:ps, r, bs)
-  -- pattern symbols are not returned to the global scope, but used
-  -- in resolving RHS and Binds
-  pattern_symtab <- M.unions <$> mapM collectPat patterns
-  -- bind symbols are used only for resolving RHS
-  binds_symtab <- case mb_binds of
-    Nothing -> return M.empty
-    Just binds -> local (withLocalSymtab pattern_symtab) $ parseBinds binds
-  -- TODO is there precedence order between binds and patterns?
-  local (withLocalSymtab (binds_symtab `M.union` pattern_symtab)) $
-    collectRhs rhs
-  return . singletonPair $ hseNameToSymbolAndLoc CTerm name
+      defined_sym_and_loc = hseNameToSymbolAndLoc CTerm name
+  local (pushDef defined_sym_and_loc) $ do
+    -- pattern symbols are not returned to the global scope, but used
+    -- in resolving RHS and Binds
+    pattern_symtab <- M.unions <$> mapM collectPat patterns
+    -- bind symbols are used only for resolving RHS
+    binds_symtab <- case mb_binds of
+      Nothing -> return M.empty
+      Just binds -> local (withLocalSymtab pattern_symtab) $ parseBinds binds
+    -- TODO is there precedence order between binds and patterns?
+    local (withLocalSymtab (binds_symtab `M.union` pattern_symtab)) $
+      collectRhs rhs
+    return . singletonPair $ defined_sym_and_loc
 
 parseBinds :: Binds S -> Parse SymTab
 parseBinds binds = case binds of
@@ -468,10 +498,11 @@ parseQOp ctx op =
 parseQName :: Ctx -> QName S -> Parse ()
 parseQName ctx qname = do
   s <- asks inScope
+  stack <- asks definitionStack
   tell . maybeToList $ do  -- in Maybe
         (l, name) <- flattenQName qname
         refPos <- M.lookup (Ctxed ctx name) s
-        return . LRef $ Ref (wrapLoc l) refPos
+        return . LRef $ Ref (wrapLoc l) refPos stack
 
 flattenQName :: QName l -> Maybe (l, String)
 flattenQName qname = case qname of
