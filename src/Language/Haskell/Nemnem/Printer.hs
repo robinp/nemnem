@@ -24,15 +24,15 @@ data Tag = LinkTo (Maybe MName) Text  -- ^ Module and location name
          | Entity Text  -- ^ Location name (implicitly local)
   deriving Show
 
--- TODO add option to specify module -> path transform
-tagToBlaze :: Maybe MName -> Tag -> B.Markup -> B.Markup
-tagToBlaze current_module t = case t of
+tagToBlaze :: (Maybe MName -> Text)  -- ^ How to get url path from module
+           -> Maybe MName -> Tag -> B.Markup -> B.Markup
+tagToBlaze module_to_path current_module t = case t of
   LinkTo link_module location ->
     if current_module == link_module
     then BH.a
            ! BA.href (B.toValue$ "#" <> location)
            ! highlightOnHover True location
-    else let mname = maybe "Anonymouse" T.pack link_module
+    else let mname = module_to_path link_module
              href = mname <> "#" <> location
          in BH.a
               ! BA.href (B.toValue href)
@@ -69,8 +69,8 @@ lineAndColumnToOffset :: [Int] -> (Int, Int) -> Int
 lineAndColumnToOffset lineLens (line, col) =
   sum (take (line-1) lineLens) + (col-1)
 
-refToRange :: [Int] -> Maybe MName -> Ref -> TaggedRange String Tag
-refToRange lineLens cur_module (Ref (SymLoc (srcStart, srcEnd) _) dst) =
+refToRange :: [Int] -> Ref -> TaggedRange String Tag
+refToRange lineLens (Ref (SymLoc (srcStart, srcEnd) _) dst) =
   mkRange (LinkTo (symModule dst) (idfy dst))
           (lc srcStart) (lc srcEnd)
   where lc = lineAndColumnToOffset lineLens

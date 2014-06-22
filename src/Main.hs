@@ -116,11 +116,13 @@ main = do
     -- assumes newline is \n (single char)
     let lineLens = map ((+1) . length) (lines src)
         bases = basesOf (miRefs mi)
-        ranges = map (refToRange lineLens (miName mi)) (miRefs mi) ++
+        ranges = map (refToRange lineLens) (miRefs mi) ++
                    mapMaybe (tagEntitiesOfCurrentModule lineLens (miName mi)) bases
         tagged = tagRegions ranges src
-    in (BR.renderHtml . withHeader . untag (tagToBlaze$ miName mi) . fmap toBlaze)
+    in (BR.renderHtml . withHeader . untag (tagToBlaze module_tranform (miName mi)) . fmap toBlaze)
           tagged
+    where
+    module_tranform = maybe "Anonymouse" TL.pack
   break = putStrLn "---"
   putStrBreak x = break >> putStrLn x
 
