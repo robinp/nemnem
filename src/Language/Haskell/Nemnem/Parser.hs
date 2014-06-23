@@ -108,7 +108,7 @@ instance ToJSON Ref where
 
 getRef (LRef r) = [r]
 getRef _ = []
-getWarn (LWarn s) = [s]
+getWarn (LWarn w) = [w]
 getWarn _ = []
 getChild (LChild p c) = [(p, c)]
 getChild _ = []
@@ -126,14 +126,20 @@ for = flip fmap
 
 -- * Link collector part
 
+data Warn = Warn LineColRange String
+  deriving Show
+
 -- TODO add module references, where imported module name points to module
 --      source
 data Log
   = LRef Ref
-  | LWarn String
+  | LWarn Warn
   | LChild Symbol Symbol
   | LAnotate SymLoc String  -- for visual debugging
   deriving Show
+
+warnAt annotated_elem warning = LWarn $
+  Warn (lineCol . ann $ annotated_elem) (warning ++ take 30 (show annotated_elem))
 
 type Logs = [Log]
 
@@ -151,7 +157,7 @@ data ModuleInfo = ModuleInfo
     -- | references from this module
   , miRefs :: [Ref]
     -- | warnings while processing AST (likely todos)
-  , miWarns :: [String]
+  , miWarns :: [Warn]
   , miOriginalPath :: Maybe String
   }
 
@@ -327,7 +333,7 @@ collectDecl decl = case decl of
     return defined_sym_and_locs
 
   -- TODO
-  other -> tell [LWarn$ "xDECL " ++ show other] >> return M.empty
+  other -> tell [warnAt other "Decl"] >> return M.empty
 
 collectRhs :: Rhs S -> Parse ()
 collectRhs rhs = case rhs of
@@ -338,7 +344,7 @@ collectRhs rhs = case rhs of
   expsFrom (GuardedRhs _l stmts exp) = exp : (stmts >>= stmtExps)
   stmtExps stmt = case stmt of
     Qualifier _l exp -> [exp]
-    other -> error $ "GuardedRhs statement " ++ show other
+    other -> error "GuardedRhs"  -- tell [warnAt other "GuardedRhs"]
 
 collectExp :: Exp S -> Parse ()
 collectExp exp = case exp of
@@ -364,7 +370,8 @@ collectExp exp = case exp of
     local (withLocalSymtab pattern_symtab) $ collectExp exp
   LeftSection _l exp qop -> parseSection qop exp
   RightSection _l qop exp -> parseSection qop exp
-  other -> tell [LWarn$ "Exp " ++ show exp]
+  Lit _l _literal -> return ()
+  other -> tell [warnAt other "Exp"]
   where
   exps ee = mapM_ collectExp ee
   parseSection qop exp = parseQOp CTerm qop >> collectExp exp
@@ -378,7 +385,7 @@ collectAlt (Alt _l pat guarded_alts binds) = do
 collectGuardedAlts :: GuardedAlts S -> Parse ()
 collectGuardedAlts gas = case gas of
   UnGuardedAlt _l exp -> collectExp exp
-  other -> tell [LWarn$ "Guarded case alternative: " ++ show other]
+  other -> tell [warnAt other "Guarded case alternative"]
 
 collectPat :: Pat S -> Parse SymTab
 collectPat p = case p of
@@ -396,7 +403,7 @@ collectPat p = case p of
     M.union <$> collectPat p1 <*> collectPat p2
   PTuple _l _boxed pats ->
     M.unions <$> mapM collectPat pats
-  other -> tell [LWarn$ "xPat" ++ show other] >> return M.empty
+  other -> tell [warnAt other "Pat"] >> return M.empty
 
 -- | Parses the subtree by pushing the Match under definition to the
 -- `definitionStack`.
@@ -425,7 +432,7 @@ parseBinds binds = case binds of
     rec decl_symtab <- local (withLocalSymtab decl_symtab) $
                          M.unions <$> mapM collectDecl decls
     return decl_symtab
-  IPBinds _l ipbinds -> error "no IPBind support"
+  other -> tell [warnAt other "Binds"] >> return M.empty
 
 parseStatementsRecursive :: [Stmt S] -> Parse SymTab
 parseStatementsRecursive stmts = do
@@ -486,7 +493,7 @@ collectType :: Type S -> Parse ()
 collectType ty = case ty of
   TyCon _l qname -> parseQName CType qname
   TyFun _l t1 t2 -> mapM_ collectType [t1, t2]
-  other -> tell [LWarn$ "xTyCon " ++ show ty]
+  other -> tell [warnAt other "Type"]
 
 parseQOp :: Ctx -> QOp S -> Parse ()
 parseQOp ctx op = 

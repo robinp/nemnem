@@ -117,8 +117,10 @@ main = do
     -- assumes newline is \n (single char)
     let lineLens = map ((+1) . length) (lines src)
         bases = basesOf (miRefs mi)
-        ranges = map (refToRange lineLens) (miRefs mi) ++
-                   mapMaybe (tagEntitiesOfCurrentModule lineLens (miName mi)) bases
+        ranges = map (refToRange lineLens) (miRefs mi)
+                  ++ mapMaybe (tagEntitiesOfCurrentModule lineLens (miName mi))
+                     bases
+                  ++ map (warnsToRange lineLens) (miWarns mi)
         tagged = tagRegions ranges src
     in (BR.renderHtml . withHeader . untag (tagToBlaze module_tranform (miName mi)) . fmap toBlaze)
           tagged
