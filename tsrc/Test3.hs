@@ -16,7 +16,7 @@ hiss :: String -> String
 hiss s = "Hisss " ++ s
 
 fst' a b = a
-xyz r = apples r + foo 1 + T4.bar 2
+xyz r = apples r + foo 1 + T4.bar 2 + apples (r { pies = Other r })
 
 f :: MyData -> String
 f Case1 = "Found one"
@@ -24,7 +24,7 @@ f (Case2 x _) = "Found " ++ x
 
 rec1 x = rec2 (x+1)
 
-rec2 x = rec1 (x-1)
+rec2 x = rec1 (x-1) + (1 `fst'` 2)
 
 localRec x =
   let y = x+y+z
@@ -49,7 +49,7 @@ i2 :: T4.DAll
 i2 = if True then Me else AndMe
 
 i3 :: DRecAll -> Int
-i3 r = T4.drA r + drB r
+i3 r = T4.drA r + drB r + i1 undefined + f undefined
 
 i4 :: a -> T4.DSome
 i4 x = One undefined

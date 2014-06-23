@@ -23,6 +23,7 @@ data Tag = LinkTo (Maybe MName) Text  -- ^ Module and location name
          | LineEnd
          | Entity Text  -- ^ Location name (implicitly local)
          | Warning Text
+         | HighlightClass Text
   deriving Show
 
 tagToBlaze :: (Maybe MName -> Text)  -- ^ How to get url path from module
@@ -47,6 +48,8 @@ tagToBlaze module_to_path current_module t = case t of
     BH.span
       ! BA.class_ "warning"
       ! BH.dataAttribute "warning" (B.toValue txt)
+  HighlightClass cls ->
+    BH.span ! BA.class_ (B.toValue cls)
   where
   highlightOnHover is_local arg =
     let function = if is_local
@@ -86,6 +89,19 @@ warnsToRange line_lens (Warn (start, end) w_txt) =
   mkRange (Warning . T.pack $ w_txt) (lc start) (lc end)
   where
   lc = lineAndColumnToOffset line_lens
+
+highlightsToRange :: [Int] -> Highlight -> TaggedRange String Tag
+highlightsToRange line_lens (Highlight (start, end) hl_kind) =
+  mkRange (HighlightClass . T.pack $ cls) (lc start) (lc end)
+  where
+  lc = lineAndColumnToOffset line_lens
+  cls = case hl_kind of
+          Literal CharLit -> "hl_char"
+          Literal StringLit -> "hl_string"
+          Literal NumLit -> "hl_num"
+          VariableName -> "hl_varname"
+          Visible -> "hl_visible"
+          SpecialName -> "hl_specname"
 
 tagEntitiesOfCurrentModule :: [Int] -> Maybe MName -> SymLoc -> Maybe (TaggedRange String Tag)
 tagEntitiesOfCurrentModule lineLens curModule sym@(SymLoc (s,e) sModule) =

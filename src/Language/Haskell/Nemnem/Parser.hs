@@ -16,7 +16,7 @@ import qualified Data.Map as M
 import Data.Maybe
 import Data.Monoid
 import qualified Data.Text as T
-import Language.Haskell.Exts.Annotated
+import Language.Haskell.Exts.Annotated as HSE
 
 import Language.Haskell.Nemnem.Util
 
@@ -106,15 +106,6 @@ instance ToJSON Ref where
     , "target" .= t
     , "stack" .= showDefinitionStack stack ]
 
-getRef (LRef r) = [r]
-getRef _ = []
-getWarn (LWarn w) = [w]
-getWarn _ = []
-getChild (LChild p c) = [(p, c)]
-getChild _ = []
-getAnnotation (LAnotate l s) = [(l, s)]
-getAnnotation _ = []
-
 lineCol :: S -> LineColRange
 lineCol src = 
   let s = srcInfoSpan src
@@ -127,7 +118,27 @@ for = flip fmap
 -- * Link collector part
 
 data Warn = Warn LineColRange String
-  deriving Show
+  deriving (Show)
+
+data Highlight = Highlight LineColRange HighlightKind
+  deriving (Show)
+
+data HighlightKind
+  = Literal LiteralKind
+  | VariableName
+  | Visible
+  | SpecialName
+  -- | Infix application of functions, operators.
+  {- | Infix
+  | Constructor
+  | TypeLevel
+  | TermLevel
+  | OtherKeyword
+  -}
+  deriving (Show)
+
+data LiteralKind = CharLit | StringLit | NumLit
+  deriving (Show)
 
 -- TODO add module references, where imported module name points to module
 --      source
@@ -135,11 +146,23 @@ data Log
   = LRef Ref
   | LWarn Warn
   | LChild Symbol Symbol
-  | LAnotate SymLoc String  -- for visual debugging
+  | LHighlight Highlight
   deriving Show
+
+getRef (LRef r) = [r]
+getRef _ = []
+getWarn (LWarn w) = [w]
+getWarn _ = []
+getChild (LChild p c) = [(p, c)]
+getChild _ = []
+getHighlight (LHighlight h) = [h]
+getHighlight _ = []
 
 warnAt annotated_elem warning = LWarn $
   Warn (lineCol . ann $ annotated_elem) (warning ++ take 30 (show annotated_elem))
+
+highlightAt l = highlightAt' (lineCol l)
+highlightAt' range hl_kind = LHighlight $ Highlight range hl_kind
 
 type Logs = [Log]
 
@@ -158,6 +181,7 @@ data ModuleInfo = ModuleInfo
   , miRefs :: [Ref]
     -- | warnings while processing AST (likely todos)
   , miWarns :: [Warn]
+  , miHighlights :: [Highlight]
   , miOriginalPath :: Maybe String
   }
 
@@ -281,6 +305,7 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
       , miChildren = exportedChildren exports children
       , miRefs = map (fillModuleName module_name)$ logs >>= getRef
       , miWarns = logs >>= getWarn
+      , miHighlights = logs >>= getHighlight
       , miOriginalPath = Nothing
       }
   where
@@ -324,8 +349,14 @@ collectDecl decl = case decl of
     return M.empty
 
   FunBind _l matches ->
-    -- Left-biased `M.unions` keeps first match as symbol.
-    M.unions <$> mapM parseMatch matches
+    if null matches then return M.empty
+    else let (m:ms) = matches
+         in do
+              first_sym_and_loc <- parseMatch Nothing m
+              rest <- mapM (parseMatch (Just . snd $ first_sym_and_loc)) ms
+              -- Left-biased `M.unions` keeps first match as symbol.
+              return . M.unions . map (uncurry M.singleton) $
+                first_sym_and_loc:rest
 
   PatBind _l pat _typeTODO rhs _bindsTODO -> do
     defined_sym_and_locs <- collectPat pat
@@ -350,7 +381,7 @@ collectExp :: Exp S -> Parse ()
 collectExp exp = case exp of
   Var _l qname -> parseQName CTerm qname
   Con _l qname -> parseQName CTerm qname
-  InfixApp _l lexp _op rexp -> exps [lexp, rexp]
+  InfixApp _l lexp qop rexp -> exps [lexp, rexp] >> parseQOp CTerm qop
   App _l exp1 exp2 -> exps [exp1, exp2]
   NegApp _l exp -> collectExp exp
   Case _l exp alts -> do
@@ -370,7 +401,12 @@ collectExp exp = case exp of
     local (withLocalSymtab pattern_symtab) $ collectExp exp
   LeftSection _l exp qop -> parseSection qop exp
   RightSection _l qop exp -> parseSection qop exp
-  Lit _l _literal -> return ()
+  Lit l literal -> case literal of
+    Char _ _ _ -> tell [highlightAt l $ Literal CharLit]
+    HSE.String _ _ _ -> tell [highlightAt l $ Literal StringLit]
+    Int _ _ _ -> tell [highlightAt l $ Literal NumLit]
+    Frac _ _ _ -> tell [highlightAt l $ Literal NumLit]
+    _ -> return ()
   other -> tell [warnAt other "Exp"]
   where
   exps ee = mapM_ collectExp ee
@@ -389,11 +425,14 @@ collectGuardedAlts gas = case gas of
 
 collectPat :: Pat S -> Parse SymTab
 collectPat p = case p of
-  PVar _l name -> return . singletonPair $ hseNameToSymbolAndLoc CTerm name
+  PVar _l name -> do
+    tell [highlightAt (ann name) VariableName]
+    return . singletonPair $ hseNameToSymbolAndLoc CTerm name
   PApp _l qname pats -> do
     parseQName CTerm qname
     M.unions <$> mapM collectPat pats
   PAsPat _l name pat -> do
+    tell [highlightAt (ann name) SpecialName]
     rest_symtab <- collectPat pat
     return . insertPair (hseNameToSymbolAndLoc CTerm name) $ rest_symtab
   PParen _l pat -> collectPat pat
@@ -407,12 +446,21 @@ collectPat p = case p of
 
 -- | Parses the subtree by pushing the Match under definition to the
 -- `definitionStack`.
-parseMatch :: Match S -> Parse SymTab
-parseMatch m = do
+parseMatch :: Maybe SymLoc -> Match S -> Parse SymbolAndLoc
+parseMatch mb_first_match_loc m = do
   let (name, patterns, rhs, mb_binds) = case m of
         Match _l nm ps r bs -> (nm, ps, r, bs)
         InfixMatch _l p nm ps r bs -> (nm, p:ps, r, bs)
       defined_sym_and_loc = hseNameToSymbolAndLoc CTerm name
+  tell . map (highlightAt (ann name)) $ [VariableName, Visible]
+  case mb_first_match_loc of
+    Nothing -> return ()
+    Just first_match_loc -> do
+      -- Emit reference to first match
+      -- TODO this is a pseudo-reference, annotate Ref (also for pseudo-ref
+      --      coming from typesig)
+      stack <- asks definitionStack
+      tell [LRef $ Ref (snd defined_sym_and_loc) first_match_loc stack]
   local (pushDef defined_sym_and_loc) $ do
     -- pattern symbols are not returned to the global scope, but used
     -- in resolving RHS and Binds
@@ -424,7 +472,7 @@ parseMatch m = do
     -- TODO is there precedence order between binds and patterns?
     local (withLocalSymtab (binds_symtab `M.union` pattern_symtab)) $
       collectRhs rhs
-    return . singletonPair $ defined_sym_and_loc
+    return defined_sym_and_loc
 
 parseBinds :: Binds S -> Parse SymTab
 parseBinds binds = case binds of

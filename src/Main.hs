@@ -121,6 +121,7 @@ main = do
                   ++ mapMaybe (tagEntitiesOfCurrentModule lineLens (miName mi))
                      bases
                   ++ map (warnsToRange lineLens) (miWarns mi)
+                  ++ map (highlightsToRange lineLens) (miHighlights mi)
         tagged = tagRegions ranges src
     in (BR.renderHtml . withHeader . untag (tagToBlaze module_tranform (miName mi)) . fmap toBlaze)
           tagged

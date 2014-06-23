@@ -4,7 +4,7 @@
 }
 
 .hlit {
-  background-color: #ffa;
+  background-color: #331;
 }
 
 a {
@@ -17,5 +17,16 @@ a:hover {
 }
 
 .warning {
-  background-color: #fcc;
+  background-color: #300;
 }
+
+body {
+  background-color: black;
+  color: gray;
+}
+span.hl_char { color: orange; }
+span.hl_string { color: red; }
+span.hl_num { color: blue; }
+span.hl_varname { color: green; }
+span.hl_specname { color: purple; }
+span.hl_visible { color: white; }
