@@ -9,6 +9,7 @@ import Control.Applicative ((<$>), (<*>), pure)
 import Control.Monad.Identity
 import Control.Monad.Trans.RWS
 import Data.Aeson.Types as A
+import qualified Data.DList as DList
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
@@ -179,16 +180,16 @@ getChild _ = []
 getHighlight (LHighlight h) = [h]
 getHighlight _ = []
 
+warn elem = tell . DList.singleton . warnAt elem
 warnAt annotated_elem warning = LWarn $
   Warn (lineCol . ann $ annotated_elem) (warning ++ take 30 (show annotated_elem))
 
-highlight l = tell . (\x -> [x]) . highlightAt l
+highlight l = tell . DList.singleton . highlightAt l
 highlightAt l = highlightAt' (lineCol l)
 highlightAt' range hl_kind = LHighlight $ Highlight range hl_kind
 
-type Logs = [Log]
+type Logs = DList.DList Log
 
-type Collector = ([SymbolAndLoc], SymTab -> Logs)
 type ChildMap = Map Symbol [Symbol]
 
 data ModuleInfo = ModuleInfo
@@ -294,7 +295,8 @@ importSyms modules decls = mconcat <$> mapM getImports decls
     case M.lookup symbol import_syms of
       Nothing -> return ()
       -- TODO represent the module-import correctly, not mixed with stack
-      Just remote_loc -> tell [LRef $ Ref loc remote_loc [[sym_and_loc]]]
+      Just remote_loc ->
+        tell . DList.singleton . LRef $ Ref loc remote_loc [[sym_and_loc]]
 
 moduleHeadName (ModuleHead _ (ModuleName _ mname) _ _) = mname
 
@@ -309,7 +311,8 @@ parseModuleSymbols modules (Module _l mhead _pragmas imports decls) = do
 
 collectModule :: Map MName ModuleInfo -> Module S -> ModuleInfo
 collectModule modules m@(Module _l mhead _pragmas imports decls) =
-  let (symtab, _, logs) = runRWS (parseModuleSymbols modules m) pctx ()
+  let (symtab, _, dlogs) = runRWS (parseModuleSymbols modules m) pctx ()
+      logs = DList.toList dlogs
       pctx = ParseCtx
               { inScope = symtab
               , definitionStack = []
@@ -348,10 +351,6 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
     fill loc@(SymLoc _ Nothing) = loc { symModule = module_name }
     fill loc = loc
 
--- TODO remove
-mergeCollect :: [SymTab -> Logs] -> SymTab -> Logs
-mergeCollect fs s = concatMap ($ s) fs
-
 collectDecl :: Decl S -> Parse SymTab
 collectDecl decl = case decl of
   DataDecl _l _dataOrNew _ctx dHead quals derivings -> do
@@ -365,7 +364,7 @@ collectDecl decl = case decl of
     collectType ty
     symtab <- asks inScope
     stack <- asks definitionStack
-    tell . catMaybes . for names $ \name ->
+    tell . DList.fromList . catMaybes . for names $ \name ->
       LRef . (\remote_loc -> Ref (hseSymOrIdentPos name) remote_loc stack) <$>
         M.lookup (Ctxed CTerm $ hseSymOrIdentValue name) symtab
     return M.empty
@@ -390,7 +389,7 @@ collectDecl decl = case decl of
     highlight l Pragma
     return M.empty
 
-  other -> tell [warnAt other "Decl"] >> return M.empty
+  other -> warn other "Decl" >> return M.empty
 
 collectRhs :: Rhs S -> Parse ()
 collectRhs rhs = case rhs of
@@ -401,7 +400,7 @@ collectRhs rhs = case rhs of
   expsFrom (GuardedRhs _l stmts exp) = exp : (stmts >>= stmtExps)
   stmtExps stmt = case stmt of
     Qualifier _l exp -> [exp]
-    other -> error "GuardedRhs"  -- tell [warnAt other "GuardedRhs"]
+    other -> error "GuardedRhs"  -- warn other "GuardedRhs"]
 
 collectExp :: Exp S -> Parse ()
 collectExp exp = case exp of
@@ -440,7 +439,7 @@ collectExp exp = case exp of
   ExpTypeSig _l exp ty -> do
     collectExp exp
     collectType ty
-  other -> tell [warnAt other "Exp"]
+  other -> warn other "Exp"
   where
   exps ee = mapM_ collectExp ee
   parseSection qop exp = do
@@ -487,7 +486,7 @@ collectPat p = case p of
     M.union <$> collectPat p1 <*> collectPat p2
   PTuple _l _boxed pats ->
     M.unions <$> mapM collectPat pats
-  other -> tell [warnAt other "Pat"] >> return M.empty
+  other -> warn other "Pat" >> return M.empty
 
 -- | Parses the subtree by pushing the Match under definition to the
 -- `definitionStack`.
@@ -505,7 +504,8 @@ parseMatch mb_first_match_loc m = do
       -- TODO this is a pseudo-reference, annotate Ref (also for pseudo-ref
       --      coming from typesig)
       stack <- asks definitionStack
-      tell [LRef $ Ref (snd defined_sym_and_loc) first_match_loc stack]
+      tell . DList.singleton . LRef $
+        Ref (snd defined_sym_and_loc) first_match_loc stack
   local (pushDef defined_sym_and_loc) $ do
     -- pattern symbols are not returned to the global scope, but used
     -- in resolving RHS and Binds
@@ -525,7 +525,7 @@ parseBinds binds = case binds of
     rec decl_symtab <- local (withLocalSymtab decl_symtab) $
                          M.unions <$> mapM collectDecl decls
     return decl_symtab
-  other -> tell [warnAt other "Binds"] >> return M.empty
+  other -> warn other "Binds" >> return M.empty
 
 parseStatementsRecursive :: [Stmt S] -> Parse SymTab
 parseStatementsRecursive stmts = do
@@ -570,13 +570,14 @@ collectQualConDecl tyname (QualConDecl _l mb_tyvarbinds mb_ctx ctor_decl) =
       let ctor_symloc = hseNameToSymbolAndLoc CTerm name
       highlightName name
       field_symlocs <- M.unions <$> mapM collectFieldDecl field_decls
-      mapM_ (tell . mkChild' tyname) (M.keys field_symlocs)
+      mapM_ (tell . DList.fromList . mkChild' tyname) (M.keys field_symlocs)
       return $ insertPair ctor_symloc field_symlocs
   where
   highlightName name = highlight (ann name) ConstructorDecl
   ctorBangs name bangs = do
     highlightName name
-    tell . mkChild' tyname $ Ctxed CTerm (hseSymOrIdentValue name)
+    tell . DList.fromList . mkChild' tyname $
+      Ctxed CTerm (hseSymOrIdentValue name)
     mapM_ (collectType . bangType) bangs
     return . M.fromList $ [hseNameToSymbolAndLoc CTerm name]
 
@@ -602,7 +603,7 @@ collectType ty = case ty of
   -- TODO create implicit entity for variable, link them together
   TyVar l _name -> highlight l $ TypeVariable
   TyTuple _l _boxed tys -> mapM_ collectType tys
-  other -> tell [warnAt other "Type"]
+  other -> warn other "Type"
 
 parseQOp :: Ctx -> QOp S -> Parse ()
 parseQOp ctx op = 
@@ -615,7 +616,7 @@ parseQName :: Ctx -> QName S -> Parse ()
 parseQName ctx qname = do
   s <- asks inScope
   stack <- asks definitionStack
-  tell . maybeToList $ do  -- in Maybe
+  tell . DList.fromList . maybeToList $ do  -- in Maybe
         (l, name) <- flattenQName qname
         refPos <- M.lookup (Ctxed ctx name) s
         return . LRef $ Ref (wrapLoc l) refPos stack
@@ -646,10 +647,6 @@ hseNameToSymbol :: Ctx -> Name S -> Symbol
 hseNameToSymbol ctx = fst . hseNameToSymbolAndLoc ctx
 
 mkChild' p c = [LChild p c]
-
--- TODO remove
-mkChild :: Symbol -> Symbol -> a -> Logs
-mkChild p c = const [LChild p c]
 
 insertPair (a,b) = M.insert a b
 singletonPair p = insertPair p M.empty
