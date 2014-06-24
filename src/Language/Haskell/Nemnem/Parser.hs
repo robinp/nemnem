@@ -70,6 +70,8 @@ type S = SrcSpanInfo
 type LineCol = (Int,Int)
 type LineColRange = (LineCol,LineCol)
 
+-- TODO add Hint (such as RecordField, ClassField..) to Sym(Loc) to aid
+--      semantic highlighting. Alternative: use child relations?
 type Symbol = Ctxed String
 data SymLoc = SymLoc
   { symRange :: LineColRange
@@ -123,13 +125,29 @@ data Warn = Warn LineColRange String
 data Highlight = Highlight LineColRange HighlightKind
   deriving (Show)
 
+data VariableDeclKind 
+  = MatchHead
+  | RecordField
+  | OtherVarDecl
+  deriving (Show)
+
+-- TODO move highlights to module, use qualified
 data HighlightKind
   = Literal LiteralKind
-  | VariableName
-  | Visible
-  | SpecialName
+  -- TODO add Depth Int based on stack depth to some of these
+  | VariableDecl VariableDeclKind
+  | SpecialName  -- used for as-pattern head now
+  | TypeVariable
+  | TypeConstructorDecl
+  | TypeConstructorRef
+  | CommentHL
+  | Pragma
   -- | Infix application of functions, operators.
-  {- | Infix
+  | Infix
+  | VariableRef
+  | ConstructorDecl
+  | ConstructorRef
+  {-
   | Constructor
   | TypeLevel
   | TermLevel
@@ -139,6 +157,9 @@ data HighlightKind
 
 data LiteralKind = CharLit | StringLit | NumLit
   deriving (Show)
+
+getCommentHighlight (Comment _ l _) =
+  Highlight (lineCol . noInfoSpan $ l) CommentHL
 
 -- TODO add module references, where imported module name points to module
 --      source
@@ -161,6 +182,7 @@ getHighlight _ = []
 warnAt annotated_elem warning = LWarn $
   Warn (lineCol . ann $ annotated_elem) (warning ++ take 30 (show annotated_elem))
 
+highlight l = tell . (\x -> [x]) . highlightAt l
 highlightAt l = highlightAt' (lineCol l)
 highlightAt' range hl_kind = LHighlight $ Highlight range hl_kind
 
@@ -333,8 +355,8 @@ mergeCollect fs s = concatMap ($ s) fs
 collectDecl :: Decl S -> Parse SymTab
 collectDecl decl = case decl of
   DataDecl _l _dataOrNew _ctx dHead quals derivings -> do
-    -- TODO derivings
-    let head_symloc@(head_sym, _) = collectDeclHead dHead
+    -- TODO ctx, derivings
+    head_symloc@(head_sym, _) <- collectDeclHead dHead
     ctor_symtab <- M.unions <$> mapM (collectQualConDecl head_sym) quals
     return $ insertPair head_symloc ctor_symtab
 
@@ -363,7 +385,11 @@ collectDecl decl = case decl of
     local (pushDefs . M.toList $ defined_sym_and_locs) $ collectRhs rhs
     return defined_sym_and_locs
 
-  -- TODO
+  InlineSig l _what_is_this_bool_TODO _activation qname -> do
+    parseQName CTerm qname
+    highlight l Pragma
+    return M.empty
+
   other -> tell [warnAt other "Decl"] >> return M.empty
 
 collectRhs :: Rhs S -> Parse ()
@@ -379,9 +405,13 @@ collectRhs rhs = case rhs of
 
 collectExp :: Exp S -> Parse ()
 collectExp exp = case exp of
-  Var _l qname -> parseQName CTerm qname
-  Con _l qname -> parseQName CTerm qname
-  InfixApp _l lexp qop rexp -> exps [lexp, rexp] >> parseQOp CTerm qop
+  Var l qname -> parseQName CTerm qname >> highlight l VariableRef
+  Con l qname -> parseQName CTerm qname >> highlight l ConstructorRef
+  InfixApp _l lexp qop rexp -> do
+    exps [lexp, rexp]
+    highlight (ann qop) Infix
+    parseQOp CTerm qop
+  -- Note: might need to record application depth for semantic highlight
   App _l exp1 exp2 -> exps [exp1, exp2]
   NegApp _l exp -> collectExp exp
   Case _l exp alts -> do
@@ -402,15 +432,22 @@ collectExp exp = case exp of
   LeftSection _l exp qop -> parseSection qop exp
   RightSection _l qop exp -> parseSection qop exp
   Lit l literal -> case literal of
-    Char _ _ _ -> tell [highlightAt l $ Literal CharLit]
-    HSE.String _ _ _ -> tell [highlightAt l $ Literal StringLit]
-    Int _ _ _ -> tell [highlightAt l $ Literal NumLit]
-    Frac _ _ _ -> tell [highlightAt l $ Literal NumLit]
+    Char _ _ _ -> highlight l $ Literal CharLit
+    HSE.String _ _ _ -> highlight l $ Literal StringLit
+    Int _ _ _ -> highlight l $ Literal NumLit
+    Frac _ _ _ -> highlight l $ Literal NumLit
     _ -> return ()
+  ExpTypeSig _l exp ty -> do
+    collectExp exp
+    collectType ty
   other -> tell [warnAt other "Exp"]
   where
   exps ee = mapM_ collectExp ee
-  parseSection qop exp = parseQOp CTerm qop >> collectExp exp
+  parseSection qop exp = do
+    -- TODO repetitive parseQOp + highlight
+    collectExp exp
+    highlight (ann qop) Infix
+    parseQOp CTerm qop
 
 collectAlt :: Alt S -> Parse ()
 collectAlt (Alt _l pat guarded_alts binds) = do
@@ -421,24 +458,32 @@ collectAlt (Alt _l pat guarded_alts binds) = do
 collectGuardedAlts :: GuardedAlts S -> Parse ()
 collectGuardedAlts gas = case gas of
   UnGuardedAlt _l exp -> collectExp exp
-  other -> tell [warnAt other "Guarded case alternative"]
+  GuardedAlts _l galts -> mapM_ parseGuardedAlt galts
+
+parseGuardedAlt :: GuardedAlt S -> Parse ()
+parseGuardedAlt (GuardedAlt _l stmts exp) = do
+  defined_symtab <- parseStatementsNonRecursive stmts
+  local (withLocalSymtab defined_symtab) $ collectExp exp
 
 collectPat :: Pat S -> Parse SymTab
 collectPat p = case p of
   PVar _l name -> do
-    tell [highlightAt (ann name) VariableName]
+    highlight (ann name) $ VariableDecl OtherVarDecl
     return . singletonPair $ hseNameToSymbolAndLoc CTerm name
   PApp _l qname pats -> do
-    parseQName CTerm qname
+    -- TODO helper for parseQName + highlight
+    parseQName CTerm qname >> highlight (ann qname) ConstructorRef
     M.unions <$> mapM collectPat pats
+  PWildCard _l -> return M.empty
   PAsPat _l name pat -> do
-    tell [highlightAt (ann name) SpecialName]
+    highlight (ann name) SpecialName
     rest_symtab <- collectPat pat
     return . insertPair (hseNameToSymbolAndLoc CTerm name) $ rest_symtab
   PParen _l pat -> collectPat pat
   PList _l pats -> M.unions <$> mapM collectPat pats
   PInfixApp _l p1 qname p2 -> do
     parseQName CTerm qname
+    highlight (ann qname) Infix
     M.union <$> collectPat p1 <*> collectPat p2
   PTuple _l _boxed pats ->
     M.unions <$> mapM collectPat pats
@@ -452,7 +497,7 @@ parseMatch mb_first_match_loc m = do
         Match _l nm ps r bs -> (nm, ps, r, bs)
         InfixMatch _l p nm ps r bs -> (nm, p:ps, r, bs)
       defined_sym_and_loc = hseNameToSymbolAndLoc CTerm name
-  tell . map (highlightAt (ann name)) $ [VariableName, Visible]
+  highlight (ann name) $ VariableDecl MatchHead
   case mb_first_match_loc of
     Nothing -> return ()
     Just first_match_loc -> do
@@ -503,26 +548,34 @@ parseStatement stmt = case stmt of
   LetStmt _l binds -> parseBinds binds
   RecStmt _l stmts -> parseStatementsRecursive stmts
 
-collectDeclHead :: DeclHead S -> SymbolAndLoc
+collectDeclHead :: DeclHead S -> Parse SymbolAndLoc
 collectDeclHead dhead = case dhead of
-  DHead _hl name _tyvarbinds -> hseNameToSymbolAndLoc CType name
-  DHInfix _hl _tyleft name _tyright -> hseNameToSymbolAndLoc CType name
-  DHParen _hl innerHead -> collectDeclHead innerHead
+  DHead _l name tyvarbinds -> collectHeadAndBinds name tyvarbinds
+  DHInfix _l ty1 name ty2 -> collectHeadAndBinds name [ty1, ty2]
+  DHParen _l innerHead -> collectDeclHead innerHead
+  where
+  collectHeadAndBinds hd binds = do
+    highlight (ann hd) TypeConstructorDecl
+    mapM_ (\b -> highlight (ann b) TypeVariable) binds
+    return $ hseNameToSymbolAndLoc CType hd
 
 -- | Parses a constructor declaration.
 collectQualConDecl :: Symbol -> QualConDecl S -> Parse SymTab
-collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx ctor_decl) =
-  -- TODO ctx
+collectQualConDecl tyname (QualConDecl _l mb_tyvarbinds mb_ctx ctor_decl) =
+  -- TODO mb_ctx, mb_tyvarbinds
   case ctor_decl of
     ConDecl _l name bangs -> ctorBangs name bangs
     InfixConDecl _l lbang name rbang -> ctorBangs name [lbang, rbang]
     RecDecl _l name field_decls -> do
       let ctor_symloc = hseNameToSymbolAndLoc CTerm name
+      highlightName name
       field_symlocs <- M.unions <$> mapM collectFieldDecl field_decls
       mapM_ (tell . mkChild' tyname) (M.keys field_symlocs)
       return $ insertPair ctor_symloc field_symlocs
   where
+  highlightName name = highlight (ann name) ConstructorDecl
   ctorBangs name bangs = do
+    highlightName name
     tell . mkChild' tyname $ Ctxed CTerm (hseSymOrIdentValue name)
     mapM_ (collectType . bangType) bangs
     return . M.fromList $ [hseNameToSymbolAndLoc CTerm name]
@@ -530,6 +583,7 @@ collectQualConDecl tyname (QualConDecl _l _tyvarbinds ctx ctor_decl) =
 collectFieldDecl :: FieldDecl S -> Parse SymTab
 collectFieldDecl (FieldDecl l names bang) = do
   collectType . bangType $ bang
+  mapM_ (\n -> highlight (ann n) (VariableDecl RecordField)) names
   return . M.fromList . map (hseNameToSymbolAndLoc CTerm) $ names
 
 bangType :: BangType l -> Type l
@@ -539,8 +593,15 @@ bangType (UnpackedTy _ t) = t
 
 collectType :: Type S -> Parse ()
 collectType ty = case ty of
-  TyCon _l qname -> parseQName CType qname
+  TyCon l qname -> parseQName CType qname >> highlight l TypeConstructorRef
   TyFun _l t1 t2 -> mapM_ collectType [t1, t2]
+  -- Note: for semantic highlight we might need to keep track
+  -- the depth of the application?
+  TyApp _l t1 t2 -> mapM_ collectType [t1, t2]
+  TyParen _l t -> collectType t
+  -- TODO create implicit entity for variable, link them together
+  TyVar l _name -> highlight l $ TypeVariable
+  TyTuple _l _boxed tys -> mapM_ collectType tys
   other -> tell [warnAt other "Type"]
 
 parseQOp :: Ctx -> QOp S -> Parse ()

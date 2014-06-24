@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Test3 where
 
 import Test4 hiding (One)
@@ -11,6 +12,9 @@ data MyRecord = Record
   }
 
 data OtherRec = Other MyRecord
+
+data Some a = WhatNot a a
+data a `TyOp` b = MkTyOp a b
 
 hiss :: String -> String
 hiss s = "Hisss " ++ s

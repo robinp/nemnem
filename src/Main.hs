@@ -39,6 +39,8 @@ prettish lvl (x:xs) = case x of
   x -> x:prettish lvl xs
   where spaces x = replicate x ' '
 
+moduleTransformLive = maybe "Anonymouse" TL.pack
+moduleTransformStatic = (<> ".html") . moduleTransformLive
 main = do
   -- in DAG order (no recursive module support)
   let paths =
@@ -59,7 +61,7 @@ main = do
       -- TODO this is possibly unsecure
       -- TODO mime types
       resource_path <- param "resource"
-      file $ "deploy/" ++ resource_path  -- TODO
+      file $ "deploy/static/" ++ resource_path  -- TODO
     get "/module/list" $ do
       json . M.keys $ module_infos
     get "/module/source/get/:name" $ do
@@ -69,7 +71,7 @@ main = do
         module_info <- hoistMaybe $ M.lookup module_name module_infos
         src_path <- hoistMaybe $ miOriginalPath module_info
         src <- lift $ readFile src_path 
-        return $ renderTaggedHtml src module_info
+        return $ renderTaggedHtml moduleTransformLive src module_info
       case mb_result of
         Nothing -> raise "module or source not found"
         Just result -> html result
@@ -86,20 +88,23 @@ main = do
                 -> FilePath              -- ^ Module source location
                 -> IO (Map MName ModuleInfo)  -- ^ Updated with current module
   processModule outdir modules path = do
-    src <- uncpp <$> readFile path  -- TODO use text
-    let ast = fromParseResult . parse $ src
+    raw_src <- readFile path  -- TODO use text
+    let src = uncpp raw_src
+        (ast, comments) = fromParseResult . parse $ src
+        -- TODO preprocess comment locations and pass to collectModule, so it can
+        --      link comments to definitions.
         mi = (collectModule modules ast) { miOriginalPath = Just path }
-        -- switch of fixities - this results in possibly incorrect AST, but
+        -- switch off fixities - this results in possibly incorrect AST, but
         -- on the source highlighting / indexing level we don't care about
         -- larger expressions anyway.
-        parse = parseFileContentsWithMode (defaultParseMode {fixities = Nothing})
+        parse = parseFileContentsWithComments $
+                  defaultParseMode {fixities = Nothing}
     print . miName $ mi
-    --putStrLn "====exports===="
-    --print . miExports $ mi
-    --putStrLn "====warns====="
-    --putStrLn . prettish 0 . show .  miWarns $ mi
-    writeLinked outdir src mi
-    return (M.insert (fromMaybe "anonymous" . miName $ mi) mi modules)
+    -- TODO move comment processing from here to collectModule
+    let comment_hls = map getCommentHighlight comments
+        mi' = mi { miHighlights = miHighlights mi ++ comment_hls }
+    writeLinked outdir raw_src mi'
+    return (M.insert (fromMaybe "Anonymous" . miName $ mi') mi' modules)
   --
   uncpp = unlines . map replace_cpp . lines
   replace_cpp l =
@@ -109,11 +114,11 @@ main = do
   --
   writeLinked :: String -> String -> ModuleInfo -> IO ()
   writeLinked outdir src mi =
-    TL.writeFile (outdir ++ fromMaybe "anonymous" (miName mi) ++ ".html") $
-      renderTaggedHtml src mi  
+    TL.writeFile (outdir ++ fromMaybe "Anonymous" (miName mi) ++ ".html") $
+      renderTaggedHtml moduleTransformStatic src mi  
   --
-  renderTaggedHtml :: String -> ModuleInfo -> TL.Text
-  renderTaggedHtml src mi =
+  renderTaggedHtml :: (Maybe MName -> TL.Text) -> String -> ModuleInfo -> TL.Text
+  renderTaggedHtml module_transform src mi =
     -- assumes newline is \n (single char)
     let lineLens = map ((+1) . length) (lines src)
         bases = basesOf (miRefs mi)
@@ -123,10 +128,8 @@ main = do
                   ++ map (warnsToRange lineLens) (miWarns mi)
                   ++ map (highlightsToRange lineLens) (miHighlights mi)
         tagged = tagRegions ranges src
-    in (BR.renderHtml . withHeader . untag (tagToBlaze module_tranform (miName mi)) . fmap toBlaze)
+    in (BR.renderHtml . withHeader . untag (tagToBlaze module_transform (miName mi)) . fmap toBlaze)
           tagged
-    where
-    module_tranform = maybe "Anonymouse" TL.pack
   break = putStrLn "---"
   putStrBreak x = break >> putStrLn x
 

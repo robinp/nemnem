@@ -3,10 +3,6 @@
   white-space: pre;
 }
 
-.hlit {
-  background-color: #331;
-}
-
 a {
   color: inherit;
   text-decoration: none;
@@ -16,17 +12,26 @@ a:hover {
   text-decoration: underline;
 }
 
-.warning {
-  background-color: #300;
-}
-
 body {
   background-color: black;
   color: gray;
 }
-span.hl_char { color: orange; }
+.hlit { background-color: #331; }
+.warning { background-color: #300; }
+span.hl_char { color: red; }
 span.hl_string { color: red; }
 span.hl_num { color: blue; }
-span.hl_varname { color: green; }
+span.hl_tyvar { color: pink; }
+span.hl_tyconref { color: lime; }
+span.hl_tycondecl { color: white; }
+span.hl_condecl { color: orange; }
+span.hl_vardecl { color: green; }
+span.hl_fielddecl { color: orange; }
+span.hl_fundecl { color: white; }
 span.hl_specname { color: purple; }
-span.hl_visible { color: white; }
+span.hl_varref { color: teal; }
+span.hl_conref { color: orange; }
+span.hl_comment { color: #995; }
+span.hl_pragma { color: #3aa; }
+span.hl_infix { color: yellow; }
+

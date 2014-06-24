@@ -99,9 +99,19 @@ highlightsToRange line_lens (Highlight (start, end) hl_kind) =
           Literal CharLit -> "hl_char"
           Literal StringLit -> "hl_string"
           Literal NumLit -> "hl_num"
-          VariableName -> "hl_varname"
-          Visible -> "hl_visible"
+          VariableDecl OtherVarDecl -> "hl_vardecl"
+          VariableDecl MatchHead -> "hl_fundecl"  -- imprecise name
+          VariableDecl RecordField -> "hl_fielddecl"
+          TypeConstructorDecl -> "hl_tycondecl"
+          TypeVariable -> "hl_tyvar"
+          TypeConstructorRef -> "hl_tyconref"
           SpecialName -> "hl_specname"
+          Infix -> "hl_infix"
+          VariableRef -> "hl_varref"
+          ConstructorDecl -> "hl_condecl"
+          ConstructorRef -> "hl_conref"
+          CommentHL -> "hl_comment"
+          Pragma -> "hl_pragma"
 
 tagEntitiesOfCurrentModule :: [Int] -> Maybe MName -> SymLoc -> Maybe (TaggedRange String Tag)
 tagEntitiesOfCurrentModule lineLens curModule sym@(SymLoc (s,e) sModule) =
