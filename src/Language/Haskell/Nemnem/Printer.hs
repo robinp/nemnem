@@ -110,6 +110,7 @@ highlightsToRange line_lens (Highlight (start, end) hl_kind) =
           VariableRef -> "hl_varref"
           ConstructorDecl -> "hl_condecl"
           ConstructorRef -> "hl_conref"
+          ClassRef -> "hl_classref"
           CommentHL -> "hl_comment"
           Pragma -> "hl_pragma"
 

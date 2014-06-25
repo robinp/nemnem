@@ -16,7 +16,9 @@ body {
   background-color: black;
   color: gray;
 }
-.hlit { background-color: #331; }
+.hlit {
+  background-color: #331;
+}
 .warning { background-color: #300; }
 span.hl_char { color: red; }
 span.hl_string { color: red; }
@@ -31,6 +33,7 @@ span.hl_fundecl { color: white; }
 span.hl_specname { color: purple; }
 span.hl_varref { color: teal; }
 span.hl_conref { color: orange; }
+span.hl_classref { color: brown; }
 span.hl_comment { color: #995; }
 span.hl_pragma { color: #3aa; }
 span.hl_infix { color: yellow; }

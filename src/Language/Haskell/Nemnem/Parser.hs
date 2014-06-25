@@ -148,6 +148,7 @@ data HighlightKind
   | VariableRef
   | ConstructorDecl
   | ConstructorRef
+  | ClassRef
   {-
   | Constructor
   | TypeLevel
@@ -180,6 +181,9 @@ getChild _ = []
 getHighlight (LHighlight h) = [h]
 getHighlight _ = []
 
+warnMay mb_elem w = case mb_elem of
+  Nothing -> return ()
+  Just elem -> warn elem w
 warn elem = tell . DList.singleton . warnAt elem
 warnAt annotated_elem warning = LWarn $
   Warn (lineCol . ann $ annotated_elem) (warning ++ take 30 (show annotated_elem))
@@ -353,11 +357,21 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
 
 collectDecl :: Decl S -> Parse SymTab
 collectDecl decl = case decl of
-  DataDecl _l _dataOrNew _ctx dHead quals derivings -> do
-    -- TODO ctx, derivings
+  DataDecl _l _dataOrNew mb_ctx dHead quals mb_derivings -> do
+    warnMay mb_ctx "DataDecl Context"
+    warnMay mb_derivings "DataDecl Derivings"
     head_symloc@(head_sym, _) <- collectDeclHead dHead
     ctor_symtab <- M.unions <$> mapM (collectQualConDecl head_sym) quals
     return $ insertPair head_symloc ctor_symtab
+
+  InstDecl _l mb_ctx inst_head mb_decls -> do
+    warnMay mb_ctx "InstDecl Context"
+    parseInstHead inst_head
+    -- TODO if we really wanted, could feed back the symbols so
+    --      overrides point to the current instance instead of 
+    --      class methods (once classes are parsed).
+    maybe (return ()) (mapM_ parseInstanceDecl) mb_decls
+    return M.empty
 
   TypeSig _l names ty -> do
     -- we want names in signatures to point to the definitions
@@ -389,7 +403,26 @@ collectDecl decl = case decl of
     highlight l Pragma
     return M.empty
 
+  RulePragmaDecl l _rules -> highlight l Pragma >> return M.empty
+
   other -> warn other "Decl" >> return M.empty
+
+-- TODO could return TypeVars to local context (first they need to be
+--      collected in collectType).
+parseInstHead :: InstHead S -> Parse ()
+parseInstHead ihead = case ihead of
+  IHead _l qname tys -> do
+    -- TODO introduce CClass ctx if can conflict with CType
+    parseQName CType qname
+    highlight (ann qname) ClassRef
+    mapM_ collectType tys
+  i@(IHInfix l t1 qname t2) -> warn i "IHInfix"
+  IHParen _l ih -> parseInstHead ih
+
+parseInstanceDecl :: InstDecl S -> Parse ()
+parseInstanceDecl idecl = case idecl of
+  InsDecl _l decl -> void $ collectDecl decl
+  other -> warn other "InstDecl"
 
 collectRhs :: Rhs S -> Parse ()
 collectRhs rhs = case rhs of
@@ -486,6 +519,7 @@ collectPat p = case p of
     M.union <$> collectPat p1 <*> collectPat p2
   PTuple _l _boxed pats ->
     M.unions <$> mapM collectPat pats
+  PBangPat _l pat -> collectPat pat
   other -> warn other "Pat" >> return M.empty
 
 -- | Parses the subtree by pushing the Match under definition to the
@@ -603,6 +637,7 @@ collectType ty = case ty of
   -- TODO create implicit entity for variable, link them together
   TyVar l _name -> highlight l $ TypeVariable
   TyTuple _l _boxed tys -> mapM_ collectType tys
+  TyList _l t -> collectType t
   other -> warn other "Type"
 
 parseQOp :: Ctx -> QOp S -> Parse ()
