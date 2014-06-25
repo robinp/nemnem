@@ -17,6 +17,7 @@ import qualified Data.Text.Lazy.IO as TL
 import qualified Text.Blaze.Html.Renderer.Text as BR
 import Hier
 import Language.Haskell.Exts.Annotated
+import System.Environment
 import Web.Scotty
 
 import Language.Haskell.Nemnem.Parser
@@ -42,8 +43,9 @@ prettish lvl (x:xs) = case x of
 moduleTransformLive = maybe "Anonymouse" TL.pack
 moduleTransformStatic = (<> ".html") . moduleTransformLive
 main = do
+  args <- getArgs
   -- in DAG order (no recursive module support)
-  let paths =
+  let default_paths =
         [ "tsrc/DataTextInternal.hs"
         , "tsrc/DataText.hs"
         , "tsrc/DataTextIO.hs"
@@ -55,6 +57,10 @@ main = do
         , "src/Language/Haskell/Nemnem/Printer.hs"
         ]
       outdir = "deploy/"
+  paths <- case args of
+    [] -> return default_paths
+    (path_file:_) -> filter (not . ("#" `L.isPrefixOf`)) . lines <$>
+                       readFile path_file
   module_infos <- foldM (processModule outdir) M.empty paths
   scotty 8080 $ do
     get "/static/:resource" $ do
@@ -90,7 +96,7 @@ main = do
   processModule outdir modules path = do
     raw_src <- readFile path  -- TODO use text
     let src = uncpp raw_src
-        (ast, comments) = fromParseResult . parse $ src
+    let (ast, comments) = fromParseResult . parse $ src
         -- TODO preprocess comment locations and pass to collectModule, so it can
         --      link comments to definitions.
         mi = (collectModule modules ast) { miOriginalPath = Just path }
@@ -98,7 +104,10 @@ main = do
         -- on the source highlighting / indexing level we don't care about
         -- larger expressions anyway.
         parse = parseFileContentsWithComments $
-                  defaultParseMode {fixities = Nothing}
+                  defaultParseMode 
+                    { fixities = Nothing
+                    , parseFilename = path
+                    }
     print . miName $ mi
     -- TODO move comment processing from here to collectModule
     let comment_hls = map getCommentHighlight comments
