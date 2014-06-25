@@ -7,6 +7,7 @@ import Control.Monad (foldM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe
 import Data.Aeson ()
+import qualified Data.Array as A
 import qualified Data.List as L
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -17,6 +18,7 @@ import qualified Data.Text.Lazy.IO as TL
 import qualified Text.Blaze.Html.Renderer.Text as BR
 import Hier
 import Language.Haskell.Exts.Annotated
+import Text.Regex.TDFA as R
 import System.Environment
 import Web.Scotty
 
@@ -115,11 +117,36 @@ main = do
     writeLinked outdir raw_src mi'
     return (M.insert (fromMaybe "Anonymous" . miName $ mi') mi' modules)
   --
-  uncpp = unlines . map replace_cpp . lines
-  replace_cpp l =
-    if "#" `L.isPrefixOf` l
-    then replicate (length l) ' '  -- length-preserving transform
-    else l
+  uncpp = unlines . reverse . trd . foldl replace_cpp (False, False, []) . lines
+  trd (_,_,a) = a
+  replace_cpp (was_where, inside_def, res) l0 =
+    -- TODO emit preprocessor ranges for syntax highlight
+    -- If we didn't encounter the `where` keyword of the module, don't try to
+    -- strip macro-like calls since it can match export patterns.
+    let l = if was_where then removeMacroCall l0 else l0
+        ends_in_slash = "\\" `L.isSuffixOf` l
+        start_def = "#" `L.isPrefixOf` l
+        -- TODO this is pretty fragile, could look for `module X (.....) where`
+        new_was_where = was_where || "where" `L.isInfixOf` l
+    in if start_def || inside_def
+       then let replaced = replicate (length l) ' '  -- length-preserving transform
+            in (new_was_where, ends_in_slash, replaced:res)
+       else (new_was_where, False, l:res)
+    where
+    -- | Heuristic to get rid of CHECK_BOUNDS(x,y,z) like invocations.
+    -- This is only correct for no-op assert macros, which is not always the case.
+    -- Otherwise parsing will result in error. Oh my.
+    removeMacroCall :: String -> String
+    removeMacroCall l =
+      let matches = matchAll pattern l :: [MatchArray]
+      -- Skip imports since an import `SomeModule (XY(a,b,c..))` would match
+      in if "import" `L.isPrefixOf` l || null matches then l
+         else let offset_and_lengths = concat . map (A.elems) $ matches
+                  regions = map (\(off,len) -> mkRange () off (off+len))
+                              offset_and_lengths
+              in transformRegions (\_ e -> replicate (length e) ' ') regions l
+      where
+      pattern = makeRegex ("[A-Z][A-Z0-9_]+\\([^)]*\\)" :: String)  :: Regex
   --
   writeLinked :: String -> String -> ModuleInfo -> IO ()
   writeLinked outdir src mi =

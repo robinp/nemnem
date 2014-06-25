@@ -43,7 +43,9 @@ class (Num (Length a), Ord (Length a)) => LengthSplitAt a where
   lsLength :: a -> Length a
   lsSplitAt :: Length a -> a -> (a, a)
 
+-- TODO rather call Splittable?
 instance LengthSplitAt [a] where
+  -- TODO rather call Index?
   type Length [a] = Int
   lsLength = length
   lsSplitAt = splitAt
@@ -67,6 +69,7 @@ mkRange = TaggedRange
 mkMarker :: a -> Length e -> TaggedRange e a
 mkMarker a l = TaggedRange a l l
 
+-- TODO why is it not transformRanges ?
 transformRegions :: (Monoid e, LengthSplitAt e) =>
                     (a -> e -> e) -> [TaggedRange e a] -> e -> e
 transformRegions t rs s = untag t $ tagRegions rs s
