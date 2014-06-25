@@ -148,6 +148,7 @@ data HighlightKind
   | VariableRef
   | ConstructorDecl
   | ConstructorRef
+  | ClassDeclHL
   | ClassRef
   {-
   | Constructor
@@ -356,13 +357,28 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
     fill loc = loc
 
 collectDecl :: Decl S -> Parse SymTab
-collectDecl decl = case decl of
-  DataDecl _l _dataOrNew mb_ctx dHead quals mb_derivings -> do
+collectDecl = collectDeclWithSigExports False
+
+collectDeclWithSigExports :: Bool -> Decl S -> Parse SymTab
+collectDeclWithSigExports signature_export decl = case decl of
+  DataDecl _l _dataOrNew mb_ctx decl_head quals mb_derivings -> do
     warnMay mb_ctx "DataDecl Context"
     warnMay mb_derivings "DataDecl Derivings"
-    head_symloc@(head_sym, _) <- collectDeclHead dHead
+    head_symloc@(head_sym, _) <- collectDeclHead TypeConstructorDecl decl_head
     ctor_symtab <- M.unions <$> mapM (collectQualConDecl head_sym) quals
     return $ insertPair head_symloc ctor_symtab
+
+  ClassDecl _l mb_ctx decl_head fundeps mb_classdecls -> do
+    warnMay mb_ctx "ClassDecl Context"
+    mapM_ (flip warn "Fundep") fundeps
+    head_symloc@(head_sym, _) <- collectDeclHead ClassDeclHL decl_head
+    -- TODO should use recursive tying to resolve default methods, mutually
+    --      recursive types
+    decl_symtab <- maybe (return M.empty)
+                         (\decls -> M.unions <$>
+                                      mapM (parseClassDecl head_sym) decls)
+                         mb_classdecls
+    return $ insertPair head_symloc decl_symtab
 
   InstDecl _l mb_ctx inst_head mb_decls -> do
     warnMay mb_ctx "InstDecl Context"
@@ -374,16 +390,20 @@ collectDecl decl = case decl of
     return M.empty
 
   TypeSig _l names ty -> do
-    -- we want names in signatures to point to the definitions
     collectType ty
-    symtab <- asks inScope
-    stack <- asks definitionStack
-    tell . DList.fromList . catMaybes . for names $ \name ->
-      LRef . (\remote_loc -> Ref (hseSymOrIdentPos name) remote_loc stack) <$>
-        M.lookup (Ctxed CTerm $ hseSymOrIdentValue name) symtab
-    return M.empty
+    if signature_export then
+        return . M.fromList . map (hseNameToSymbolAndLoc CTerm) $ names
+      else do
+        -- we want names in signatures to point to the definitions
+        symtab <- asks inScope
+        stack <- asks definitionStack
+        tell . DList.fromList . catMaybes . for names $ \name ->
+          LRef . (\remote_loc -> Ref (hseSymOrIdentPos name) remote_loc stack) <$>
+            M.lookup (Ctxed CTerm $ hseSymOrIdentValue name) symtab
+        return M.empty
 
   FunBind _l matches ->
+    -- TODO don't export, and point to sig if signature_export == True
     if null matches then return M.empty
     else let (m:ms) = matches
          in do
@@ -394,6 +414,7 @@ collectDecl decl = case decl of
                 first_sym_and_loc:rest
 
   PatBind _l pat _typeTODO rhs _bindsTODO -> do
+    -- TODO don't export, and point to sig if signature_export == True
     defined_sym_and_locs <- collectPat pat
     local (pushDefs . M.toList $ defined_sym_and_locs) $ collectRhs rhs
     return defined_sym_and_locs
@@ -582,16 +603,25 @@ parseStatement stmt = case stmt of
   LetStmt _l binds -> parseBinds binds
   RecStmt _l stmts -> parseStatementsRecursive stmts
 
-collectDeclHead :: DeclHead S -> Parse SymbolAndLoc
-collectDeclHead dhead = case dhead of
+collectDeclHead :: HighlightKind -> DeclHead S -> Parse SymbolAndLoc
+collectDeclHead hl_kind dhead = case dhead of
   DHead _l name tyvarbinds -> collectHeadAndBinds name tyvarbinds
   DHInfix _l ty1 name ty2 -> collectHeadAndBinds name [ty1, ty2]
-  DHParen _l innerHead -> collectDeclHead innerHead
+  DHParen _l innerHead -> collectDeclHead hl_kind innerHead
   where
   collectHeadAndBinds hd binds = do
-    highlight (ann hd) TypeConstructorDecl
+    highlight (ann hd) hl_kind
     mapM_ (\b -> highlight (ann b) TypeVariable) binds
     return $ hseNameToSymbolAndLoc CType hd
+
+parseClassDecl :: Symbol -> ClassDecl S -> Parse SymTab
+parseClassDecl clsname cdecl = case cdecl of
+  ClsDecl _l decl -> do
+    decl_symtab <- collectDeclWithSigExports True decl
+    -- TODO repetitive
+    mapM_ (tell . DList.fromList . mkChild' clsname) (M.keys decl_symtab)
+    return decl_symtab
+  other -> warn other ("ClassDecl " ++ take 30 (show other)) >> return M.empty
 
 -- | Parses a constructor declaration.
 collectQualConDecl :: Symbol -> QualConDecl S -> Parse SymTab
