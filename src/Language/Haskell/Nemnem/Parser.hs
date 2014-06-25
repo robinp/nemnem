@@ -435,8 +435,10 @@ collectDeclWithSigExports signature_export decl = case decl of
               return . M.unions . map (uncurry M.singleton) $
                 first_sym_and_loc:rest
 
-  PatBind _l pat _typeTODO rhs _bindsTODO -> do
+  PatBind _l pat mb_type rhs mb_binds -> do
     -- TODO don't export, and point to sig if signature_export == True
+    warnMay mb_binds "PatBind binds"
+    warnMay mb_type "PatBind type"
     defined_sym_and_locs <- collectPat pat
     local (pushDefs . M.toList $ defined_sym_and_locs) $ collectRhs rhs
     return defined_sym_and_locs
@@ -525,10 +527,12 @@ collectExp exp = case exp of
     parseQOp CTerm qop
 
 collectAlt :: Alt S -> Parse ()
-collectAlt (Alt _l pat guarded_alts binds) = do
-  -- only used in guarded_alts
+collectAlt (Alt _l pat guarded_alts mb_binds) = do
+  -- only used in locally
   pattern_symtab <- collectPat pat
-  local (withLocalSymtab pattern_symtab) $ collectGuardedAlts guarded_alts
+  binds_symtab <- parseMaybeBinds pattern_symtab mb_binds
+  local (withLocalSymtab $ pattern_symtab `M.union` binds_symtab) $
+    collectGuardedAlts guarded_alts
 
 collectGuardedAlts :: GuardedAlts S -> Parse ()
 collectGuardedAlts gas = case gas of
@@ -588,13 +592,16 @@ parseMatch mb_first_match_loc m = do
     -- in resolving RHS and Binds
     pattern_symtab <- M.unions <$> mapM collectPat patterns
     -- bind symbols are used only for resolving RHS
-    binds_symtab <- case mb_binds of
-      Nothing -> return M.empty
-      Just binds -> local (withLocalSymtab pattern_symtab) $ parseBinds binds
+    binds_symtab <- parseMaybeBinds pattern_symtab mb_binds
     -- TODO is there precedence order between binds and patterns?
     local (withLocalSymtab (binds_symtab `M.union` pattern_symtab)) $
       collectRhs rhs
     return defined_sym_and_loc
+
+parseMaybeBinds :: SymTab -> Maybe (Binds S) -> Parse SymTab
+parseMaybeBinds extra_symtab mb_binds = case mb_binds of
+  Nothing -> return M.empty
+  Just binds -> local (withLocalSymtab extra_symtab) $ parseBinds binds
 
 parseBinds :: Binds S -> Parse SymTab
 parseBinds binds = case binds of
