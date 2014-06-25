@@ -10,6 +10,7 @@ import Control.Monad.Identity
 import Control.Monad.Trans.RWS
 import Data.Aeson.Types as A
 import qualified Data.DList as DList
+import Data.Either
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
@@ -213,10 +214,20 @@ data ModuleInfo = ModuleInfo
   , miOriginalPath :: Maybe String
   }
 
-exportedKeys :: ChildMap -> [ExportSpec l] -> [Symbol]
-exportedKeys children xs = xs >>= exports
+--      EModuleContents _ (ModuleName _ mname) ->
+
+exportedKeys :: Map MName ModuleInfo -> ChildMap -> [ExportSpec l]
+             -> ([Symbol], [ModuleInfo], SymTab)
+exportedKeys modules children xs =
+  let direct_exports = xs >>= directExports
+      reexport_infos = catMaybes . map reexportedModuleInfo $ xs
+      reexport_symtab = M.unions . map miExports $ reexport_infos
+  in (direct_exports, reexport_infos, reexport_symtab)
   where
-    exports x = case x of
+    reexportedModuleInfo x = case x of
+      EModuleContents _ (ModuleName _ mname) -> M.lookup mname modules
+      _ -> Nothing
+    directExports x = case x of
       EVar _ qname -> getQName CTerm qname
       EAbs _ qname -> getQName CType qname
       EThingAll _ qname -> do
@@ -224,7 +235,9 @@ exportedKeys children xs = xs >>= exports
         name : M.findWithDefault [] name children
       EThingWith _ qname cnames ->
         getQName CType qname ++ map (Ctxed CTerm . getCName) cnames
-      EModuleContents _ (ModuleName _ mname) -> error "TODO EModuleContents"
+      EModuleContents _ _ ->
+        -- Handled elsewhere
+        []
     getQName ctx =
       -- TODO maybe should drop module part instead flatten? what's the
       --    spec here?
@@ -326,13 +339,15 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
       children =
         let pairs = map (\(p,c) -> (p, [c])) $ logs >>= getChild
         in M.unionsWith (++) (map (M.fromList . return) pairs)
-      exports = fromMaybe M.empty $ headExports symtab children <$> mhead
+      (exports, reexport_children) = fromMaybe (M.empty, M.empty) $
+                                       headExports symtab children <$> mhead
       module_name = moduleHeadName <$> mhead
   in ModuleInfo
       { miName = module_name
       , miSymbols = symtab
       , miExports = exports
-      , miChildren = exportedChildren exports children
+      -- TODO also include children from reexports
+      , miChildren = exportedChildren exports children `M.union` reexport_children
       , miRefs = map (fillModuleName module_name)$ logs >>= getRef
       , miWarns = logs >>= getWarn
       , miHighlights = logs >>= getHighlight
@@ -341,11 +356,18 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
   where
   headExports symtab children (ModuleHead _ _ _ exportSpecs) =
     case exportSpecs of
-      Nothing -> symtab
+      -- TODO this is incorrect, since `symtab` at this point already includes
+      --      the module-defined and imported symbols. Treat those separately,
+      --      at least up to this point.
+      Nothing -> (symtab, M.empty)
       Just (ExportSpecList _ xs) ->
-        let key_set = exportedKeys children xs
-           -- TODO improve lookup efficiency
-        in M.filterWithKey (\k _ -> k `elem` key_set) symtab
+        let (key_set, reexport_infos, reexport_symtab) =
+              exportedKeys modules children xs
+        -- TODO improve lookup efficiency
+            result_symtab = M.filterWithKey (\k _ -> k `elem` key_set) symtab
+                              `M.union` reexport_symtab
+            reexport_children = M.unions . map miChildren $ reexport_infos
+        in (result_symtab, reexport_children)
   exportedChildren :: SymTab -> ChildMap -> ChildMap
   exportedChildren exports =
     let exported = flip M.member exports
