@@ -8,7 +8,7 @@ import qualified Data.Map as M
 import Data.Maybe
 import qualified Data.Text.Lazy as TL
 import Language.Haskell.Exts.Annotated
-import Text.Regex.TDFA as R
+import Text.Regex.TDFA
 
 import Language.Haskell.Nemnem.Internal.Util
 import Language.Haskell.Nemnem.Parse.Module

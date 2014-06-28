@@ -2,3 +2,5 @@
 *.o
 .gitignore
 *.swp
+.cabal-sandbox
+cabal.sandbox.config

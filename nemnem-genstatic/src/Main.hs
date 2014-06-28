@@ -3,12 +3,10 @@
 module Main where
 
 import Control.Applicative ((<$>))
---import Control.Monad (foldM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State (StateT, execStateT)
 import Data.Aeson ()
-import Data.Functor.Identity
 import qualified Data.List as L
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -18,7 +16,6 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TL
 import qualified Text.Blaze.Html.Renderer.Text as BR
 import Hier
-import Language.Haskell.Exts.Annotated
 import System.Environment
 import Web.Scotty
 

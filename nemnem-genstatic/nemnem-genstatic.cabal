@@ -1,0 +1,22 @@
+name:                nemnem-genstatic
+version:             0.1.0.0
+synopsis:            Static hyperlinked source generator for Haskell.
+license:             BSD3
+license-file:        ../LICENSE
+author:              Robin Palotai
+maintainer:          palotai.robin@gmail.com
+category:            Development
+build-type:          Simple
+cabal-version:       >=1.8.0.4
+
+executable nemnem-genstatic:
+  hs-source-dirs:      src
+  main-is:             Main.hs
+  build-depends:       nemnem,
+                       aeson >= 0.7,
+                       base >= 4.6,
+                       blaze-html >= 0.7,
+                       containers >= 0.5,
+                       scotty >= 0.8,
+                       text >= 1.1,
+                       transformers >= 0.3

@@ -6,7 +6,8 @@
 module Language.Haskell.Nemnem.Parse.Module where
 
 import Control.Applicative ((<$>), (<*>), pure)
-import Control.Monad.Identity
+import Data.Functor.Identity
+import Control.Monad (foldM, void)
 import Control.Monad.Trans.RWS
 import Data.Aeson.Types as A
 import qualified Data.DList as DList
