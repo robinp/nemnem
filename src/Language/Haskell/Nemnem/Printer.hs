@@ -12,8 +12,8 @@ import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as T
 import Hier
 
-import Language.Haskell.Nemnem.Parser
-import Language.Haskell.Nemnem.Util
+import Language.Haskell.Nemnem.Parse.Module
+import Language.Haskell.Nemnem.Internal.Util
 
 instance Show (TaggedRange String Tag) where
   show = showTaggedRange

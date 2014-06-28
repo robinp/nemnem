@@ -3,7 +3,7 @@
 -- TODO remove this once HSE 0.15.0.2 is out
 -- See https://github.com/haskell-suite/haskell-src-exts/issues/42
 {-# LANGUAGE Arrows #-} 
-module Language.Haskell.Nemnem.Parser where
+module Language.Haskell.Nemnem.Parse.Module where
 
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Monad.Identity
@@ -11,8 +11,6 @@ import Control.Monad.Trans.RWS
 import Data.Aeson.Types as A
 import qualified Data.DList as DList
 import Data.Either
-import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
@@ -20,7 +18,7 @@ import Data.Monoid
 import qualified Data.Text as T
 import Language.Haskell.Exts.Annotated as HSE
 
-import Language.Haskell.Nemnem.Util
+import Language.Haskell.Nemnem.Internal.Util
 
 type LhsSymbols = [SymbolAndLoc]
 
@@ -162,7 +160,7 @@ data HighlightKind
 data LiteralKind = CharLit | StringLit | NumLit
   deriving (Show)
 
-getCommentHighlight (Comment _ l _) =
+makeCommentHighlight (Comment _ l _) =
   Highlight (lineCol . noInfoSpan $ l) CommentHL
 
 -- TODO add module references, where imported module name points to module

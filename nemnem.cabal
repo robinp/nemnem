@@ -17,12 +17,23 @@ cabal-version:       >=1.8
 executable nemnem
   main-is:             Main.hs
   other-modules:       Hier,
-                       Language.Haskell.Nemnem.Parser,
+                       Language.Haskell.Nemnem.Parse.Module,
                        Language.Haskell.Nemnem.Printer,
-                       Language.Haskell.Nemnem.Util
-  build-depends:       base >= 4.6, bytestring >= 0.10, containers >= 0.5, text >= 1.1, mtl >= 2.1, transformers >= 0.3,
-                      haskell-src-exts == 1.14.*, blaze-html >= 0.7, blaze-markup >= 0.6,
+                       Language.Haskell.Nemnem.Internal.Util
+  build-depends:       aeson >= 0.7,
+                       array >= 0.4,
+                       base >= 4.6,
+                       blaze-html >= 0.7,
+                       blaze-markup >= 0.6,
+                       bytestring >= 0.10,
+                       containers >= 0.5,
+                       dlist >= 0.7,
+                       haskell-src-exts == 1.14.*,
+                       mtl >= 2.1,
+                       regex-base >= 0.9,
+                       regex-tdfa >= 1.2,
                        semigroups >= 0.14,
-                       scotty >= 0.8, aeson >= 0.7, dlist >= 0.7,
-                       regex-base >= 0.9, regex-tdfa >= 1.2, array >= 0.4
+                       scotty >= 0.8,
+                       text >= 1.1,
+                       transformers >= 0.3
   hs-source-dirs:      src
