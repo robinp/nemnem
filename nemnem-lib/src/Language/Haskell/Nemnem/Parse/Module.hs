@@ -11,6 +11,7 @@ import Control.Monad (foldM, void)
 import Control.Monad.Trans.RWS
 import Data.Aeson.Types as A
 import qualified Data.DList as DList
+import qualified Data.List as L
 import Data.Either
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -236,8 +237,7 @@ exportedKeys modules children xs =
         -- Handled above in reexportedModuleInfo
         []
     getQName ctx =
-      -- TODO maybe should drop module part instead flatten? what's the
-      --    spec here?
+      -- Conversion to unqualified name happens at callsite.
       maybeToList . fmap (Ctxed ctx . snd) . flattenQName
 
 getCName (VarName _ name) = hseSymOrIdentValue name
@@ -294,6 +294,8 @@ importSyms modules decls = mconcat <$> mapM getImports decls
   --
   aliased mAlias exps =
     let prefix = mAlias ++ "."
+       -- TODO this won't work for operator-like funny chars,
+       --      what is the rule there?
     in M.mapKeys (fmap (prefix ++)) exps
   --
   mname (ModuleName _ m) = m
@@ -371,11 +373,16 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
       Just (ExportSpecList _ xs) ->
         let (key_set, reexport_infos, reexport_symtab) =
               exportedKeys modules children xs
-            symtab = allSymbols av_symtab
-            -- TODO might need to normalize the filtered symbols from symtab,
-            --      so that qualification/alias is dropped?
-            result_symtab = M.filterWithKey (\k _ -> k `elem` key_set) symtab
-                              `M.union` reexport_symtab
+            result_symtab = 
+              let export_symtab =
+                    let symtab = allSymbols av_symtab
+                        keyInKeySet k _ = k `elem` key_set
+                        toUnqualified (Ctxed ctx a) =
+                          -- TODO operator-like funny chars
+                          Ctxed ctx . reverse . fst . L.break (== '.') . reverse $ a
+                    in M.mapKeys toUnqualified . M.filterWithKey keyInKeySet $
+                         symtab
+              in export_symtab `M.union` reexport_symtab
             reexport_children = M.unions . map miChildren $ reexport_infos
         in (result_symtab, reexport_children)
   exportedChildren :: SymTab -> ChildMap -> ChildMap
@@ -760,11 +767,13 @@ parseQName ctx qname = do
 flattenQName :: QName l -> Maybe (l, String)
 flattenQName qname = case qname of
   -- TODO does this impl fit all uses?
+  -- TODO parens for operator-like funny chars?
   Qual l (ModuleName _ mname) name ->
     Just (l, mname ++ "." ++ hseSymOrIdentValue name)
   UnQual l name ->
     Just (l, hseSymOrIdentValue name)
   Special _ _ ->
+    -- TODO ?
     Nothing
 
 hseSymOrIdentPos (Symbol p _) = wrapLoc p
