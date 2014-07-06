@@ -213,8 +213,6 @@ data ModuleInfo = ModuleInfo
   , miOriginalPath :: Maybe String
   }
 
---      EModuleContents _ (ModuleName _ mname) ->
-
 exportedKeys :: Map MName ModuleInfo -> ChildMap -> [ExportSpec l]
              -> ([Symbol], [ModuleInfo], SymTab)
 exportedKeys modules children xs =
@@ -235,7 +233,7 @@ exportedKeys modules children xs =
       EThingWith _ qname cnames ->
         getQName CType qname ++ map (Ctxed CTerm . getCName) cnames
       EModuleContents _ _ ->
-        -- Handled elsewhere
+        -- Handled above in reexportedModuleInfo
         []
     getQName ctx =
       -- TODO maybe should drop module part instead flatten? what's the
@@ -279,17 +277,20 @@ importSyms modules decls = mconcat <$> mapM getImports decls
   where
   getImports (ImportDecl _l lmname isQual _src _pkg alias mb_specs) =
     case M.lookup (mname lmname) modules of
-      Nothing -> return mempty  -- Imported module not yet processed?
+      Nothing -> do
+        -- Imported module not yet processed?
+        warn lmname "Module not found"
+        return mempty  
       Just mi -> do
         filtered <-
           let exports = miExports mi
           in case mb_specs of
             Just specs -> filterImports (miChildren mi) specs exports
             Nothing -> return exports
-        return $ case alias of
-          Just a -> aliased (mname a) filtered
-                    `mappend` if isQual then M.empty else filtered
-          Nothing -> applyIf isQual (aliased $ mname lmname) filtered
+        let aliased_symtab = 
+              let alias_name = mname . fromMaybe lmname $ alias
+              in aliased alias_name filtered
+        return $ aliased_symtab `mappend` if isQual then M.empty else filtered
   --
   aliased mAlias exps =
     let prefix = mAlias ++ "."
@@ -317,21 +318,31 @@ importSyms modules decls = mconcat <$> mapM getImports decls
 
 moduleHeadName (ModuleHead _ (ModuleName _ mname) _ _) = mname
 
-parseModuleSymbols :: Map MName ModuleInfo -> Module S -> Parse SymTab
+data AvailableSymbols = ASymbols
+  { aSymImported :: SymTab
+  , aSymDefined :: SymTab
+  }
+
+mkAvailableSymbols = ASymbols
+
+allSymbols :: AvailableSymbols -> SymTab
+allSymbols (ASymbols imported defined) = defined `M.union` imported
+
+parseModuleSymbols :: Map MName ModuleInfo -> Module S -> Parse AvailableSymbols
 parseModuleSymbols modules (Module _l mhead _pragmas imports decls) = do
   decl_symtabs <- mapM collectDecl decls
   let mname = moduleHeadName <$> mhead
       module_symtab = M.map (\s -> s { symModule = mname }) $
                         M.unions decl_symtabs
   imported_symtab <- importSyms modules imports
-  return $ module_symtab `M.union` imported_symtab
+  return $ mkAvailableSymbols imported_symtab module_symtab
 
 collectModule :: Map MName ModuleInfo -> Module S -> ModuleInfo
 collectModule modules m@(Module _l mhead _pragmas imports decls) =
-  let (symtab, _, dlogs) = runRWS (parseModuleSymbols modules m) pctx ()
+  let (av_symtab, _, dlogs) = runRWS (parseModuleSymbols modules m) pctx ()
       logs = DList.toList dlogs
       pctx = ParseCtx
-              { inScope = symtab
+              { inScope = allSymbols av_symtab
               , definitionStack = []
               , parseOpts = () 
               }
@@ -339,13 +350,13 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
         let pairs = map (\(p,c) -> (p, [c])) $ logs >>= getChild
         in M.unionsWith (++) (map (M.fromList . return) pairs)
       (exports, reexport_children) = fromMaybe (M.empty, M.empty) $
-                                       headExports symtab children <$> mhead
+                                       headExports av_symtab children <$> mhead
       module_name = moduleHeadName <$> mhead
   in ModuleInfo
       { miName = module_name
-      , miSymbols = symtab
+      , miSymbols = aSymDefined av_symtab
+      -- TODO add imported symbols to ModuleInfo if needed
       , miExports = exports
-      -- TODO also include children from reexports
       , miChildren = exportedChildren exports children `M.union` reexport_children
       , miRefs = map (fillModuleName module_name)$ logs >>= getRef
       , miWarns = logs >>= getWarn
@@ -353,16 +364,16 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
       , miOriginalPath = Nothing
       }
   where
-  headExports symtab children (ModuleHead _ _ _ exportSpecs) =
+  headExports av_symtab children (ModuleHead _ _ _ exportSpecs) =
     case exportSpecs of
-      -- TODO this is incorrect, since `symtab` at this point already includes
-      --      the module-defined and imported symbols. Treat those separately,
-      --      at least up to this point.
-      Nothing -> (symtab, M.empty)
+      Nothing -> (aSymDefined av_symtab, M.empty)
+      -- TODO handle self-reexport (module Test (module Test, ..) where ..)
       Just (ExportSpecList _ xs) ->
         let (key_set, reexport_infos, reexport_symtab) =
               exportedKeys modules children xs
-        -- TODO improve lookup efficiency
+            symtab = allSymbols av_symtab
+            -- TODO might need to normalize the filtered symbols from symtab,
+            --      so that qualification/alias is dropped?
             result_symtab = M.filterWithKey (\k _ -> k `elem` key_set) symtab
                               `M.union` reexport_symtab
             reexport_children = M.unions . map miChildren $ reexport_infos
