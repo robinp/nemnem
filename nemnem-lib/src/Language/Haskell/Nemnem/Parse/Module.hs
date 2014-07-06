@@ -380,6 +380,7 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
 collectDecl :: Decl S -> Parse SymTab
 collectDecl = collectDeclWithSigExports False
 
+-- | Signatures should only be exported from class declarations.
 collectDeclWithSigExports :: Bool -> Decl S -> Parse SymTab
 collectDeclWithSigExports signature_export decl = case decl of
   DataDecl _l _dataOrNew mb_ctx decl_head quals mb_derivings -> do
@@ -436,11 +437,13 @@ collectDeclWithSigExports signature_export decl = case decl of
 
   PatBind _l pat mb_type rhs mb_binds -> do
     -- TODO don't export, and point to sig if signature_export == True
-    warnMay mb_binds "PatBind binds"
     warnMay mb_type "PatBind type"
-    defined_sym_and_locs <- collectPat pat
-    local (pushDefs . M.toList $ defined_sym_and_locs) $ collectRhs rhs
-    return defined_sym_and_locs
+    pattern_symtab <- collectPat pat
+    binds_symtab <- parseMaybeBinds pattern_symtab mb_binds
+    local (pushDefs . M.toList $ pattern_symtab) $
+      local (withLocalSymtab $ pattern_symtab `M.union` binds_symtab) $
+        collectRhs rhs
+    return pattern_symtab
 
   InlineSig l _what_is_this_bool_TODO _activation qname -> do
     parseQName CTerm qname
@@ -501,18 +504,17 @@ collectExp exp = case exp of
   Paren _l exp -> collectExp exp
   Tuple _l _boxed es -> exps es 
   List _l ee -> exps ee
+  ListComp _l exp qual_stmts -> do
+    stmts <- onlyStmts qual_stmts  -- no TransformListComp support (yet?)
+    local_symtab <- parseStatementsNonRecursive stmts
+    local (withLocalSymtab local_symtab) $ collectExp exp
   Lambda _l pats exp -> do
     -- TODO would it useful to make lambda part of the definitionStack?
     pattern_symtab <- M.unions <$> mapM collectPat pats
     local (withLocalSymtab pattern_symtab) $ collectExp exp
   LeftSection _l exp qop -> parseSection qop exp
   RightSection _l qop exp -> parseSection qop exp
-  Lit l literal -> case literal of
-    Char _ _ _ -> highlight l $ Literal CharLit
-    HSE.String _ _ _ -> highlight l $ Literal StringLit
-    Int _ _ _ -> highlight l $ Literal NumLit
-    Frac _ _ _ -> highlight l $ Literal NumLit
-    _ -> return ()
+  Lit _l literal -> parseLiteral literal
   ExpTypeSig _l exp ty -> do
     collectExp exp
     collectType ty
@@ -525,10 +527,28 @@ collectExp exp = case exp of
     highlight (ann qop) Infix
     parseQOp CTerm qop
 
+onlyStmts :: [QualStmt S] -> Parse [Stmt S]
+onlyStmts = fmap catMaybes . mapM getStmt
+  where
+  getStmt qual_stmt = case qual_stmt of
+    QualStmt _l stmt -> return $ Just stmt
+    other -> do
+      warn other "TransformListComp?"
+      return Nothing
+
+parseLiteral :: Literal S -> Parse ()
+parseLiteral literal = case literal of
+  Char _ _ _ -> highlight l $ Literal CharLit
+  HSE.String _ _ _ -> highlight l $ Literal StringLit
+  Int _ _ _ -> highlight l $ Literal NumLit
+  Frac _ _ _ -> highlight l $ Literal NumLit
+  _ -> return ()
+  where
+  l = ann literal
+
 collectAlt :: Alt S -> Parse ()
 collectAlt (Alt _l pat guarded_alts mb_binds) = do
-  -- only used in locally
-  pattern_symtab <- collectPat pat
+  pattern_symtab <- collectPat pat  -- only used locally
   binds_symtab <- parseMaybeBinds pattern_symtab mb_binds
   local (withLocalSymtab $ pattern_symtab `M.union` binds_symtab) $
     collectGuardedAlts guarded_alts
@@ -545,6 +565,7 @@ parseGuardedAlt (GuardedAlt _l stmts exp) = do
 
 collectPat :: Pat S -> Parse SymTab
 collectPat p = case p of
+  PLit _l lit -> parseLiteral lit >> return M.empty
   PVar _l name -> do
     highlight (ann name) $ VariableDecl OtherVarDecl
     return . singletonPair $ hseNameToSymbolAndLoc CTerm name
@@ -566,6 +587,7 @@ collectPat p = case p of
   PTuple _l _boxed pats ->
     M.unions <$> mapM collectPat pats
   PBangPat _l pat -> collectPat pat
+  PatTypeSig _l pat ty -> collectType ty >> collectPat pat
   other -> warn other "Pat" >> return M.empty
 
 -- | Parses the subtree by pushing the Match under definition to the
@@ -639,8 +661,12 @@ collectDeclHead hl_kind dhead = case dhead of
   where
   collectHeadAndBinds hd binds = do
     highlight (ann hd) hl_kind
-    mapM_ (\b -> highlight (ann b) TypeVariable) binds
+    parseTyVarBinds binds
     return $ hseNameToSymbolAndLoc CType hd
+
+parseTyVarBinds :: [TyVarBind S] -> Parse ()
+parseTyVarBinds tyvarbinds =
+  mapM_ (\b -> highlight (ann b) TypeVariable) tyvarbinds
 
 parseClassDecl :: Symbol -> ClassDecl S -> Parse SymTab
 parseClassDecl clsname cdecl = case cdecl of
@@ -696,6 +722,12 @@ collectType ty = case ty of
   TyVar l _name -> highlight l $ TypeVariable
   TyTuple _l _boxed tys -> mapM_ collectType tys
   TyList _l t -> collectType t
+  TyForall _l mb_tyvarbinds mb_ctx t -> do
+    case mb_tyvarbinds of
+      Just binds -> parseTyVarBinds binds
+      Nothing -> return ()
+    warnMay mb_ctx "Context"
+    collectType t
   other -> warn other "Type"
 
 parseQOp :: Ctx -> QOp S -> Parse ()

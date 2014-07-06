@@ -1,6 +1,10 @@
 #!/bin/bash
 rm deploy/*html
-pushd src
-ghc Main.hs || rm src/Main
+pushd nemnem-lib
+cabal install
 popd
-./src/Main
+
+pushd nemnem-genstatic
+cabal clean
+cabal build
+popd
