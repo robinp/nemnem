@@ -6,6 +6,7 @@ import qualified Text.Blaze as B
 import qualified Text.Blaze.Html5 as BH
 import qualified Text.Blaze.Html5.Attributes as BA
 import Data.List (nub)
+import qualified Data.Map as M
 import Data.Maybe
 import Data.Monoid
 import Data.Text.Lazy (Text)
@@ -131,8 +132,13 @@ idfy s =
   b = snd . symRange
   tshow = T.pack . show
 
--- the base is the destination of a reference
-basesOf :: [Ref] -> [SymLoc]
-basesOf = nub . map (\(Ref _ dst _) -> dst)
+-- | The base is the destination of a reference.
+-- Exported symbols are also included, since these are potentially referenced
+-- in foreign modules.
+basesOf :: [Ref] -> SymTab -> [SymLoc]
+basesOf refs exported_syms =
+  let ref_targets = map (\(Ref _ dst _) -> dst) refs
+      exported_locs = M.elems $ exported_syms
+  in nub $ nub ref_targets ++ exported_locs
 
 

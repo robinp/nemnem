@@ -108,7 +108,7 @@ main = do
   renderTaggedHtml module_transform src mi =
     -- assumes newline is \n (single char)
     let lineLens = map ((+1) . length) (lines src)
-        bases = basesOf (miRefs mi)
+        bases = basesOf (miRefs mi) (miExports mi)
         ranges = map (refToRange lineLens) (miRefs mi)
                   ++ mapMaybe (tagEntitiesOfCurrentModule lineLens (miName mi))
                      bases
