@@ -51,6 +51,7 @@ unCpp = unlines . reverse . trd . foldl replace_cpp (False, False, []) . lines
   where
   replace_cpp (was_where, inside_def, res) l0 =
     -- TODO emit preprocessor ranges for syntax highlight
+    --
     -- If we didn't encounter the `where` keyword of the module, don't try to
     -- strip macro-like calls since it can match export patterns.
     let l = if was_where then removeMacroCall l0 else l0

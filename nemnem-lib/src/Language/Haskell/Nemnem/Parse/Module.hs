@@ -5,9 +5,9 @@
 {-# LANGUAGE Arrows #-} 
 module Language.Haskell.Nemnem.Parse.Module where
 
-import Control.Applicative ((<$>), (<*>), pure)
+import Control.Applicative ((<$>), (<*>), (<|>), pure)
 import Data.Functor.Identity
-import Control.Monad (foldM, void)
+import Control.Monad (foldM, void, when)
 import Control.Monad.Trans.RWS
 import Data.Aeson.Types as A
 import qualified Data.DList as DList
@@ -27,7 +27,7 @@ type LhsSymbols = [SymbolAndLoc]
 data ParseCtx = ParseCtx
   { inScope :: SymTab  -- ^ Tied recursively.
   -- | TODO make a bit more versatile, able to represent contexts such as
-  -- comments, RULES pragmas, imports/exports..
+  -- comments, RULES pragmas, imports/exports, class/instance decls..
   , definitionStack :: [LhsSymbols]
   , parseOpts :: ()
   }
@@ -45,6 +45,7 @@ pushDefs :: LhsSymbols -> ParseCtx -> ParseCtx
 pushDefs lhss pctx =
   pctx { definitionStack = lhss:definitionStack pctx }
 
+pushDef :: SymbolAndLoc -> ParseCtx -> ParseCtx
 pushDef a = pushDefs [a] 
 
 setSymtab :: SymTab -> ParseCtx -> ParseCtx
@@ -396,11 +397,17 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
     fill loc = loc
 
 collectDecl :: Decl S -> Parse SymTab
-collectDecl = collectDeclWithSigExports False
+collectDecl = collectDeclWithSigExports False False
 
--- | Signatures should only be exported from class declarations.
-collectDeclWithSigExports :: Bool -> Decl S -> Parse SymTab
-collectDeclWithSigExports signature_export decl = case decl of
+-- | Arguments:
+-- `signature_export`: if true, we associate the signature declaration
+-- of a function with the related symbol, so that usages point to the signature.
+-- Expected to be set only inside class declarations.
+--
+-- `signature_link`: if true, function declarations should link to the signature
+-- of that function. Expected to be set inside instance declarations.
+collectDeclWithSigExports :: Bool -> Bool -> Decl S -> Parse SymTab
+collectDeclWithSigExports signature_export signature_link decl = case decl of
   DataDecl _l _dataOrNew mb_ctx decl_head quals mb_derivings -> do
     warnMay mb_ctx "DataDecl Context"
     warnMay mb_derivings "DataDecl Derivings"
@@ -408,12 +415,15 @@ collectDeclWithSigExports signature_export decl = case decl of
     ctor_symtab <- M.unions <$> mapM (collectQualConDecl head_sym) quals
     return $ insertPair head_symloc ctor_symtab
 
+  -- Note: take caution when adding symbols to local symtab in class/instance
+  -- decl, to avoid resolving a link to the local decl instead of the instance
+  -- for an other type.
+
   ClassDecl _l mb_ctx decl_head fundeps mb_classdecls -> do
     warnMay mb_ctx "ClassDecl Context"
     mapM_ (flip warn "Fundep") fundeps
+    -- TODO pushDef once supported
     head_symloc@(head_sym, _) <- collectDeclHead ClassDeclHL decl_head
-    -- TODO should use recursive tying to resolve default methods, mutually
-    --      recursive types
     decl_symtab <- maybe (return M.empty)
                          (\decls -> M.unions <$>
                                       mapM (parseClassDecl head_sym) decls)
@@ -422,10 +432,8 @@ collectDeclWithSigExports signature_export decl = case decl of
 
   InstDecl _l mb_ctx inst_head mb_decls -> do
     warnMay mb_ctx "InstDecl Context"
+    -- TODO pushDef once supported
     parseInstHead inst_head
-    -- TODO if we really wanted, could feed back the symbols so
-    --      overrides point to the current instance instead of 
-    --      class methods (once classes are parsed).
     maybe (return ()) (mapM_ parseInstanceDecl) mb_decls
     return M.empty
 
@@ -435,33 +443,38 @@ collectDeclWithSigExports signature_export decl = case decl of
         return . M.fromList . map (hseNameToSymbolAndLoc CTerm) $ names
       else do
         -- we want names in signatures to point to the definitions
-        symtab <- asks inScope
-        stack <- asks definitionStack
-        tell . DList.fromList . catMaybes . for names $ \name ->
-          LRef . (\remote_loc -> Ref (hseSymOrIdentPos name) remote_loc stack) <$>
-            M.lookup (Ctxed CTerm $ hseSymOrIdentValue name) symtab
+        addScopeReferences (hseNameToSymbolAndLoc CTerm) names
         return M.empty
 
   FunBind _l matches ->
-    -- TODO don't export, and point to sig if signature_export == True
     if null matches then return M.empty
-    else let (m:ms) = matches
-         in do
-              first_sym_and_loc <- parseMatch Nothing m
-              rest <- mapM (parseMatch (Just . snd $ first_sym_and_loc)) ms
-              -- Left-biased `M.unions` keeps first match as symbol.
-              return . M.unions . map (uncurry M.singleton) $
-                first_sym_and_loc:rest
+    else do
+      let (m:ms) = matches
+      sig_ref <- if signature_link then do
+                   symtab <- asks inScope
+                   return $ M.lookup (Ctxed CTerm $ matchName m) symtab
+                 else return Nothing
+      first_sym_and_loc <- parseMatch sig_ref m
+      let rest_ref = sig_ref <|> (Just . snd) first_sym_and_loc
+      mapM_ (parseMatch rest_ref) ms
+      return . exceptInSignatureExport $ singletonPair first_sym_and_loc
 
   PatBind _l pat mb_type rhs mb_binds -> do
     -- TODO don't export, and point to sig if signature_export == True
     warnMay mb_type "PatBind type"
     pattern_symtab <- collectPat pat
-    binds_symtab <- parseMaybeBinds pattern_symtab mb_binds
+    when signature_link . addScopeReferences id . M.toList $ pattern_symtab
+    let local_pattern_symtab = if signature_link
+          then M.empty
+          else pattern_symtab
+    -- Note: need to see examples for what can end up used in binds from the
+    --       pattern.
+    binds_symtab <- parseMaybeBinds local_pattern_symtab mb_binds
+    let local_symtab = local_pattern_symtab `M.union` binds_symtab
     local (pushDefs . M.toList $ pattern_symtab) $
-      local (withLocalSymtab $ pattern_symtab `M.union` binds_symtab) $
+      local (withLocalSymtab local_symtab) $
         collectRhs rhs
-    return pattern_symtab
+    return $ exceptInSignatureExport pattern_symtab
 
   InlineSig l _what_is_this_bool_TODO _activation qname -> do
     parseQName CTerm qname
@@ -471,6 +484,19 @@ collectDeclWithSigExports signature_export decl = case decl of
   RulePragmaDecl l _rules -> highlight l Pragma >> return M.empty
 
   other -> warn other "Decl" >> return M.empty
+  where
+  -- | Use to prevent the default impl getting into symtab.
+  exceptInSignatureExport :: SymTab -> SymTab
+  exceptInSignatureExport m = if signature_export then M.empty else m
+
+  addScopeReferences :: (a -> SymbolAndLoc) -> [a] -> Parse ()
+  addScopeReferences symLocFun as = do
+    symtab <- asks inScope
+    stack <- asks definitionStack
+    tell . DList.fromList . catMaybes . for as $ \a ->
+      let (sym, loc) = symLocFun a
+      in LRef . (\remote_loc -> Ref loc remote_loc stack) <$>
+           M.lookup sym symtab
 
 -- TODO could return TypeVars to local context (first they need to be
 --      collected in collectType).
@@ -484,9 +510,14 @@ parseInstHead ihead = case ihead of
   i@(IHInfix l t1 qname t2) -> warn i "IHInfix"
   IHParen _l ih -> parseInstHead ih
 
+-- TODO return local SymTab and call with feedback, so local signature
+--      definition can point to local function instead of class signature.
+--      But this needs some thought, since adding it to local symtab is not
+--      correct (since the class method can be called for other types).
+--      Generally this might be impossible without typeclass inference.
 parseInstanceDecl :: InstDecl S -> Parse ()
 parseInstanceDecl idecl = case idecl of
-  InsDecl _l decl -> void $ collectDecl decl
+  InsDecl _l decl -> void $ collectDeclWithSigExports False True decl
   other -> warn other "InstDecl"
 
 collectRhs :: Rhs S -> Parse ()
@@ -608,24 +639,28 @@ collectPat p = case p of
   PatTypeSig _l pat ty -> collectType ty >> collectPat pat
   other -> warn other "Pat" >> return M.empty
 
+matchName :: Match S -> String
+matchName m = hseSymOrIdentValue $ case m of
+  Match _l nm _ _ _ -> nm
+  InfixMatch _l _ nm _ _ _ -> nm
+
 -- | Parses the subtree by pushing the Match under definition to the
 -- `definitionStack`.
 parseMatch :: Maybe SymLoc -> Match S -> Parse SymbolAndLoc
-parseMatch mb_first_match_loc m = do
+parseMatch mb_reference_loc m = do
   let (name, patterns, rhs, mb_binds) = case m of
         Match _l nm ps r bs -> (nm, ps, r, bs)
         InfixMatch _l p nm ps r bs -> (nm, p:ps, r, bs)
       defined_sym_and_loc = hseNameToSymbolAndLoc CTerm name
   highlight (ann name) $ VariableDecl MatchHead
-  case mb_first_match_loc of
+  case mb_reference_loc of
     Nothing -> return ()
-    Just first_match_loc -> do
-      -- Emit reference to first match
+    Just reference_loc -> do
       -- TODO this is a pseudo-reference, annotate Ref (also for pseudo-ref
-      --      coming from typesig)
+      --      coming from typesig, instance method, etc...)
       stack <- asks definitionStack
       tell . DList.singleton . LRef $
-        Ref (snd defined_sym_and_loc) first_match_loc stack
+        Ref (snd defined_sym_and_loc) reference_loc stack
   local (pushDef defined_sym_and_loc) $ do
     -- pattern symbols are not returned to the global scope, but used
     -- in resolving RHS and Binds
@@ -689,7 +724,7 @@ parseTyVarBinds tyvarbinds =
 parseClassDecl :: Symbol -> ClassDecl S -> Parse SymTab
 parseClassDecl clsname cdecl = case cdecl of
   ClsDecl _l decl -> do
-    decl_symtab <- collectDeclWithSigExports True decl
+    decl_symtab <- collectDeclWithSigExports True True decl
     -- TODO repetitive
     mapM_ (tell . DList.fromList . mkChild' clsname) (M.keys decl_symtab)
     return decl_symtab
@@ -793,8 +828,8 @@ hseNameToSymbol ctx = fst . hseNameToSymbolAndLoc ctx
 
 mkChild' p c = [LChild p c]
 
-insertPair (a,b) = M.insert a b
-singletonPair p = insertPair p M.empty
+insertPair = uncurry M.insert
+singletonPair = uncurry M.singleton
   
 applyIf :: Bool -> (a -> a) -> a -> a
 applyIf c f = if c then f else id
