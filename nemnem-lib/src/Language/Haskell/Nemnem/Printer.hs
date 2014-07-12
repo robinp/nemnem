@@ -11,13 +11,10 @@ import Data.Maybe
 import Data.Monoid
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as T
-import Hier
+import qualified Data.Vector.Unboxed as UV
 
 import Language.Haskell.Nemnem.Parse.Module
 import Language.Haskell.Nemnem.Internal.Util
-
-instance Show (TaggedRange String Tag) where
-  show = showTaggedRange
 
 ----------- Blaze stuff
 data Tag = LinkTo (Maybe MName) Text  -- ^ Module and location name
@@ -73,29 +70,30 @@ toBlaze = preStyle . B.toMarkup
 preStyle = BH.span ! BA.class_ "mpre"
 -----------
 
--- | Line and column numbers assumed from one
-lineAndColumnToOffset :: [Int] -> (Int, Int) -> Int
-lineAndColumnToOffset lineLens (line, col) =
-  sum (take (line-1) lineLens) + (col-1)
+type OffsetTable = UV.Vector Int
+type OffsetFun = (Int, Int) -> Int
 
-refToRange :: [Int] -> Ref -> TaggedRange String Tag
-refToRange lineLens (Ref (SymLoc (srcStart, srcEnd) _) dst stack) =
-  mkRange (LinkTo (symModule dst) (idfy dst))
-          (lc srcStart) (lc srcEnd)
-  where
-  lc = lineAndColumnToOffset lineLens
+mkOffsetTable :: [Int] -> OffsetTable
+mkOffsetTable line_lens = UV.scanl' (+) 0 (UV.fromList line_lens)
 
-warnsToRange :: [Int] -> Warn -> TaggedRange String Tag
-warnsToRange line_lens (Warn (start, end) w_txt) =
-  mkRange (Warning . T.pack $ w_txt) (lc start) (lc end)
-  where
-  lc = lineAndColumnToOffset line_lens
+offsetAt :: OffsetTable -> OffsetFun
+offsetAt table (line, col) = table UV.! (line - 1) + col - 1
 
-highlightsToRange :: [Int] -> Highlight -> TaggedRange String Tag
-highlightsToRange line_lens (Highlight (start, end) hl_kind) =
-  mkRange (HighlightClass . T.pack $ cls) (lc start) (lc end)
+data Range a = Range a !Int !Int
+
+refToRange :: OffsetFun -> Ref -> Range Tag
+refToRange lc (Ref (SymLoc (srcStart, srcEnd) _) dst stack) =
+  Range (LinkTo (symModule dst) (idfy dst))
+        (lc srcStart) (lc srcEnd)
+
+warnsToRange :: OffsetFun -> Warn -> Range Tag
+warnsToRange lc (Warn (start, end) w_txt) =
+  Range (Warning . T.pack $ w_txt) (lc start) (lc end)
+
+highlightsToRange :: OffsetFun -> Highlight -> Range Tag
+highlightsToRange lc (Highlight (start, end) hl_kind) =
+  Range (HighlightClass cls) (lc start) (lc end)
   where
-  lc = lineAndColumnToOffset line_lens
   cls = case hl_kind of
           Literal CharLit -> "hl_char"
           Literal StringLit -> "hl_string"
@@ -116,12 +114,12 @@ highlightsToRange line_lens (Highlight (start, end) hl_kind) =
           CommentHL -> "hl_comment"
           Pragma -> "hl_pragma"
 
-tagEntitiesOfCurrentModule :: [Int] -> Maybe MName -> SymLoc -> Maybe (TaggedRange String Tag)
-tagEntitiesOfCurrentModule lineLens curModule sym@(SymLoc (s,e) sModule) =
+tagEntitiesOfCurrentModule
+  :: OffsetFun -> Maybe MName -> SymLoc -> Maybe (Range Tag)
+tagEntitiesOfCurrentModule lc curModule sym@(SymLoc (s,e) sModule) =
   if sModule == curModule
-    then Just $ mkRange (Entity$ idfy sym) (lc s) (lc e)
+    then Just $ Range (Entity$ idfy sym) (lc s) (lc e)
     else Nothing
-  where lc = lineAndColumnToOffset lineLens
 
 idfy :: SymLoc -> Text
 idfy s = 

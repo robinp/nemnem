@@ -27,7 +27,8 @@ type LhsSymbols = [SymbolAndLoc]
 data ParseCtx = ParseCtx
   { inScope :: SymTab  -- ^ Tied recursively.
   -- | TODO make a bit more versatile, able to represent contexts such as
-  -- comments, RULES pragmas, imports/exports, class/instance decls..
+  -- comments, RULES pragmas, imports/exports, class/instance decls, package,
+  -- etc..
   , definitionStack :: [LhsSymbols]
   , parseOpts :: ()
   }
@@ -82,6 +83,7 @@ data SymLoc = SymLoc
   -- which is substituted later by parseModuleSymbols / collectModule
   -- before tying back the knot.
   , symModule :: Maybe String  -- TODO these Strings are ugly
+  -- TODO symPackage
   }
   deriving (Eq, Show)
 
@@ -355,7 +357,7 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
       (exports, reexport_children) = fromMaybe (M.empty, M.empty) $
                                        headExports av_symtab children <$> mhead
       module_name = moduleHeadName <$> mhead
-  in ModuleInfo
+  in {-# SCC collectModule #-} ModuleInfo
       { miName = module_name
       , miSymbols = aSymDefined av_symtab
       -- TODO add imported symbols to ModuleInfo if needed
@@ -460,7 +462,6 @@ collectDeclWithSigExports signature_export signature_link decl = case decl of
       return . exceptInSignatureExport $ singletonPair first_sym_and_loc
 
   PatBind _l pat mb_type rhs mb_binds -> do
-    -- TODO don't export, and point to sig if signature_export == True
     warnMay mb_type "PatBind type"
     pattern_symtab <- collectPat pat
     when signature_link . addScopeReferences id . M.toList $ pattern_symtab
@@ -658,6 +659,8 @@ parseMatch mb_reference_loc m = do
     Just reference_loc -> do
       -- TODO this is a pseudo-reference, annotate Ref (also for pseudo-ref
       --      coming from typesig, instance method, etc...)
+      --      Alternatively, the reference now includes definition stack, which
+      --      should also be good enough.
       stack <- asks definitionStack
       tell . DList.singleton . LRef $
         Ref (snd defined_sym_and_loc) reference_loc stack

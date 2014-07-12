@@ -12,11 +12,13 @@ cabal-version:       >=1.8.0.4
 executable nemnem-genstatic
   hs-source-dirs:      src
   main-is:             Main.hs
-  build-depends:       nemnem,
+  build-depends:       nemnem >= 0.1.0.1,
                        aeson >= 0.7,
                        base >= 4.6,
                        blaze-html >= 0.7,
+                       blaze-markup >= 0.6,
                        containers >= 0.5,
+                       dlist >= 0.7,
                        scotty >= 0.8,
                        text >= 1.1,
                        transformers >= 0.3

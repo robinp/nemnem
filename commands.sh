@@ -5,3 +5,6 @@ for i in $(find ../ext/text/|grep hs$|grep Data); do NAME=$(echo $i | tr '/' '.'
 
 # Warnings breakdown.
 grep -o 'data-warning=.[a-zA-Z]\+' deploy/Data.Text.*html | cut -d\" -f2 | sort | uniq -c | sort -nrk1
+
+# Running
+./nemnem-genstatic/dist/build/nemnem-genstatic/nemnem-genstatic files.txt +RTS -p

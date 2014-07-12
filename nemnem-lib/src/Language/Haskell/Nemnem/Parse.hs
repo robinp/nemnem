@@ -18,17 +18,18 @@ processModule
   :: (Monad m)
   => (FilePath, String)    -- ^ Path and content of module
   -> StateT (Map MName ModuleInfo) m (Either String ModuleInfo)
-processModule (path, raw_src) = StateT $ \modules ->
-  let src = unCpp raw_src
-  in case parse src of
+processModule (path, raw_src) = {-# SCC processModule #-} StateT $ \modules ->
+  let src = {-# SCC unCpp #-} unCpp raw_src
+  in case {-# SCC hseParse #-} parse src of
        fail@(ParseFailed _ _) -> return (Left (show fail), modules)
        ParseOk (ast, comments) ->
          -- TODO preprocess comment locations and pass to collectModule, so it can
          --      link comments to definitions.
-         let comment_hls = map makeCommentHighlight comments
+         let comment_hls = {-# SCC comments #-}
+                           map makeCommentHighlight comments
              m_info0 = (collectModule modules ast)
                          { miOriginalPath = Just path }
-             m_info = m_info0
+             m_info = {-# SCC concat #-} m_info0
                         { miHighlights = miHighlights m_info0 ++ comment_hls}
              new_modules = M.insert
                              (fromMaybe "Anonymous" . miName $ m_info)

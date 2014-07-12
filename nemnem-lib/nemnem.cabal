@@ -1,5 +1,5 @@
 name:                nemnem
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Source code hyperlinker for Haskell.
 license:             BSD3
 license-file:        ../LICENSE
@@ -28,4 +28,5 @@ library
                        haskell-src-exts == 1.14.*,
                        regex-tdfa >= 1.2,
                        text >= 1.1,
-                       transformers >= 0.3
+                       transformers >= 0.3,
+                       vector >= 0.10

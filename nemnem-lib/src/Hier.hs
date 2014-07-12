@@ -1,7 +1,8 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 
 module Hier 
-  ( TaggedRange()
+  ( LengthSplitAt
+  , TaggedRange()
   , mkRange
   , showTaggedRange
   , mkMarker
@@ -16,6 +17,8 @@ import Data.Ord (comparing)
 import Data.Monoid
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 
 data Tagged a e = Tagged
   { untagged :: e
@@ -55,6 +58,16 @@ instance LengthSplitAt BL.ByteString where
   lsLength = BL.length
   lsSplitAt = BL.splitAt
 
+instance LengthSplitAt TL.Text where
+  type Length TL.Text = Int64
+  lsLength = TL.length
+  lsSplitAt = TL.splitAt
+
+instance LengthSplitAt T.Text where
+  type Length T.Text = Int
+  lsLength = T.length
+  lsSplitAt = T.splitAt
+
 instance Functor (Tagged a) where
   fmap f (Tagged e tl) = Tagged (f e) (fmap (maptail f) tl)
     where maptail f (TagTail a r s) = TagTail a (fmap f r) (fmap f s)
@@ -83,11 +96,11 @@ tlength (Tagged ut t) =
       tlen = case t of
         Nothing -> 0
         Just (TagTail _ r s) -> tlength r + tlength s
-  in hlen + tlen
+  in {-# SCC "tlength" #-} hlen + tlen
 
 -- TODO make untagging go through third type (BS.Builder for example)
 untag :: (Monoid e) => (a -> e -> e) -> Tagged a e -> e
-untag f (Tagged ut t) = case t of
+untag f (Tagged ut t) = {-# SCC "untag" #-} case t of
   Nothing -> ut
   Just (TagTail a reg rst) ->
     ut `mappend` f a (untag f reg) `mappend` untag f rst
@@ -95,27 +108,27 @@ untag f (Tagged ut t) = case t of
 -- | Assumes non-crossing regions, good boundaries. Subregions are allowed.
 tagRegions :: (LengthSplitAt e) =>[TaggedRange e a] -> e -> Tagged a e
 tagRegions ranges elems =
-  let ordered = sortBy (comparing (\x -> rangeStart x - rangeEnd x)) ranges
-  in foldl tag0 (Tagged elems Nothing) ordered
+  let ordered = {-# SCC "sort" #-} sortBy (comparing (\x -> rangeStart x - rangeEnd x)) ranges
+  in {-# SCC "tagRegions" #-} foldl tag0 (Tagged elems Nothing) ordered
 
 tag0 :: (LengthSplitAt e) => Tagged a e -> TaggedRange e a -> Tagged a e
 tag0 orig@(Tagged ut t) r@(TaggedRange a start end) = 
   let rlen = end - start
-      prefixLen = lsLength ut
-  in if end <= prefixLen then
+      prefixLen = {-# SCC "lsLength" #-} lsLength ut
+  in {-# SCC "tag0" #-} if end <= prefixLen then
        let (as, bcs) = lsSplitAt start ut
            (bs, cs) = lsSplitAt rlen bcs
            tagtail = Just$ TagTail a (Tagged bs Nothing) rst
            rst = Tagged cs t
-       in Tagged as tagtail
+       in {-# SCC "endBefore" #-} Tagged as tagtail
      else if start < prefixLen then orig  -- bad input, overlapping
      else case t of
        Nothing -> orig  -- bad input
        Just tl@(TagTail _ tReg tRest) ->
          let newRange = subRange prefixLen r
-             regLength = tlength tReg
-             newTail = if rangeEnd newRange <= regLength
+             regLength = {-# SCC "regLength" #-} tlength tReg
+             newTail = {-# SCC "newTail" #-} if rangeEnd newRange <= regLength
                then tl { region = tag0 tReg newRange }
                else let newestRange = subRange regLength newRange
                     in tl { rest = tag0 tRest newestRange }
-         in orig { tagged = Just newTail }
+         in {-# SCC "endAfter" #-} orig { tagged = Just newTail }
