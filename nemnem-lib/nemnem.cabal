@@ -16,7 +16,8 @@ library
                        Language.Haskell.Nemnem.Printer,
                        Language.Haskell.Nemnem.ProcessingPlan
 
-  other-modules:       Language.Haskell.Nemnem.Internal.Util
+  other-modules:       Language.Haskell.Nemnem.Internal.Source
+                       Language.Haskell.Nemnem.Internal.Util
   hs-source-dirs:      src
   build-depends:       aeson >= 0.7,
                        array >= 0.4,

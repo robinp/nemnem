@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, RankNTypes,
-             OverloadedStrings #-}
+             RecordWildCards, OverloadedStrings #-}
 module Main where
 
 import Control.Applicative ((<$>))
@@ -44,26 +44,35 @@ prettish lvl (x:xs) = case x of
 
 moduleTransformLive = maybe "Anonymouse" TL.pack
 moduleTransformStatic = (<> ".html") . moduleTransformLive
+
+parseSourceInfoLine :: String -> SourceInfo
+parseSourceInfoLine line = case words line of
+  pkg_and_version:path:_ ->
+    let (rev_ver, rev_pkg) = L.break (== '-') . reverse $ pkg_and_version
+        pkg_version = reverse rev_ver
+        pkg = case rev_pkg of
+          '-':xs -> reverse xs
+          _ -> error $ "Extracting package version: " ++ line
+    in SourceInfo pkg pkg_version path
+  _ -> error $ "parseSourceInfoLine: " ++ line
+
+data ProcessModuleConfig = ProcessModuleConfig
+  { pmcOutDir :: String
+  , pmcIdMacroPrefixes :: [String]
+  }
+
 main = do
   args <- getArgs
-  -- in DAG order (no recursive module support - yet?)
-  let default_paths =
-        [ "tsrc/DataTextInternal.hs"
-        , "tsrc/DataText.hs"
-        , "tsrc/DataTextIO.hs"
-        , "tsrc/Test4.hs"
-        , "tsrc/Test3.hs"
-        , "src/Language/Haskell/Nemnem/Util.hs"
-        , "src/Language/Haskell/Nemnem/Parser.hs"
-        , "src/Hier.hs"
-        , "src/Language/Haskell/Nemnem/Printer.hs"
-        ]
-      outdir = "deploy/"
-  paths <- dagOrdered =<< case args of
-    [] -> return default_paths
-    (path_file:_) -> filter (not . ("#" `L.isPrefixOf`)) . lines <$>
-                       readFile path_file
-  module_infos <- mapM_ (processModules outdir) paths `execStateT` M.empty
+  source_infos <- dagOrdered siPath =<< case args of
+    [] -> return []
+    (path_file:_) -> map parseSourceInfoLine 
+                       . filter (not . ("#" `L.isPrefixOf`)) 
+                       . lines
+                       <$> readFile path_file
+  let config = ProcessModuleConfig "deploy/" ["CHECK_"]
+  module_infos <- mapM_ (processModules config) source_infos `execStateT` M.empty
+  return ()
+  {-
   scotty 8080 $ do
     get "/static/:resource" $ do
       -- TODO this is possibly unsecure
@@ -89,19 +98,22 @@ main = do
         Nothing -> raise "module not found"
         Just module_info -> do
           json $ miRefs module_info
+    -}
   where
+  hoistMaybe :: Maybe a -> MaybeT IO a
   hoistMaybe = MaybeT . return
-  processModules :: FilePath  -- ^ Directory to output highlit source to
-                 -> FilePath  -- ^ Module source location
+  -- TODO move to lib/Parse.hs
+  processModules :: ProcessModuleConfig
+                 -> SourceInfo
                  -> StateT (Map MName ModuleInfo) IO ()
-  processModules outdir path = do
-    raw_src <- lift $ readFile path
-    err_or_mi <- processModule (path, raw_src)
+  processModules ProcessModuleConfig{..} source_info = do
+    raw_src <- lift $ readFile (siPath source_info)
+    err_or_mi <- processModule pmcIdMacroPrefixes source_info raw_src
     case err_or_mi of
       Left err -> lift $ print err
       Right (parsed_src, mi) -> lift $ do
         print . miName $ mi
-        writeLinked outdir parsed_src mi
+        writeLinked pmcOutDir parsed_src mi
   --
   writeLinked :: String -> String -> ModuleInfo -> IO ()
   writeLinked outdir src mi =

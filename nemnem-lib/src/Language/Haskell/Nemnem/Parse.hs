@@ -1,4 +1,8 @@
-module Language.Haskell.Nemnem.Parse where
+{-# LANGUAGE RecordWildCards #-}
+module Language.Haskell.Nemnem.Parse
+  ( SourceInfo(..)
+  , processModule
+  ) where
 
 import Control.Monad.Trans.State
 import qualified Data.Array as A
@@ -14,14 +18,23 @@ import Language.Haskell.Nemnem.Internal.Util
 import Language.Haskell.Nemnem.Parse.Module
 import Hier (mkRange, transformRegions)
 
+data SourceInfo = SourceInfo
+  { siPackage :: String
+  , siPackageVersion :: String
+  , siPath :: FilePath
+  }
+
 -- | Returns also the parsed src on success.
 processModule
   :: (Monad m)
-  => (FilePath, String)    -- ^ Path and content of module
+  => [String]
+  -> SourceInfo
+  -> String  -- ^ Source content
   -> StateT (Map MName ModuleInfo) m (Either String (String, ModuleInfo))
-processModule (path, raw_src) = {-# SCC processModule #-} StateT $ \modules ->
+processModule id_macro_prefixes SourceInfo{..} raw_src = StateT $ \modules ->
+  {-# SCC processModule #-} 
   let parsed_src = unTab raw_src
-      src = {-# SCC sourceTransform #-} unCpp parsed_src
+      src = {-# SCC sourceTransform #-} unCpp id_macro_prefixes parsed_src
   in case {-# SCC hseParse #-} parse src of
        fail@(ParseFailed _ _) -> return (Left (show fail), modules)
        ParseOk (ast, comments) ->
@@ -30,7 +43,7 @@ processModule (path, raw_src) = {-# SCC processModule #-} StateT $ \modules ->
          let comment_hls = {-# SCC comments #-}
                            map makeCommentHighlight comments
              m_info0 = (collectModule modules ast)
-                         { miOriginalPath = Just path }
+                         { miOriginalPath = Just siPath }
              m_info = {-# SCC concat #-} m_info0
                         { miHighlights = miHighlights m_info0 ++ comment_hls}
              new_modules = M.insert
@@ -44,7 +57,7 @@ processModule (path, raw_src) = {-# SCC processModule #-} StateT $ \modules ->
   -- larger expressions anyway (might be needed for gradient highlight).
   parse = parseFileContentsWithComments $ defaultParseMode 
             { fixities = Nothing
-            , parseFilename = path
+            , parseFilename = siPath
             -- TODO user-suppliable list of extra LANG extensions
             }
 
@@ -56,13 +69,21 @@ unTab :: String -> String
 unTab = TL.unpack . TL.replace tab spaces . TL.pack
   where
   tab = TL.pack "\t"
-  spaces = TL.pack "        "
+  spaces = TL.pack (replicate 8 ' ')
 
 -- | Offset-preserving removal of CPP-directives and possible macro calls.
-unCpp :: String -> String
-unCpp = unlines . reverse . trd . foldl replace_cpp (False, False, []) . lines
+-- TODO could support basic ifdefs like version checks.. but even nicer would be
+--      a cpphs-like package which returns a range mapping between the original
+--      and the transformed source, so the transformed could be analyzed, but
+--      results would be marked up on the original.
+unCpp :: [String] -> String -> String
+unCpp id_macro_prefixes = {-# SCC unCpp #-}
+  unlines 
+  . reverse . trd
+  . foldl replaceCpp (False, False, [])
+  . lines
   where
-  replace_cpp (was_where, inside_def, res) l0 =
+  replaceCpp (was_where, inside_def, res) l0 = {-# SCC replaceCpp #-}
     -- TODO emit preprocessor ranges for syntax highlight
     --
     -- If we didn't encounter the `where` keyword of the module, don't try to
@@ -73,20 +94,36 @@ unCpp = unlines . reverse . trd . foldl replace_cpp (False, False, []) . lines
         -- TODO this is pretty fragile, could look for `module X (.....) where`
         new_was_where = was_where || "where" `L.isInfixOf` l
     in if start_def || inside_def
-       then let replaced = replicate (length l) ' '  -- length-preserving transform
+       then let replaced =
+                  -- Length-preserving transform.
+                  replicate (length l) ' '
             in (new_was_where, ends_in_slash, replaced:res)
        else (new_was_where, False, l:res)
     where
     -- | Heuristic to get rid of CHECK_BOUNDS(x,y,z) like invocations.
-    -- This is only correct for no-op assert macros, which is not always the case.
-    -- Otherwise parsing will result in error. Oh my.
     removeMacroCall :: String -> String
-    removeMacroCall l = let matches = matchAll pattern l :: [MatchArray] -- Skip imports since an import `SomeModule (XY(a,b,c..))` would match
+    removeMacroCall l = {-# SCC removeMacroCall #-}
+      let matches = matchAll pattern l :: [MatchArray] -- Skip imports since an import `SomeModule (XY(a,b,c..))` would match
       in if "import" `L.isPrefixOf` l || null matches then l
-         else let offset_and_lengths = concat . map (A.elems) $ matches
+         else let offset_and_lengths =
+                    map modifyOffsetForNestedParens
+                    . filter canRemoveMacroCall
+                    . concat . map (A.elems)
+                    $ matches
                   regions = map (\(off,len) -> mkRange () off (off+len))
                               offset_and_lengths
               in transformRegions (\_ e -> replicate (length e) ' ') regions l
       where
       pattern = makeRegex ("[A-Z][A-Z0-9_]+\\([^)]*\\)" :: String)  :: Regex
-    
+      canRemoveMacroCall (offset, _) =
+        let frag = takeWhile (/= '(') . drop offset $ l
+        in (`L.isPrefixOf` frag) `any` id_macro_prefixes
+      modifyOffsetForNestedParens (offset, _) =
+        let (name, rest) = L.break (== '(') . drop offset $ l
+        in (offset, length name + parlen 0 0 rest)
+      parlen i cnt xs = case (cnt, xs) of
+        (_, '(':rs) -> parlen (i+1) (cnt+1) rs
+        (1, ')':_)  -> i+1
+        (x, ')':rs) -> parlen (i+1) (x-1) rs
+        (x, _:rs)   -> parlen (i+1) x rs
+        _ -> i

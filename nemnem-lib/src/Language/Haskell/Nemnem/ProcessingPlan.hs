@@ -14,23 +14,21 @@ import Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
+import Language.Haskell.Nemnem.Internal.Source
+
 data FileData = FileData
   { fdPath :: FilePath
   , fdModule :: T.Text
   , fdImportedModules :: [T.Text]
   }
 
--- TODO error handling
+-- TODO exceptions handling
 parseFile :: FilePath -> IO FileData
 parseFile path = {-# SCC parseFile #-} do 
   lines <- T.lines <$> T.readFile path
   let import_lines = filter ("import " `T.isPrefixOf`) lines
       imported_modules = nub . map getImportedModule $ import_lines
-      module_name = case filter ("module " `T.isPrefixOf`) lines of
-        first_line:_ -> case T.words first_line of
-          "module":things:_ -> beforeParen things
-          _ -> "Unknown"
-        _ -> "Unknown"
+      module_name = fromMaybe "Unknown" (moduleName lines)
   return $ FileData path module_name imported_modules    
   where
   getImportedModule line =
@@ -38,8 +36,7 @@ parseFile path = {-# SCC parseFile #-} do
           "import":"qualified":things:_ -> things
           "import":things:_ -> things
           _ -> error . T.unpack $ "unexpected: " <> line
-    in beforeParen things
-  beforeParen = fst . T.breakOn "(" 
+    in beforeOpenParen things
 
 importGraph :: [FileData] -> [(FilePath, [FilePath])]
 importGraph file_datas = {-# SCC importGraph #-}
@@ -53,12 +50,17 @@ importGraph file_datas = {-# SCC importGraph #-}
   where
   moduleAndPath fd = (fdModule fd, fdPath fd)
 
-dagOrdered :: [FilePath] -> IO [FilePath]
-dagOrdered paths = {-# SCC dagOrdered #-} do
+dagOrdered :: (a -> FilePath) -> [a] -> IO [a]
+dagOrdered getPath as = {-# SCC dagOrdered #-} do
+  let paths = map getPath as
+      pathmap = M.fromList $ paths `zip` as
   datas <- mapM parseFile paths
   let adj = importGraph datas
       idmap = M.fromList $ paths `zip` [0..]
-  return $ dagOrdered' (fromJust . flip M.lookup idmap) $ adj  
+  return
+    . map (fromJust . flip M.lookup pathmap)
+    . dagOrdered' (fromJust . flip M.lookup idmap)
+    $ adj  
 
 dagOrdered' :: (a -> Int) -> [(a, [a])] -> [a]
 dagOrdered' getId imports = {-# SCC dagOrdered' #-}
