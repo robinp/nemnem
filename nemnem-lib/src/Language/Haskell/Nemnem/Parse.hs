@@ -14,12 +14,14 @@ import Language.Haskell.Nemnem.Internal.Util
 import Language.Haskell.Nemnem.Parse.Module
 import Hier (mkRange, transformRegions)
 
+-- | Returns also the parsed src on success.
 processModule
   :: (Monad m)
   => (FilePath, String)    -- ^ Path and content of module
-  -> StateT (Map MName ModuleInfo) m (Either String ModuleInfo)
+  -> StateT (Map MName ModuleInfo) m (Either String (String, ModuleInfo))
 processModule (path, raw_src) = {-# SCC processModule #-} StateT $ \modules ->
-  let src = {-# SCC unCpp #-} unCpp raw_src
+  let parsed_src = unTab raw_src
+      src = {-# SCC sourceTransform #-} unCpp parsed_src
   in case {-# SCC hseParse #-} parse src of
        fail@(ParseFailed _ _) -> return (Left (show fail), modules)
        ParseOk (ast, comments) ->
@@ -35,7 +37,7 @@ processModule (path, raw_src) = {-# SCC processModule #-} StateT $ \modules ->
                              (fromMaybe "Anonymous" . miName $ m_info)
                              m_info
                              modules
-         in return (Right m_info, new_modules)
+         in return (Right (parsed_src, m_info), new_modules)
   where
   -- switch off fixities - this results in possibly incorrect AST, but
   -- on the source highlighting / indexing level we don't care about
@@ -45,6 +47,16 @@ processModule (path, raw_src) = {-# SCC processModule #-} StateT $ \modules ->
             , parseFilename = path
             -- TODO user-suppliable list of extra LANG extensions
             }
+
+-- | HSE would interpret a tab as 8 position indent, and would return funny
+-- source columns, which interfers with text-based tagging. So take initiative
+-- and convert tabs to 8 spaces.
+unTab :: String -> String
+-- TODO could receive and leave as (lazy) Text instead roundtripping
+unTab = TL.unpack . TL.replace tab spaces . TL.pack
+  where
+  tab = TL.pack "\t"
+  spaces = TL.pack "        "
 
 -- | Offset-preserving removal of CPP-directives and possible macro calls.
 unCpp :: String -> String

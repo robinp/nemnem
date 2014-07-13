@@ -191,7 +191,7 @@ warnMay mb_elem w = case mb_elem of
   Just elem -> warn elem w
 warn elem = tell . DList.singleton . warnAt elem
 warnAt annotated_elem warning = LWarn $
-  Warn (lineCol . ann $ annotated_elem) (warning ++ take 30 (show annotated_elem))
+  Warn (lineCol . ann $ annotated_elem) (warning ++ take 530 (show annotated_elem))
 
 highlight l = tell . DList.singleton . highlightAt l
 highlightAt l = highlightAt' (lineCol l)
@@ -524,13 +524,11 @@ parseInstanceDecl idecl = case idecl of
 collectRhs :: Rhs S -> Parse ()
 collectRhs rhs = case rhs of
   UnGuardedRhs _l exp -> collectExp exp
-  GuardedRhss _l grhss ->
-    mapM_ collectExp $ concat (map expsFrom grhss)
+  GuardedRhss _l grhss -> mapM_ expsFrom grhss
   where
-  expsFrom (GuardedRhs _l stmts exp) = exp : (stmts >>= stmtExps)
-  stmtExps stmt = case stmt of
-    Qualifier _l exp -> [exp]
-    other -> error "GuardedRhs"  -- warn other "GuardedRhs"]
+  expsFrom (GuardedRhs _l stmts exp) = do
+    mapM_ parseStatement stmts
+    collectExp exp
 
 collectExp :: Exp S -> Parse ()
 collectExp exp = case exp of

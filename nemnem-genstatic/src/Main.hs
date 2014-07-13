@@ -98,9 +98,9 @@ main = do
     err_or_mi <- processModule (path, raw_src)
     case err_or_mi of
       Left err -> lift $ print err
-      Right mi -> lift $ do
+      Right (parsed_src, mi) -> lift $ do
         print . miName $ mi
-        writeLinked outdir raw_src mi
+        writeLinked outdir parsed_src mi
   --
   writeLinked :: String -> String -> ModuleInfo -> IO ()
   writeLinked outdir src mi =
@@ -135,6 +135,7 @@ startR (Range _ s _) = s
 endR (Range _ _ e) = e
 
 -- Note: could check if using Text.Lazy could lower the memory usage
+-- TODO this can blow up if the ranges are messed up, do some checking
 tagRanges
   :: (a -> B.Markup -> B.Markup)
   -> [Range a]
@@ -145,13 +146,14 @@ tagRanges blazer rs txt0 =
       ordered = L.sortBy (comparing (\(Range _ s e) -> (s,-e))) fs
       tlen = T.length txt0
       full = Range undefined 0 tlen
-      guarded = let last = Range undefined tlen tlen
-                in ordered ++ [last]
-  in go ((0, txt0), [(mempty, full)]) guarded
+  in go ((0, txt0), [(mempty, full)]) ordered
   where
-  go (_, _:(res, _):[]) [] =
-    -- drop the `last` guard and retrieve result from accumulator of `full`
-    res
+  go ((idx, txt), stk) [] = case stk of
+    (acc, r):[] -> 
+      let (gap, _) = gapAndRest (endR r - idx) txt
+      in acc <> gap
+    (acc1, r1):(acc2, r2):stks ->
+      pop idx txt acc1 r1 acc2 r2 stks []
   go ((idx, txt), stk) rr@(r:rs) = case stk of
     [] -> error "Stack can't be empty (`full` should remain)"
     (acc, r1):stks | r1 `contains` r ->
@@ -161,14 +163,17 @@ tagRanges blazer rs txt0 =
       in go ((idx + gap_size, txt1),
             (mempty, r):(acc <> gap, r1):stks) rs
     (acc1, r1):(acc2, r2):stks ->
-      -- Add end-gap to r1, pop off r1, and execute it and record the result
-      -- in acc2. Retry same range input (with the updated state).
-      let gap_size = endR r1 - idx
-          (gap, txt1) = gapAndRest gap_size txt
-          result1 = getR r1 $ acc1 <> gap
-      in go ((idx + gap_size, txt1),
-            (acc2 <> result1, r2):stks) rr
-    _ -> error "Should not happen on well-formed input."
+      pop idx txt acc1 r1 acc2 r2 stks rr
+    _ -> error "Unexpected range setup?"
+  pop idx txt acc1 r1 acc2 r2 stks rr =
+    -- Add end-gap to r1, pop off r1, and execute it and record the result
+    -- in acc2. Retry same range input (with the updated state).
+    let gap_size = endR r1 - idx
+        (gap, txt1) = gapAndRest gap_size txt
+        result1 = getR r1 $ acc1 <> gap
+    in go ((idx + gap_size, txt1),
+          (acc2 <> result1, r2):stks) rr
+
   gapAndRest gap_size txt =
     let (gap, txt1) = T.splitAt gap_size txt
         blaze_gap = if T.null gap then mempty else toBlaze gap
