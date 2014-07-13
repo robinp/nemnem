@@ -25,6 +25,7 @@ import Web.Scotty
 import Language.Haskell.Nemnem.Parse.Module
 import Language.Haskell.Nemnem.Parse
 import Language.Haskell.Nemnem.Printer
+import Language.Haskell.Nemnem.ProcessingPlan
 
 -- | Quick hack for displaying a paired paren-rich string in a readable form.
 prettish :: Int -> String -> String
@@ -58,7 +59,7 @@ main = do
         , "src/Language/Haskell/Nemnem/Printer.hs"
         ]
       outdir = "deploy/"
-  paths <- case args of
+  paths <- dagOrdered =<< case args of
     [] -> return default_paths
     (path_file:_) -> filter (not . ("#" `L.isPrefixOf`)) . lines <$>
                        readFile path_file
