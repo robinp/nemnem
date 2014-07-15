@@ -62,6 +62,9 @@ processModule id_macro_prefixes SourceInfo{..} raw_src = StateT $ \modules ->
             EnableExtension MultiParamTypeClasses
           , EnableExtension FlexibleContexts
           , EnableExtension FlexibleInstances
+            -- DOH, let's just throw these in for now
+          , EnableExtension TypeOperators
+          , EnableExtension FunctionalDependencies
           ]
         exts =
           let ge = moGlasgowExts . moduleOptions . T.lines . T.pack $ raw_src

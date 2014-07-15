@@ -9,6 +9,9 @@ module Language.Haskell.Nemnem.Internal.Source
 import Data.Text (Text)
 import qualified Data.Text as T
 
+-- TODO these functions should receive streamed input
+--      to save reading all the file.
+
 -- | Parses the module name of a .hs source.
 moduleName :: [Text] -> Maybe Text
 moduleName src_lines = {-# SCC moduleName #-}
