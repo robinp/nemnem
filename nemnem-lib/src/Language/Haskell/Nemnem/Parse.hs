@@ -10,10 +10,12 @@ import qualified Data.List as L
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
+import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Language.Haskell.Exts.Annotated
 import Text.Regex.TDFA
 
+import Language.Haskell.Nemnem.Internal.Source
 import Language.Haskell.Nemnem.Internal.Util
 import Language.Haskell.Nemnem.Parse.Module
 import Hier (mkRange, transformRegions)
@@ -52,14 +54,27 @@ processModule id_macro_prefixes SourceInfo{..} raw_src = StateT $ \modules ->
                              modules
          in return (Right (parsed_src, m_info), new_modules)
   where
-  -- switch off fixities - this results in possibly incorrect AST, but
-  -- on the source highlighting / indexing level we don't care about
-  -- larger expressions anyway (might be needed for gradient highlight).
-  parse = parseFileContentsWithComments $ defaultParseMode 
-            { fixities = Nothing
-            , parseFilename = siPath
-            -- TODO user-suppliable list of extra LANG extensions
-            }
+  parse =
+    let forced_exts =
+          [ 
+            -- https://github.com/haskell-suite/haskell-src-exts/issues/29,
+            -- and these can't hurt anyway
+            EnableExtension MultiParamTypeClasses
+          , EnableExtension FlexibleContexts
+          , EnableExtension FlexibleInstances
+          ]
+        exts =
+          let ge = moGlasgowExts . moduleOptions . T.lines . T.pack $ raw_src
+          in if ge then glasgowExts else []
+    in parseFileContentsWithComments $ defaultParseMode 
+         -- switch off fixities - this results in possibly incorrect AST, but
+         -- on the source highlighting / indexing level we don't care about
+         -- larger expressions anyway (might be needed for gradient highlight).
+         { fixities = Nothing
+         , parseFilename = siPath
+         -- TODO user-suppliable list of extra LANG extensions
+         , extensions = forced_exts ++ exts
+         }
 
 -- | HSE would interpret a tab as 8 position indent, and would return funny
 -- source columns, which interfers with text-based tagging. So take initiative
