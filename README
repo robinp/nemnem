@@ -22,6 +22,8 @@ Be aware that bounds in .cabal files are pretty arbitrary, might work with lower
 
 3) Create a directory called 'deploy', and copy contents of resource/static there.
 
+To switch to light theme instead of dark, flip the comments at the top of nemnem.hss and run hss on it (http://ncannasse.fr/projects/hss). Powered by Solarized (http://ethanschoonover.com/solarized). You can of course modify the colors in the css in any other way.
+
 (Yes, you are my build system now, sorry).
 
 4) ./cabal[-sandbox]/bin/nemnem-genstatic <my-source-list.txt>
