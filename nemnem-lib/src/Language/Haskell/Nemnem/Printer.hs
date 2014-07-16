@@ -59,9 +59,9 @@ tagToBlaze module_to_path current_module t = case t of
 withHeader m = BH.html $ do
   BH.head $ do
     BH.title "NemNem"
-    BH.link ! BA.rel "stylesheet" ! BA.type_ "text/css" ! BA.href "/static/nemnem.css"
-    BH.script ! BA.src "/static/jquery-2.0.3.min.js" $ mempty
-    BH.script ! BA.src "/static/nemnem.js" $ mempty
+    BH.link ! BA.rel "stylesheet" ! BA.type_ "text/css" ! BA.href "static/nemnem.css"
+    BH.script ! BA.src "static/jquery-2.0.3.min.js" $ mempty
+    BH.script ! BA.src "static/nemnem.js" $ mempty
   BH.body $
     BH.div ! BA.id "code" $ m
 
