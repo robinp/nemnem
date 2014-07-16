@@ -16,10 +16,15 @@ a:hover {
 	text-decoration : none;
 }
 .hlit {
-	border-bottom : 1px solid #b58900;
+  // margin fix suggested by qZeta
+	display: inline-block; 
+  border-bottom : 1px solid #b58900;
+  margin-bottom : -1px;
 }
 .warning {
+	display: inline-block;
 	border-bottom : 1px dashed #dc322f;
+  margin-bottom : -1px;
 }
 span.hl_comment {
 	color : #586e75;
