@@ -16,9 +16,17 @@ a:hover {
 	text-decoration : none;
 }
 .hlit {
+	display : inline-block;
+	zoom : 1;
+	*display : inline;
+	margin-bottom : -1px;
 	border-bottom : 1px solid #b58900;
 }
 .warning {
+	display : inline-block;
+	zoom : 1;
+	*display : inline;
+	margin-bottom : -1px;
 	border-bottom : 1px dashed #dc322f;
 }
 span.hl_comment {

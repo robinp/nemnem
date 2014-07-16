@@ -1,3 +1,4 @@
+// Colors from Solarized theme, http://ethanschoonover.com/solarized
 var base03 =    #002b36;
 var base02 =    #073642;
 var base01 =    #586e75;
@@ -60,11 +61,25 @@ a {
 }
 
 a:hover {
-  text-decoration: underline;
+  // .hlit will take care of underlining
+  text-decoration: none;
 }
 
-.hlit { border-bottom: 1px solid $yellow; }
-.warning { border-bottom: 1px dashed $red; }
+var underline_fix = {
+  display: inline-block;
+  margin-bottom: -1 px;
+}
+
+.hlit {
+  $underline_fix;
+  border-bottom: 1px solid $yellow;
+}
+
+.warning {
+  $underline_fix;
+  border-bottom: 1px dashed $red;
+}
+
 span.hl_comment { color: $secondary_text; }
 
 span.hl_char { color: $violet; }
