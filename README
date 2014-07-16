@@ -2,3 +2,33 @@ NemNem - Haskell source hyperlinker.
 
 The goal of NemNem is to take .hs source files and parse crossreference
 information. Then hyperlinked HTMLs are made, which ease navigating sources.
+
+To get started with you own (private) codebase:
+
+1) Generate a source list, where each line should be:
+
+<packagename>-<packageversion> <path/to/Some.hs>
+
+You may find some inspiration in pull.hs for this.
+Make sure that only a single version of a given package is present, otherwise links get messed up.
+
+2) Using your favourite cabal sandboxing technique:
+
+(optional, if not yet present in bin: cabal install happy alex)
+cd nemnem-lib && cabal install
+cd nemnem-genstatic && cabal install
+
+Be aware that bounds in .cabal files are pretty arbitrary, might work with lower ones (feel free to make suggestions).
+
+3) Create a directory called 'deploy', and copy contents of resource/static there.
+
+(Yes, you are my build system now, sorry).
+
+4) ./cabal[-sandbox]/bin/nemnem-genstatic <my-source-list.txt>
+
+You need to run this from next to the deploy directory, will put .html files there.
+Bug: Might die horribly if a file contains strange encodings. Please report if so.
+
+5) Browse the sources. AST parts not yet supported will be underlined with red.
+
+Please report bugs, but also keep in mind that rough edges (and even missing edges) are expected at this point.
