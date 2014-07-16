@@ -1,0 +1,59 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{-|
+    Use this module if you like to write simple scripts with &#39;String&#39;-based
+    errors, but you prefer to use &#39;EitherT&#39; to handle errors rather than
+    @Control.Exception@.
+
+&gt; import Control.Error
+&gt;
+&gt; main = runScript $ do
+&gt;     str &lt;- scriptIO getLine
+&gt;     n   &lt;- tryRead &quot;Read failed&quot; str
+&gt;     scriptIO $ print (n + 1)
+-}</span></span><span class="mpre">
+
+module Control.Error.Script (
+    </span><span class="hl_comment"><span class="mpre">-- * The Script Monad</span></span><span class="mpre">
+    Script,
+    runScript,
+    scriptIO
+    ) where
+
+import Control.Exception (</span><a href="Control.Exception.Base.html#loc_212_1_212_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_212_1_212_4&#39;)"><span class="mpre">try</span></a><span class="mpre">, SomeException)
+import Control.Monad (</span><a href="Control.Monad.html#loc_274_1_274_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_274_1_274_6&#39;)"><span class="mpre">liftM</span></a><span class="mpre">)
+import Control.Monad.IO.Class (</span><a href="Control.Monad.IO.Class.html#loc_30_20_30_27" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.IO.Class.html#loc_30_20_30_27&#39;)"><span class="mpre">MonadIO</span></a><span class="mpre">(</span><a href="Control.Monad.IO.Class.html#loc_32_5_32_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.IO.Class.html#loc_32_5_32_11&#39;)"><span class="mpre">liftIO</span></a><span class="mpre">))
+import Control.Monad.Trans.Either (</span><a href="Control.Monad.Trans.Either.html#loc_69_9_69_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_69_9_69_16&#39;)"><span class="mpre">EitherT</span></a><span class="mpre">(EitherT, </span><a href="Control.Monad.Trans.Either.html#loc_69_35_69_45" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_69_35_69_45&#39;)"><span class="mpre">runEitherT</span></a><span class="mpre">))
+import Control.Error.Util (</span><a href="Control.Error.Util.html#loc_211_1_211_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Error.Util.html#loc_211_1_211_6&#39;)"><span class="mpre">errLn</span></a><span class="mpre">)
+import Data.EitherR (</span><a href="Data.EitherR.html#loc_123_1_123_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.EitherR.html#loc_123_1_123_6&#39;)"><span class="mpre">fmapL</span></a><span class="mpre">)
+import System.Exit (</span><a href="System.Exit.html#loc_69_1_69_12" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Exit.html#loc_69_1_69_12&#39;)"><span class="mpre">exitFailure</span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- Documentation</span></span><span class="mpre">
+import Control.Monad.Trans.Class (</span><a href="Control.Monad.Trans.Class.html#loc_51_5_51_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Class.html#loc_51_5_51_9&#39;)"><span class="mpre">lift</span></a><span class="mpre">)
+import System.IO (</span><a href="GHC.IO.Handle.FD.html#loc_74_1_74_7" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.FD.html#loc_74_1_74_7&#39;)"><span class="mpre">stderr</span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;IO&#39; action that can fail with a &#39;String&#39; error message</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/errors-1.4.7/Control/Error/Script.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 1, srcSpanEndLine = 34, srcSpanEndColumn = 32}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/errors-1.4.7/Control/Error/Script.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 1, srcSpanEndLine = 34, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/errors-1.4.7/Control/Error/Script.hs&quot;, srcSpanStartLin"><span class="mpre">type Script = EitherT String IO</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-| Runs the &#39;Script&#39; monad
+
+    Prints the first error to &#39;stderr&#39; and exits with &#39;exitFailure&#39;
+-}</span></span><span class="mpre">
+</span><a href="#loc_41_1_41_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_41_1_41_10&#39;)"><span class="mpre">runScript</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Script</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_41_1_41_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_41_1_41_10&#39;)"><span class="hl_fundecl"><span class="mpre">runScript</span></span></a><span class="mpre"> </span><a name="loc_41_11_41_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_41_11_41_12&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> = do
+    </span><a name="loc_42_5_42_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_42_5_42_6&#39;)"><span class="hl_vardecl"><span class="mpre">e</span></span></a><span class="mpre"> &lt;- </span><a href="Control.Monad.Trans.Either.html#loc_69_35_69_45" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_69_35_69_45&#39;)"><span class="hl_varref"><span class="mpre">runEitherT</span></span></a><span class="mpre"> </span><a href="#loc_41_11_41_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_41_11_41_12&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre">
+    case </span><a href="#loc_42_5_42_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_42_5_42_6&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre"> of
+        </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre">  </span><a name="loc_44_15_44_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_15_44_16&#39;)"><span class="hl_vardecl"><span class="mpre">e</span></span></a><span class="mpre"> -&gt; do
+            </span><a href="Control.Error.Util.html#loc_211_1_211_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Error.Util.html#loc_211_1_211_6&#39;)"><span class="hl_varref"><span class="mpre">errLn</span></span></a><span class="mpre"> </span><a href="#loc_44_15_44_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_15_44_16&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre">
+            </span><a href="System.Exit.html#loc_69_1_69_12" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Exit.html#loc_69_1_69_12&#39;)"><span class="hl_varref"><span class="mpre">exitFailure</span></span></a><span class="mpre">
+        </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a name="loc_47_15_47_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_15_47_16&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> -&gt; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_47_15_47_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_15_47_16&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-| &#39;scriptIO&#39; resembles &#39;lift&#39;, except it catches all exceptions and converts
+    them to &#39;String&#39;s.
+
+    Note that &#39;scriptIO&#39; is compatible with the &#39;Script&#39; monad.
+-}</span></span><span class="mpre">
+</span><a href="#loc_55_1_55_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_1_55_9&#39;)"><span class="mpre">scriptIO</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/errors-1.4.7/Control/Error/Script.hs&quot;, srcSpanStartLine = 54, srcSpanStartColumn = 13, srcSpanEndLine = 54, srcSpanEndColumn = 27}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/errors-1.4.7/Control/Error/Script.hs&quot;, srcSpanStartLine = 54, srcSpanStartColumn = 13, srcSpanEndLine = 54, srcSpanEndColumn = 14},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/errors-1.4.7/Control/Error/Script.hs&quot;, srcSpanStartL"><span class="mpre">(MonadIO m) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><a href="Control.Monad.Trans.Either.html#loc_69_9_69_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_69_9_69_16&#39;)"><span class="hl_tyconref"><span class="mpre">EitherT</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_55_1_55_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_1_55_9&#39;)"><span class="hl_vardecl"><span class="mpre">scriptIO</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">EitherT</span></span><span class="mpre">
+         </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Control.Monad.IO.Class.html#loc_32_5_32_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.IO.Class.html#loc_32_5_32_11&#39;)"><span class="hl_varref"><span class="mpre">liftIO</span></span></a><span class="mpre">
+         </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Control.Monad.html#loc_274_1_274_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_274_1_274_6&#39;)"><span class="hl_varref"><span class="mpre">liftM</span></span></a><span class="mpre"> (</span><a href="Data.EitherR.html#loc_123_1_123_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.EitherR.html#loc_123_1_123_6&#39;)"><span class="hl_varref"><span class="mpre">fmapL</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre">)
+         </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> (</span><a href="Control.Exception.Base.html#loc_212_1_212_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_212_1_212_4&#39;)"><span class="hl_varref"><span class="mpre">try</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">SomeException</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">))
+</span></div></body></html>

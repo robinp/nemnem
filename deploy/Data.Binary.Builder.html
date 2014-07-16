@@ -1,0 +1,58 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Safe #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.Binary.Builder</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : Lennart Kolmodin, Ross Paterson</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD3-style (see LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Lennart Kolmodin &lt;kolmodin@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : portable to Hugs and GHC</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Efficient construction of lazy bytestrings.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Binary.Builder (
+
+    </span><span class="hl_comment"><span class="mpre">-- * The Builder type</span></span><span class="mpre">
+      Builder
+    , toLazyByteString
+
+    </span><span class="hl_comment"><span class="mpre">-- * Constructing Builders</span></span><span class="mpre">
+    , empty
+    , singleton
+    , append
+    , fromByteString        </span><span class="hl_comment"><span class="mpre">-- :: S.ByteString -&gt; Builder</span></span><span class="mpre">
+    , fromLazyByteString    </span><span class="hl_comment"><span class="mpre">-- :: L.ByteString -&gt; Builder</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Flushing the buffer state</span></span><span class="mpre">
+    , flush
+
+    </span><span class="hl_comment"><span class="mpre">-- * Derived Builders</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- ** Big-endian writes</span></span><span class="mpre">
+    , putWord16be           </span><span class="hl_comment"><span class="mpre">-- :: Word16 -&gt; Builder</span></span><span class="mpre">
+    , putWord32be           </span><span class="hl_comment"><span class="mpre">-- :: Word32 -&gt; Builder</span></span><span class="mpre">
+    , putWord64be           </span><span class="hl_comment"><span class="mpre">-- :: Word64 -&gt; Builder</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Little-endian writes</span></span><span class="mpre">
+    , putWord16le           </span><span class="hl_comment"><span class="mpre">-- :: Word16 -&gt; Builder</span></span><span class="mpre">
+    , putWord32le           </span><span class="hl_comment"><span class="mpre">-- :: Word32 -&gt; Builder</span></span><span class="mpre">
+    , putWord64le           </span><span class="hl_comment"><span class="mpre">-- :: Word64 -&gt; Builder</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Host-endian, unaligned writes</span></span><span class="mpre">
+    , putWordhost           </span><span class="hl_comment"><span class="mpre">-- :: Word -&gt; Builder</span></span><span class="mpre">
+    , putWord16host         </span><span class="hl_comment"><span class="mpre">-- :: Word16 -&gt; Builder</span></span><span class="mpre">
+    , putWord32host         </span><span class="hl_comment"><span class="mpre">-- :: Word32 -&gt; Builder</span></span><span class="mpre">
+    , putWord64host         </span><span class="hl_comment"><span class="mpre">-- :: Word64 -&gt; Builder</span></span><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- ** Unicode</span></span><span class="mpre">
+    , putCharUtf8
+
+  ) where
+
+import Data.Binary.Builder.Base
+</span></div></body></html>

@@ -1,0 +1,96 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{-| 
+
+The &quot;Text.Regex.TDFA&quot; module provides a backend for regular
+expressions. It provides instances for the classes defined and
+documented in &quot;Text.Regex.Base&quot; and re-exported by this module.  If
+you import this along with other backends then you should do so with
+qualified imports (with renaming for convenience).
+
+This regex-tdfa package implements, correctly, POSIX extended regular
+expressions.  It is highly unlikely that the regex-posix package on
+your operating system is correct, see
+http://www.haskell.org/haskellwiki/Regex_Posix for examples of your
+OS&#39;s bugs.
+
+This package does provide captured parenthesized subexpressions.
+
+Depending on the text being searched this package supports Unicode.
+The [Char] and (Seq Char) text types support Unicode.  The ByteString
+and ByteString.Lazy text types only support ASCII.  It is possible to
+support utf8 encoded ByteString.Lazy by using regex-tdfa and
+regex-tdfa-utf8 packages together  (required the utf8-string package).
+
+As of version 1.1.1 the following GNU extensions are recognized, all
+anchors:
+
+\\\` at beginning of entire text
+
+\\\&#39; at end of entire text
+
+\\&lt; at beginning of word
+
+\\&gt; at end of word
+
+\\b at either beginning or end of word
+
+\\B at neither beginning nor end of word
+
+The above are controlled by the &#39;newSyntax&#39; Bool in &#39;CompOption&#39;.
+
+Where the &quot;word&quot; boundaries means between characters that are and are
+not in the [:word:] character class which contains [a-zA-Z0-9_].  Note
+that \&lt; and \b may match before the entire text and \&gt; and \b may
+match at the end of the entire text.
+
+There is no locale support, so collating elements like [.ch.] are
+simply ignored and equivalence classes like [=a=] are converted to
+just [a].  The character classes like [:alnum:] are supported over
+ASCII only, valid classes are alnum, digit, punct, alpha, graph,
+space, blank, lower, upper, cntrl, print, xdigit, word.
+
+This package does not provide &quot;basic&quot; regular expressions.  This
+package does not provide back references inside regular expressions.
+
+The package does not provide Perl style regular expressions.  Please
+look at the regex-pcre and pcre-light packages instead.
+
+-}</span></span><span class="mpre">
+
+module Text.Regex.TDFA(getVersion_Text_Regex_TDFA
+                      ,(=~),(=~~)
+                      ,module Text.Regex.TDFA.Common
+                      ,module Text.Regex.Base) where
+
+import Data.Version(</span><a href="Data.Version.html#loc_68_6_68_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_68_6_68_13&#39;)"><span class="mpre">Version</span></a><span class="mpre">)
+import Text.Regex.Base
+import Text.Regex.TDFA.String()
+import Text.Regex.TDFA.ByteString()
+import Text.Regex.TDFA.ByteString.Lazy()
+import Text.Regex.TDFA.Sequence()
+import Text.Regex.TDFA.Common(</span><a href="Text.Regex.TDFA.Common.html#loc_128_6_128_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Regex.TDFA.Common.html#loc_128_6_128_11&#39;)"><a href="Text.Regex.TDFA.Common.html#loc_128_14_128_19" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Regex.TDFA.Common.html#loc_128_14_128_19&#39;)"><span class="mpre">Regex</span></a></a><span class="mpre">,</span><a href="Text.Regex.TDFA.Common.html#loc_85_6_85_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Regex.TDFA.Common.html#loc_85_6_85_16&#39;)"><span class="mpre">CompOption</span></a><span class="mpre">(..),</span><a href="Text.Regex.TDFA.Common.html#loc_101_6_101_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Regex.TDFA.Common.html#loc_101_6_101_16&#39;)"><span class="mpre">ExecOption</span></a><span class="mpre">(..))
+</span><span class="hl_comment"><span class="mpre">--import Text.Regex.TDFA.Wrap(Regex,CompOption(..),ExecOption(..),(=~),(=~~))</span></span><span class="mpre">
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine = 73, srcSpanStartColumn = 8, srcSpanEndLine = 73, srcSpanEndColumn = 24}, srcInfoPoints = []}) &quot;Paths_regex_tdfa&quot;"><span class="mpre">Paths_regex_tdfa</span></span><span class="mpre">(version)
+
+</span><a href="#loc_76_1_76_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_1_76_27&#39;)"><span class="mpre">getVersion_Text_Regex_TDFA</span></a><span class="mpre"> :: </span><a href="Data.Version.html#loc_68_6_68_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_68_6_68_13&#39;)"><span class="hl_tyconref"><span class="mpre">Version</span></span></a><span class="mpre">
+</span><a name="loc_76_1_76_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_1_76_27&#39;)"><span class="hl_vardecl"><span class="mpre">getVersion_Text_Regex_TDFA</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">version</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | This is the pure functional matching operator.  If the target</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- cannot be produced then some empty result will be returned.  If</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- there is an error in processing, then &#39;error&#39; will be called.</span></span><span class="mpre">
+</span><a href="#loc_84_1_84_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_5&#39;)"><span class="mpre">(=~)</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxTuple (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine = 82, srcSpanStartColumn = 9, srcSpanEndLine = 83, srcSpanEndColumn = 8}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine = 82, srcSpanStartColumn = 9, srcSpanEndLine = 82, srcSpanEndColumn = 10},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine = "><span class="mpre">(RegexMaker Regex CompOption ExecOption source,RegexContext Regex source1 target)
+     =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">source1</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">source</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">target</span></span><span class="mpre">
+</span><a name="loc_84_1_84_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_5&#39;)"><span class="hl_fundecl"><span class="mpre">(=~)</span></span></a><span class="mpre"> </span><a name="loc_84_6_84_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_6_84_7&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> </span><a name="loc_84_8_84_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_8_84_9&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre"> = let </span><a href="#loc_85_16_85_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_85_16_85_20&#39;)"><span class="mpre">make</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine = 84, srcSpanStartColumn = 24, srcSpanEndLine = 84, srcSpanEndColumn = 67}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine = 84, srcSpanStartColumn = 65, srcSpanEndLine = 84, srcSpanEndColumn = 67}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2"><span class="mpre">RegexMaker Regex CompOption ExecOption a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><a href="Text.Regex.TDFA.Common.html#loc_128_6_128_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Regex.TDFA.Common.html#loc_128_6_128_11&#39;)"><span class="hl_tyconref"><span class="mpre">Regex</span></span></a><span class="mpre">
+               </span><a name="loc_85_16_85_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_85_16_85_20&#39;)"><span class="hl_vardecl"><span class="mpre">make</span></span></a><span class="mpre"> = </span><a href="Text.Regex.Base.RegexLike.html#loc_101_3_101_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Regex.Base.RegexLike.html#loc_101_3_101_12&#39;)"><span class="hl_varref"><span class="mpre">makeRegex</span></span></a><span class="mpre">
+           in </span><a href="Text.Regex.Base.RegexLike.html#loc_191_3_191_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Regex.Base.RegexLike.html#loc_191_3_191_8&#39;)"><span class="hl_varref"><span class="mpre">match</span></span></a><span class="mpre"> (</span><a href="#loc_85_16_85_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_85_16_85_20&#39;)"><span class="hl_varref"><span class="mpre">make</span></span></a><span class="mpre"> </span><a href="#loc_84_8_84_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_8_84_9&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre">) </span><a href="#loc_84_6_84_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_6_84_7&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | This is the monadic matching operator.  If a single match fails,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- then &#39;fail&#39; will be called.</span></span><span class="mpre">
+</span><a href="#loc_92_1_92_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_6&#39;)"><span class="mpre">(=~~)</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxTuple (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine = 90, srcSpanStartColumn = 10, srcSpanEndLine = 91, srcSpanEndColumn = 9}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine = 90, srcSpanStartColumn = 10, srcSpanEndLine = 90, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine "><span class="mpre">(RegexMaker Regex CompOption ExecOption source,RegexContext Regex source1 target,Monad m)
+      =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">source1</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">source</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">target</span></span><span class="mpre">
+</span><a name="loc_92_1_92_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_6&#39;)"><span class="hl_fundecl"><span class="mpre">(=~~)</span></span></a><span class="mpre"> </span><a name="loc_92_7_92_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_7_92_8&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> </span><a name="loc_92_9_92_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_9_92_10&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre"> = do let </span><a href="#loc_93_20_93_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_93_20_93_24&#39;)"><span class="mpre">make</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxTuple (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine = 92, srcSpanStartColumn = 28, srcSpanEndLine = 92, srcSpanEndColumn = 82}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine = 92, srcSpanStartColumn = 28, srcSpanEndLine = 92, srcSpanEndColumn = 29},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-tdfa-1.2.0/Text/Regex/TDFA.hs&quot;, srcSpanStartLine"><span class="mpre">(RegexMaker Regex CompOption ExecOption a, Monad m) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><a href="Text.Regex.TDFA.Common.html#loc_128_6_128_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Regex.TDFA.Common.html#loc_128_6_128_11&#39;)"><span class="hl_tyconref"><span class="mpre">Regex</span></span></a><span class="mpre">
+                   </span><a name="loc_93_20_93_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_93_20_93_24&#39;)"><span class="hl_vardecl"><span class="mpre">make</span></span></a><span class="mpre"> = </span><a href="Text.Regex.Base.RegexLike.html#loc_105_3_105_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Regex.Base.RegexLike.html#loc_105_3_105_13&#39;)"><span class="hl_varref"><span class="mpre">makeRegexM</span></span></a><span class="mpre">
+               </span><a name="loc_94_16_94_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_94_16_94_17&#39;)"><span class="hl_vardecl"><span class="mpre">q</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_93_20_93_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_93_20_93_24&#39;)"><span class="hl_varref"><span class="mpre">make</span></span></a><span class="mpre"> </span><a href="#loc_92_9_92_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_9_92_10&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre">
+               </span><a href="Text.Regex.Base.RegexLike.html#loc_192_3_192_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Regex.Base.RegexLike.html#loc_192_3_192_9&#39;)"><span class="hl_varref"><span class="mpre">matchM</span></span></a><span class="mpre"> </span><a href="#loc_94_16_94_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_94_16_94_17&#39;)"><span class="hl_varref"><span class="mpre">q</span></span></a><span class="mpre"> </span><a href="#loc_92_7_92_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_7_92_8&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+</span></div></body></html>

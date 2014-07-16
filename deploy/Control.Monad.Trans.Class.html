@@ -1,0 +1,241 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Monad.Trans.Class</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Andy Gill 2001,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Oregon Graduate Institute of Science and Technology, 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  ross@soi.city.ac.uk</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The class of monad transformers.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A monad transformer makes a new monad out of an existing monad, such</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that computations of the old monad may be embedded in the new one.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To construct a monad with a desired set of features, one typically</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- starts with a base monad, such as &#39;Data.Functor.Identity.Identity&#39;, @[]@ or &#39;IO&#39;, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- applies a sequence of monad transformers.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Control.Monad.Trans.Class (
+    </span><span class="hl_comment"><span class="mpre">-- * Transformer class</span></span><span class="mpre">
+    MonadTrans(..)
+
+    </span><span class="hl_comment"><span class="mpre">-- * Conventions</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $conventions</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Strict monads</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $strict</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Examples</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- ** Parsing</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $example1</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Parsing and counting</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $example2</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Interpreter monad</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $example3</span></span><span class="mpre">
+  ) where
+
+</span><span class="hl_comment"><span class="mpre">-- | The class of monad transformers.  Instances should satisfy the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- following laws, which state that &#39;lift&#39; is a monad transformation:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @&#39;lift&#39; . &#39;return&#39; = &#39;return&#39;@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @&#39;lift&#39; (m &gt;&gt;= f) = &#39;lift&#39; m &gt;&gt;= (&#39;lift&#39; . f)@</span></span><span class="mpre">
+
+class </span><a name="loc_49_7_49_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_49_7_49_17&#39;)"><span class="hl_classdecl"><span class="mpre">MonadTrans</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">t</span></span><span class="mpre"> where
+    </span><span class="hl_comment"><span class="mpre">-- | Lift a computation from the argument monad to the constructed monad.</span></span><span class="mpre">
+    </span><a name="loc_51_5_51_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_51_5_51_9&#39;)"><span class="mpre">lift</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/Trans/Class.hs&quot;, srcSpanStartLine = 51, srcSpanStartColumn = 13, srcSpanEndLine = 51, srcSpanEndColumn = 25}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/Trans/Class.hs&quot;, srcSpanStartLine = 51, srcSpanStartColumn = 13, srcSpanEndLine = 51, srcSpanEndColumn = 14},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Contr"><span class="mpre">(Monad m) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">t</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $conventions
+Most monad transformer modules include the special case of applying
+the transformer to &#39;Data.Functor.Identity.Identity&#39;.  For example,
+@&#39;Control.Monad.Trans.State.Lazy.State&#39; s@ is an abbreviation for
+@&#39;Control.Monad.Trans.State.Lazy.StateT&#39; s &#39;Data.Functor.Identity.Identity&#39;@.
+
+Each monad transformer also comes with an operation @run@/XXX/@T@ to
+unwrap the transformer, exposing a computation of the inner monad.
+(Currently these functions are defined as field labels, but in the next
+major release they will be separate functions.)
+
+All of the monad transformers except &#39;Control.Monad.Trans.Cont.ContT&#39;
+are functors on the category of monads: in addition to defining a
+mapping of monads, they also define a mapping from transformations
+between base monads to transformations between transformed monads,
+called @map@/XXX/@T@.  Thus given a monad transformation @t :: M a -&gt; N a@,
+the combinator &#39;Control.Monad.Trans.State.Lazy.mapStateT&#39; constructs
+a monad transformation
+
+&gt; mapStateT t :: StateT s M a -&gt; StateT s N a
+
+Each of the monad transformers introduces relevant operations.
+In a sequence of monad transformers, most of these operations.can be
+lifted through other transformers using &#39;lift&#39; or the @map@/XXX/@T@
+combinator, but a few with more complex type signatures require
+specialized lifting combinators, called @lift@/Op/.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $strict
+
+A monad is said to be /strict/ if its &#39;&gt;&gt;=&#39; operation is strict in its first
+argument.  The base monads &#39;Maybe&#39;, @[]@ and &#39;IO&#39; are strict:
+
+&gt;&gt;&gt; undefined &gt;&gt; return 2 :: Maybe Integer
+*** Exception: Prelude.undefined
+
+However the monad &#39;Data.Functor.Identity.Identity&#39; is not:
+
+&gt;&gt;&gt; runIdentity (undefined &gt;&gt; return 2)
+2
+
+In a strict monad you know when each action is executed, but the monad
+is not necessarily strict in the return value, or in other components
+of the monad, such as a state.  However you can use &#39;seq&#39; to create
+an action that is strict in the component you want evaluated.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $example1
+
+One might define a parsing monad by adding a state (the &#39;String&#39; remaining
+to be parsed) to the @[]@ monad, which provides non-determinism:
+
+&gt; import Control.Monad.Trans.State
+&gt;
+&gt; type Parser = StateT String []
+
+Then @Parser@ is an instance of @MonadPlus@: monadic sequencing implements
+concatenation of parsers, while @mplus@ provides choice.  To use parsers,
+we need a primitive to run a constructed parser on an input string:
+
+&gt; runParser :: Parser a -&gt; String -&gt; [a]
+&gt; runParser p s = [x | (x, &quot;&quot;) &lt;- runStateT p s]
+
+Finally, we need a primitive parser that matches a single character,
+from which arbitrarily complex parsers may be constructed:
+
+&gt; item :: Parser Char
+&gt; item = do
+&gt;     c:cs &lt;- get
+&gt;     put cs
+&gt;     return c
+
+In this example we use the operations @get@ and @put@ from
+&quot;Control.Monad.Trans.State&quot;, which are defined only for monads that are
+applications of &#39;Control.Monad.Trans.State.Lazy.StateT&#39;.  Alternatively one
+could use monad classes from the @mtl@ package or similar, which contain
+methods @get@ and @put@ with types generalized over all suitable monads.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $example2
+
+We can define a parser that also counts by adding a
+&#39;Control.Monad.Trans.Writer.Lazy.WriterT&#39; transformer:
+
+&gt; import Control.Monad.Trans.Class
+&gt; import Control.Monad.Trans.State
+&gt; import Control.Monad.Trans.Writer
+&gt; import Data.Monoid
+&gt;
+&gt; type Parser = WriterT (Sum Int) (StateT String [])
+
+The function that applies a parser must now unwrap each of the monad
+transformers in turn:
+
+&gt; runParser :: Parser a -&gt; String -&gt; [(a, Int)]
+&gt; runParser p s = [(x, n) | ((x, Sum n), &quot;&quot;) &lt;- runStateT (runWriterT p) s]
+
+To define the @item@ parser, we need to lift the
+&#39;Control.Monad.Trans.State.Lazy.StateT&#39; operations through the
+&#39;Control.Monad.Trans.Writer.Lazy.WriterT&#39; transformer.
+
+&gt; item :: Parser Char
+&gt; item = do
+&gt;     c:cs &lt;- lift get
+&gt;     lift (put cs)
+&gt;     return c
+
+In this case, we were able to do this with &#39;lift&#39;, but operations with
+more complex types require special lifting functions, which are provided
+by monad transformers for which they can be implemented.  If you use the
+monad classes of the @mtl@ package or similar, this lifting is handled
+automatically by the instances of the classes, and you need only use
+the generalized methods @get@ and @put@.
+
+We can also define a primitive using the Writer:
+
+&gt; tick :: Parser ()
+&gt; tick = tell (Sum 1)
+
+Then the parser will keep track of how many @tick@s it executes.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $example3
+
+This example is a cut-down version of the one in
+\&quot;Monad Transformers and Modular Interpreters\&quot;,
+by Sheng Liang, Paul Hudak and Mark Jones in /POPL&#39;95/
+(&lt;http://web.cecs.pdx.edu/~mpj/pubs/modinterp.html&gt;).
+
+Suppose we want to define an interpreter that can do I\/O and has
+exceptions, an environment and a modifiable store.  We can define
+a monad that supports all these things as a stack of monad transformers:
+
+&gt; import Control.Monad.Trans.Class
+&gt; import Control.Monad.Trans.State
+&gt; import qualified Control.Monad.Trans.Reader as R
+&gt; import qualified Control.Monad.Trans.Except as E
+&gt;
+&gt; type InterpM = StateT Store (R.ReaderT Env (E.ExceptT Err []))
+
+for suitable types @Store@, @Env@ and @Err@.
+
+Now we would like to be able to use the operations associated with each
+of those monad transformers on @InterpM@ actions.  Since the uppermost
+monad transformer of @InterpM@ is &#39;Control.Monad.Trans.State.Lazy.StateT&#39;,
+it already has the state operations @get@ and @set@.
+
+The first of the &#39;Control.Monad.Trans.Reader.ReaderT&#39; operations,
+&#39;Control.Monad.Trans.Reader.ask&#39;, is a simple action, so we can lift it
+through &#39;Control.Monad.Trans.State.Lazy.StateT&#39; to @InterpM@ using &#39;lift&#39;:
+
+&gt; ask :: InterpM Env
+&gt; ask = lift R.ask
+
+The other &#39;Control.Monad.Trans.Reader.ReaderT&#39; operation,
+&#39;Control.Monad.Trans.Reader.local&#39;, has a suitable type for lifting
+using &#39;Control.Monad.Trans.State.Lazy.mapStateT&#39;:
+
+&gt; local :: (Env -&gt; Env) -&gt; InterpM a -&gt; InterpM a
+&gt; local f = mapStateT (R.local f)
+
+We also wish to lift the operations of &#39;Control.Monad.Trans.Except.ExceptT&#39;
+through both &#39;Control.Monad.Trans.Reader.ReaderT&#39; and
+&#39;Control.Monad.Trans.State.Lazy.StateT&#39;.  For the operation
+&#39;Control.Monad.Trans.Except.throwE&#39;, we know @throwE e@ is a simple
+action, so we can lift it through the two monad transformers to @InterpM@
+with two &#39;lift&#39;s:
+
+&gt; throwE :: Err -&gt; InterpM a
+&gt; throwE e = lift (lift (E.throwE e))
+
+The &#39;Control.Monad.Trans.Except.catchE&#39; operation has a more
+complex type, so we need to use the special-purpose lifting function
+@liftCatch@ provided by most monad transformers.  Here we use
+the &#39;Control.Monad.Trans.Reader.ReaderT&#39; version followed by the
+&#39;Control.Monad.Trans.State.Lazy.StateT&#39; version:
+
+&gt; catchE :: InterpM a -&gt; (Err -&gt; InterpM a) -&gt; InterpM a
+&gt; catchE = liftCatch (R.liftCatch E.catchE)
+
+We could lift &#39;IO&#39; actions to @InterpM@ using three &#39;lift&#39;s, but @InterpM@
+is automatically an instance of &#39;Control.Monad.IO.Class.MonadIO&#39;,
+so we can use &#39;Control.Monad.IO.Class.liftIO&#39; instead:
+
+&gt; putStr :: String -&gt; InterpM ()
+&gt; putStr s = liftIO (Prelude.putStr s)
+
+-}</span></span><span class="mpre">
+</span></div></body></html>

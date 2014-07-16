@@ -1,0 +1,154 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Lens.Operators</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2012-14 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module exists for users who like to work with qualified imports</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- but want access to the operators from Lens.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import qualified Control.Lens as L</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import Control.Lens.Operators</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Control.Lens.Operators
+  ( </span><span class="hl_comment"><span class="mpre">-- output from scripts/operators -h</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &quot;Control.Lens.Action&quot;</span></span><span class="mpre">
+    (^!)
+  , (^!!)
+  , (^!?)
+  , (^@!)
+  , (^@!!)
+  , (^@!?)
+  </span><span class="hl_comment"><span class="mpre">-- * &quot;Control.Lens.Cons&quot;</span></span><span class="mpre">
+  , (&lt;|)
+  , (|&gt;)
+  </span><span class="hl_comment"><span class="mpre">-- * &quot;Control.Lens.Fold&quot;</span></span><span class="mpre">
+  , (^..)
+  , (^?)
+  , (^?!)
+  , (^@..)
+  , (^@?)
+  , (^@?!)
+  </span><span class="hl_comment"><span class="mpre">-- * &quot;Control.Lens.Getter&quot;</span></span><span class="mpre">
+  , (^.)
+  , (^@.)
+  </span><span class="hl_comment"><span class="mpre">-- * &quot;Control.Lens.Indexed&quot;</span></span><span class="mpre">
+  , (&lt;.)
+  , (.&gt;)
+  , (&lt;.&gt;)
+  </span><span class="hl_comment"><span class="mpre">-- * &quot;Control.Lens.Lens&quot;</span></span><span class="mpre">
+  , (%%~)
+  , (%%=)
+  , (&amp;)
+  , (&amp;~)
+  , (&lt;&amp;&gt;)
+  , (??)
+  , (&lt;%~)
+  , (&lt;+~)
+  , (&lt;-~)
+  , (&lt;*~)
+  , (&lt;//~)
+  , (&lt;^~)
+  , (&lt;^^~)
+  , (&lt;**~)
+  , (&lt;||~)
+  , (&lt;&amp;&amp;~)
+  , (&lt;&lt;%~)
+  , (&lt;&lt;.~)
+  , (&lt;&lt;+~)
+  , (&lt;&lt;-~)
+  , (&lt;&lt;*~)
+  , (&lt;&lt;//~)
+  , (&lt;&lt;^~)
+  , (&lt;&lt;^^~)
+  , (&lt;&lt;**~)
+  , (&lt;&lt;||~)
+  , (&lt;&lt;&amp;&amp;~)
+  , (&lt;&lt;&lt;&gt;~)
+  , (&lt;%=)
+  , (&lt;+=)
+  , (&lt;-=)
+  , (&lt;*=)
+  , (&lt;//=)
+  , (&lt;^=)
+  , (&lt;^^=)
+  , (&lt;**=)
+  , (&lt;||=)
+  , (&lt;&amp;&amp;=)
+  , (&lt;&lt;%=)
+  , (&lt;&lt;.=)
+  , (&lt;&lt;+=)
+  , (&lt;&lt;-=)
+  , (&lt;&lt;*=)
+  , (&lt;&lt;//=)
+  , (&lt;&lt;^=)
+  , (&lt;&lt;^^=)
+  , (&lt;&lt;**=)
+  , (&lt;&lt;||=)
+  , (&lt;&lt;&amp;&amp;=)
+  , (&lt;&lt;&lt;&gt;=)
+  , (&lt;&lt;~)
+  , (&lt;&lt;&gt;~)
+  , (&lt;&lt;&gt;=)
+  , (&lt;%@~)
+  , (&lt;&lt;%@~)
+  , (%%@~)
+  , (%%@=)
+  , (&lt;%@=)
+  , (&lt;&lt;%@=)
+  , (^#)
+  , ( #~ )
+  , ( #%~ )
+  , ( #%%~ )
+  , ( #= )
+  , ( #%= )
+  , (&lt;#%~)
+  , (&lt;#%=)
+  , ( #%%= )
+  , (&lt;#~)
+  , (&lt;#=)
+  </span><span class="hl_comment"><span class="mpre">-- * &quot;Control.Lens.Plated&quot;</span></span><span class="mpre">
+  , (...)
+  </span><span class="hl_comment"><span class="mpre">-- * &quot;Control.Lens.Review&quot;</span></span><span class="mpre">
+  , ( # )
+  </span><span class="hl_comment"><span class="mpre">-- * &quot;Control.Lens.Setter&quot;</span></span><span class="mpre">
+  , (%~)
+  , (.~)
+  , (?~)
+  , (&lt;.~)
+  , (&lt;?~)
+  , (+~)
+  , (*~)
+  , (-~)
+  , (//~)
+  , (^~)
+  , (^^~)
+  , (**~)
+  , (||~)
+  , (&amp;&amp;~)
+  , (.=)
+  , (%=)
+  , (?=)
+  , (+=)
+  , (-=)
+  , (*=)
+  , (//=)
+  , (^=)
+  , (^^=)
+  , (**=)
+  , (&amp;&amp;=)
+  , (||=)
+  , (&lt;~)
+  , (&lt;.=)
+  , (&lt;?=)
+  , (&lt;&gt;~)
+  , (&lt;&gt;=)
+  , (%@~)
+  , (%@=)
+  ) where
+
+import Control.Lens
+</span></div></body></html>

@@ -1,0 +1,224 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Attoparsec.ByteString</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  Bryan O&#39;Sullivan 2007-2014</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD3</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  bos@serpentine.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  unknown</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Simple, efficient combinator parsing for &#39;B.ByteString&#39; strings,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- loosely based on the Parsec library.</span></span><span class="mpre">
+
+module Data.Attoparsec.ByteString
+    (
+    </span><span class="hl_comment"><span class="mpre">-- * Differences from Parsec</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $parsec</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Incremental input</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $incremental</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Performance considerations</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $performance</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Parser types</span></span><span class="mpre">
+      I.Parser
+    , Result
+    , T.IResult(..)
+    , I.compareResults
+
+    </span><span class="hl_comment"><span class="mpre">-- * Running parsers</span></span><span class="mpre">
+    , parse
+    , feed
+    , I.parseOnly
+    , parseWith
+    , parseTest
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Result conversion</span></span><span class="mpre">
+    , maybeResult
+    , eitherResult
+
+    </span><span class="hl_comment"><span class="mpre">-- * Parsing individual bytes</span></span><span class="mpre">
+    , I.word8
+    , I.anyWord8
+    , I.notWord8
+    , I.satisfy
+    , I.satisfyWith
+    , I.skip
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Lookahead</span></span><span class="mpre">
+    , I.peekWord8
+    , I.peekWord8&#39;
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Byte classes</span></span><span class="mpre">
+    , I.inClass
+    , I.notInClass
+
+    </span><span class="hl_comment"><span class="mpre">-- * Efficient string handling</span></span><span class="mpre">
+    , I.string
+    , I.skipWhile
+    , I.take
+    , I.scan
+    , I.takeWhile
+    , I.takeWhile1
+    , I.takeTill
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Consume all remaining input</span></span><span class="mpre">
+    , I.takeByteString
+    , I.takeLazyByteString
+
+    </span><span class="hl_comment"><span class="mpre">-- * Combinators</span></span><span class="mpre">
+    , try
+    , (&lt;?&gt;)
+    , choice
+    , count
+    , option
+    , many&#39;
+    , many1
+    , many1&#39;
+    , manyTill
+    , manyTill&#39;
+    , sepBy
+    , sepBy&#39;
+    , sepBy1
+    , sepBy1&#39;
+    , skipMany
+    , skipMany1
+    , eitherP
+    , I.match
+    </span><span class="hl_comment"><span class="mpre">-- * State observation and manipulation functions</span></span><span class="mpre">
+    , I.endOfInput
+    , I.atEnd
+    ) where
+
+import Data.Attoparsec.Combinator
+import qualified Data.Attoparsec.ByteString.Internal as I
+import qualified Data.Attoparsec.Internal as I
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/attoparsec-0.12.1.0/Data/Attoparsec/ByteString.hs&quot;, srcSpanStartLine = 97, srcSpanStartColumn = 18, srcSpanEndLine = 97, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> as B
+import Data.Attoparsec.ByteString.Internal (Result, </span><a href="Data.Attoparsec.ByteString.Internal.html#loc_405_1_405_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Attoparsec.ByteString.Internal.html#loc_405_1_405_6&#39;)"><span class="mpre">parse</span></a><span class="mpre">)
+import qualified Data.Attoparsec.Internal.Types as T
+
+</span><span class="hl_comment"><span class="mpre">-- $parsec</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Compared to Parsec 3, attoparsec makes several tradeoffs.  It is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- not intended for, or ideal for, all possible uses.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * While attoparsec can consume input incrementally, Parsec cannot.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Incremental input is a huge deal for efficient and secure network</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   and system programming, since it gives much more control to users</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   of the library over matters such as resource usage and the I/O</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   model to use.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * Much of the performance advantage of attoparsec is gained via</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   high-performance parsers such as &#39;I.takeWhile&#39; and &#39;I.string&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   If you use complicated combinators that return lists of bytes or</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   characters, there is less performance difference between the two</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   libraries.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * Unlike Parsec 3, attoparsec does not support being used as a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   monad transformer.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * attoparsec is specialised to deal only with strict &#39;B.ByteString&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   input.  Efficiency concerns rule out both lists and lazy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   bytestrings.  The usual use for lazy bytestrings would be to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   allow consumption of very large input without a large footprint.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   For this need, attoparsec&#39;s incremental input provides an</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   excellent substitute, with much more control over when input</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   takes place.  If you must use lazy bytestrings, see the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &quot;Data.Attoparsec.ByteString.Lazy&quot; module, which feeds lazy chunks</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   to a regular parser.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * Parsec parsers can produce more helpful error messages than</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   attoparsec parsers.  This is a matter of focus: attoparsec avoids</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   the extra book-keeping in favour of higher performance.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $incremental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- attoparsec supports incremental input, meaning that you can feed it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a bytestring that represents only part of the expected total amount</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of data to parse. If your parser reaches the end of a fragment of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- input and could consume more input, it will suspend parsing and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- return a &#39;T.Partial&#39; continuation.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Supplying the &#39;T.Partial&#39; continuation with a bytestring will</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- resume parsing at the point where it was suspended, with the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- bytestring you supplied used as new input at the end of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- existing input. You must be prepared for the result of the resumed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- parse to be another &#39;T.Partial&#39; continuation.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To indicate that you have no more input, supply the &#39;T.Partial&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- continuation with an empty bytestring.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Remember that some parsing combinators will not return a result</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- until they reach the end of input.  They may thus cause &#39;T.Partial&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- results to be returned.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If you do not need support for incremental input, consider using</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the &#39;I.parseOnly&#39; function to run your parser.  It will never</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- prompt for more input.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Note/: incremental input does /not/ imply that attoparsec will</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- release portions of its internal state for garbage collection as it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- proceeds.  Its internal representation is equivalent to a single</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;ByteString&#39;: if you feed incremental input to a parser, it will</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- require memory proportional to the amount of input you supply.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (This is necessary to support arbitrary backtracking.)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $performance</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If you write an attoparsec-based parser carefully, it can be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- realistic to expect it to perform similarly to a hand-rolled C</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- parser (measuring megabytes parsed per second).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To actually achieve high performance, there are a few guidelines</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that it is useful to follow.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Use the &#39;B.ByteString&#39;-oriented parsers whenever possible,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- e.g. &#39;I.takeWhile1&#39; instead of &#39;many1&#39; &#39;I.anyWord8&#39;.  There is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- about a factor of 100 difference in performance between the two</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- kinds of parser.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For very simple byte-testing predicates, write them by hand instead</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of using &#39;I.inClass&#39; or &#39;I.notInClass&#39;.  For instance, both of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- these predicates test for an end-of-line byte, but the first is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- much faster than the second:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;endOfLine_fast w = w == 13 || w == 10</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;endOfLine_slow   = inClass &quot;\r\n&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Make active use of benchmarking and profiling tools to measure,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- find the problems with, and improve the performance of your parser.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Run a parser and print its result to standard output.</span></span><span class="mpre">
+</span><a href="#loc_194_1_194_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_194_1_194_10&#39;)"><span class="mpre">parseTest</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/attoparsec-0.12.1.0/Data/Attoparsec/ByteString.hs&quot;, srcSpanStartLine = 193, srcSpanStartColumn = 14, srcSpanEndLine = 193, srcSpanEndColumn = 25}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/attoparsec-0.12.1.0/Data/Attoparsec/ByteString.hs&quot;, srcSpanStartLine = 193, srcSpanStartColumn = 14, srcSpanEndLine = 193, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/attoparsec-0.12.1.0/Da"><span class="mpre">(Show a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">I.Parser</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_194_1_194_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_194_1_194_10&#39;)"><span class="hl_fundecl"><span class="mpre">parseTest</span></span></a><span class="mpre"> </span><a name="loc_194_11_194_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_194_11_194_12&#39;)"><span class="hl_vardecl"><span class="mpre">p</span></span></a><span class="mpre"> </span><a name="loc_194_13_194_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_194_13_194_14&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">print</span></span><span class="mpre"> (</span><a href="Data.Attoparsec.ByteString.Internal.html#loc_405_1_405_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Attoparsec.ByteString.Internal.html#loc_405_1_405_6&#39;)"><span class="hl_varref"><span class="mpre">parse</span></span></a><span class="mpre"> </span><a href="#loc_194_11_194_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_194_11_194_12&#39;)"><span class="hl_varref"><span class="mpre">p</span></span></a><span class="mpre"> </span><a href="#loc_194_13_194_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_194_13_194_14&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | Run a parser with an initial input string, and a monadic action</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that can supply more input if needed.</span></span><span class="mpre">
+</span><a href="#loc_207_1_207_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_1_207_10&#39;)"><span class="mpre">parseWith</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/attoparsec-0.12.1.0/Data/Attoparsec/ByteString.hs&quot;, srcSpanStartLine = 198, srcSpanStartColumn = 14, srcSpanEndLine = 198, srcSpanEndColumn = 24}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/attoparsec-0.12.1.0/Data/Attoparsec/ByteString.hs&quot;, srcSpanStartLine = 198, srcSpanStartColumn = 22, srcSpanEndLine = 198, srcSpanEndColumn = 24}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/va"><span class="mpre">Monad m =&gt;</span></span><span class="mpre">
+             (</span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">)
+          </span><span class="hl_comment"><span class="mpre">-- ^ An action that will be executed to provide the parser</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- with more input, if necessary.  The action must return an</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;B.empty&#39; string when there is no more input available.</span></span><span class="mpre">
+          -&gt; </span><span class="hl_tyconref"><span class="mpre">I.Parser</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+          -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- ^ Initial input for the parser.</span></span><span class="mpre">
+          -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Result</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+</span><a name="loc_207_1_207_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_1_207_10&#39;)"><span class="hl_fundecl"><span class="mpre">parseWith</span></span></a><span class="mpre"> </span><a name="loc_207_11_207_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_11_207_17&#39;)"><span class="hl_vardecl"><span class="mpre">refill</span></span></a><span class="mpre"> </span><a name="loc_207_18_207_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_18_207_19&#39;)"><span class="hl_vardecl"><span class="mpre">p</span></span></a><span class="mpre"> </span><a name="loc_207_20_207_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_20_207_21&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> = </span><a href="#loc_208_9_208_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_9_208_13&#39;)"><span class="hl_varref"><span class="mpre">step</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Data.Attoparsec.ByteString.Internal.html#loc_405_1_405_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Attoparsec.ByteString.Internal.html#loc_405_1_405_6&#39;)"><span class="hl_varref"><span class="mpre">parse</span></span></a><span class="mpre"> </span><a href="#loc_207_18_207_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_18_207_19&#39;)"><span class="hl_varref"><span class="mpre">p</span></span></a><span class="mpre"> </span><a href="#loc_207_20_207_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_20_207_21&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre">
+  where </span><a name="loc_208_9_208_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_9_208_13&#39;)"><span class="hl_fundecl"><span class="mpre">step</span></span></a><span class="mpre"> (</span><a href="Data.Attoparsec.Internal.Types.html#loc_58_5_58_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Attoparsec.Internal.Types.html#loc_58_5_58_12&#39;)"><span class="hl_conref"><span class="mpre">T.Partial</span></span></a><span class="mpre"> </span><a name="loc_208_25_208_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_25_208_26&#39;)"><span class="hl_vardecl"><span class="mpre">k</span></span></a><span class="mpre">) = (</span><a href="#loc_208_9_208_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_9_208_13&#39;)"><span class="hl_varref"><span class="mpre">step</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="#loc_208_25_208_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_25_208_26&#39;)"><span class="hl_varref"><span class="mpre">k</span></span></a><span class="mpre">) </span><span class="hl_infix"><span class="mpre">=&lt;&lt;</span></span><span class="mpre"> </span><a href="#loc_207_11_207_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_11_207_17&#39;)"><span class="hl_varref"><span class="mpre">refill</span></span></a><span class="mpre">
+        </span><a href="#loc_208_9_208_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_9_208_13&#39;)"><span class="hl_fundecl"><span class="mpre">step</span></span></a><span class="mpre"> </span><a name="loc_209_14_209_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_14_209_15&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre">             = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_209_14_209_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_14_209_15&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_207_1_207_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_1_207_10&#39;)"><span class="mpre">parseWith</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Convert a &#39;Result&#39; value to a &#39;Maybe&#39; value. A &#39;T.Partial&#39; result</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is treated as failure.</span></span><span class="mpre">
+</span><a href="#loc_215_1_215_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_215_1_215_12&#39;)"><span class="mpre">maybeResult</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Result</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">r</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">r</span></span><span class="mpre">
+</span><a name="loc_215_1_215_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_215_1_215_12&#39;)"><span class="hl_fundecl"><span class="mpre">maybeResult</span></span></a><span class="mpre"> (</span><a href="Data.Attoparsec.Internal.Types.html#loc_65_5_65_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Attoparsec.Internal.Types.html#loc_65_5_65_9&#39;)"><span class="hl_conref"><span class="mpre">T.Done</span></span></a><span class="mpre"> _ </span><a name="loc_215_23_215_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_215_23_215_24&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> </span><a href="#loc_215_23_215_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_215_23_215_24&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre">
+</span><a href="#loc_215_1_215_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_215_1_215_12&#39;)"><span class="hl_fundecl"><span class="mpre">maybeResult</span></span></a><span class="mpre"> _            = </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Convert a &#39;Result&#39; value to an &#39;Either&#39; value. A &#39;T.Partial&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- result is treated as failure.</span></span><span class="mpre">
+</span><a href="#loc_221_1_221_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_221_1_221_13&#39;)"><span class="mpre">eitherResult</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Result</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">r</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">r</span></span><span class="mpre">
+</span><a name="loc_221_1_221_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_221_1_221_13&#39;)"><span class="hl_fundecl"><span class="mpre">eitherResult</span></span></a><span class="mpre"> (</span><a href="Data.Attoparsec.Internal.Types.html#loc_65_5_65_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Attoparsec.Internal.Types.html#loc_65_5_65_9&#39;)"><span class="hl_conref"><span class="mpre">T.Done</span></span></a><span class="mpre"> _ </span><a name="loc_221_24_221_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_221_24_221_25&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre">)     = </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a href="#loc_221_24_221_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_221_24_221_25&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre">
+</span><a href="#loc_221_1_221_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_221_1_221_13&#39;)"><span class="hl_fundecl"><span class="mpre">eitherResult</span></span></a><span class="mpre"> (</span><a href="Data.Attoparsec.Internal.Types.html#loc_52_5_52_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Attoparsec.Internal.Types.html#loc_52_5_52_9&#39;)"><span class="hl_conref"><span class="mpre">T.Fail</span></span></a><span class="mpre"> _ _ </span><a name="loc_222_26_222_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_26_222_29&#39;)"><span class="hl_vardecl"><span class="mpre">msg</span></span></a><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> </span><a href="#loc_222_26_222_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_26_222_29&#39;)"><span class="hl_varref"><span class="mpre">msg</span></span></a><span class="mpre">
+</span><a href="#loc_221_1_221_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_221_1_221_13&#39;)"><span class="hl_fundecl"><span class="mpre">eitherResult</span></span></a><span class="mpre"> _                = </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;Result: incomplete input&quot;</span></span><span class="mpre">
+</span></div></body></html>

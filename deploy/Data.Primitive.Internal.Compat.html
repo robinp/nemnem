@@ -1,0 +1,39 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, MagicHash #-}
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.Primitive.Internal.Compat</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) Roman Leshchinskiy 2011-2012</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Roman Leshchinskiy &lt;rl@cse.unsw.edu.au&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Compatibility functions</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+
+module Data.Primitive.Internal.Compat (
+    isTrue#
+  , mkNoRepType
+  ) where
+
+#if MIN_VERSION_base(4,2,0)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/Internal/Compat.hs&quot;, srcSpanStartLine = 20, srcSpanStartColumn = 8, srcSpanEndLine = 20, srcSpanEndColumn = 17}, srcInfoPoints = []}) &quot;Data.Data&quot;"><span class="mpre">Data.Data</span></span><span class="mpre"> (mkNoRepType)
+#else
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/Internal/Compat.hs&quot;, srcSpanStartLine = 22, srcSpanStartColumn = 8, srcSpanEndLine = 22, srcSpanEndColumn = 17}, srcInfoPoints = []}) &quot;Data.Data&quot;"><span class="mpre">Data.Data</span></span><span class="mpre"> (mkNorepType)
+#endif
+
+#if MIN_VERSION_base(4,7,0)
+import GHC.Exts (isTrue#)
+#endif
+
+
+
+#if !MIN_VERSION_base(4,2,0)
+</span><a name="loc_32_1_32_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_1_32_12&#39;)"><span class="hl_vardecl"><span class="mpre">mkNoRepType</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">mkNorepType</span></span><span class="mpre">
+#endif
+
+#if !MIN_VERSION_base(4,7,0)
+</span><a href="#loc_37_1_37_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_1_37_8&#39;)"><span class="mpre">isTrue#</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_37_1_37_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_1_37_8&#39;)"><span class="hl_fundecl"><span class="mpre">isTrue#</span></span></a><span class="mpre"> </span><a name="loc_37_9_37_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_9_37_10&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> = </span><a href="#loc_37_9_37_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_9_37_10&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">
+#endif
+</span></div></body></html>

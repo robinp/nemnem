@@ -1,0 +1,94 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, PackageImports #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Safe #-}
+#endif
+
+module Foreign.C.Types
+        ( </span><span class="hl_comment"><span class="mpre">-- * Representations of C types</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- $ctypes</span></span><span class="mpre">
+
+          </span><span class="hl_comment"><span class="mpre">-- ** Integral types</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- | These types are are represented as @newtype@s of</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- types in &quot;Data.Int&quot; and &quot;Data.Word&quot;, and are instances of</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Prelude.Eq&#39;, &#39;Prelude.Ord&#39;, &#39;Prelude.Num&#39;, &#39;Prelude.Read&#39;,</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Prelude.Show&#39;, &#39;Prelude.Enum&#39;, &#39;Storable&#39;,</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Prelude.Bounded&#39;, &#39;Prelude.Real&#39;, &#39;Prelude.Integral&#39; and</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Bits&#39;.</span></span><span class="mpre">
+          CChar,  CSChar,  CUChar
+        , CShort, CUShort, CInt,   CUInt
+        , CLong,  CULong
+        , CPtrdiff, CSize, CWchar, CSigAtomic
+        , CLLong, CULLong
+        , CIntPtr, CUIntPtr
+        , CIntMax, CUIntMax
+
+          </span><span class="hl_comment"><span class="mpre">-- ** Numeric types</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- | These types are are represented as @newtype@s of basic</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- foreign types, and are instances of</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Prelude.Eq&#39;, &#39;Prelude.Ord&#39;, &#39;Prelude.Num&#39;, &#39;Prelude.Read&#39;,</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Prelude.Show&#39;, &#39;Prelude.Enum&#39; and &#39;Storable&#39;.</span></span><span class="mpre">
+        , CClock,   CTime
+
+          </span><span class="hl_comment"><span class="mpre">-- ** Floating types</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- | These types are are represented as @newtype@s of</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Prelude.Float&#39; and &#39;Prelude.Double&#39;, and are instances of</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Prelude.Eq&#39;, &#39;Prelude.Ord&#39;, &#39;Prelude.Num&#39;, &#39;Prelude.Read&#39;,</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Prelude.Show&#39;, &#39;Prelude.Enum&#39;, &#39;Storable&#39;,</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Prelude.Real&#39;, &#39;Prelude.Fractional&#39;, &#39;Prelude.Floating&#39;,</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- &#39;Prelude.RealFrac&#39; and &#39;Prelude.RealFloat&#39;.</span></span><span class="mpre">
+        , CFloat,  CDouble
+</span><span class="hl_comment"><span class="mpre">-- GHC doesn&#39;t support CLDouble yet</span></span><span class="mpre">
+#ifdef HASKELL_REPORT
+        , CLDouble
+#endif
+          </span><span class="hl_comment"><span class="mpre">-- ** Other types</span></span><span class="mpre">
+
+          </span><span class="hl_comment"><span class="mpre">-- Instances of: Eq and Storable</span></span><span class="mpre">
+        , CFile,        CFpos,     CJmpBuf
+
+  ) where
+import &quot;base&quot; </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell2010-1.1.2.0/Foreign/C/Types.hs&quot;, srcSpanStartLine = 50, srcSpanStartColumn = 15, srcSpanEndLine = 50, srcSpanEndColumn = 30}, srcInfoPoints = []}) &quot;Foreign.C.Types&quot;"><span class="mpre">Foreign.C.Types</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $ctypes
+
+These types are needed to accurately represent C function prototypes,
+in order to access C library interfaces in Haskell.  The Haskell system
+is not required to represent those types exactly as C does, but the
+following guarantees are provided concerning a Haskell type @CT@
+representing a C type @t@:
+
+* If a C function prototype has @t@ as an argument or result type, the
+  use of @CT@ in the corresponding position in a foreign declaration
+  permits the Haskell program to access the full range of values encoded
+  by the C type; and conversely, any Haskell value for @CT@ has a valid
+  representation in C.
+
+* @&#39;sizeOf&#39; (&#39;Prelude.undefined&#39; :: CT)@ will yield the same value as
+  @sizeof (t)@ in C.
+
+* @&#39;alignment&#39; (&#39;Prelude.undefined&#39; :: CT)@ matches the alignment
+  constraint enforced by the C implementation for @t@.
+
+* The members &#39;peek&#39; and &#39;poke&#39; of the &#39;Storable&#39; class map all values
+  of @CT@ to the corresponding value of @t@ and vice versa.
+
+* When an instance of &#39;Prelude.Bounded&#39; is defined for @CT@, the values
+  of &#39;Prelude.minBound&#39; and &#39;Prelude.maxBound&#39; coincide with @t_MIN@
+  and @t_MAX@ in C.
+
+* When an instance of &#39;Prelude.Eq&#39; or &#39;Prelude.Ord&#39; is defined for @CT@,
+  the predicates defined by the type class implement the same relation
+  as the corresponding predicate in C on @t@.
+
+* When an instance of &#39;Prelude.Num&#39;, &#39;Prelude.Read&#39;, &#39;Prelude.Integral&#39;,
+  &#39;Prelude.Fractional&#39;, &#39;Prelude.Floating&#39;, &#39;Prelude.RealFrac&#39;, or
+  &#39;Prelude.RealFloat&#39; is defined for @CT@, the arithmetic operations
+  defined by the type class implement the same function as the
+  corresponding arithmetic operations (if available) in C on @t@.
+
+* When an instance of &#39;Bits&#39; is defined for @CT@, the bitwise operation
+  defined by the type class implement the same function as the
+  corresponding bitwise operation in C on @t@.
+
+-}</span></span><span class="mpre">
+</span></div></body></html>

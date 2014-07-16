@@ -1,0 +1,46 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Unsafe #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Foreign.Marshal.Unsafe</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The FFI task force 2003</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  ffi@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Marshalling support. Unsafe API.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Foreign.Marshal.Unsafe (
+        </span><span class="hl_comment"><span class="mpre">-- * Unsafe functions</span></span><span class="mpre">
+        unsafeLocalState
+    ) where
+
+import GHC.IO
+
+</span><span class="hl_comment"><span class="mpre">{- |
+Sometimes an external entity is a pure function, except that it passes
+arguments and/or results via pointers.  The function
+@unsafeLocalState@ permits the packaging of such entities as pure
+functions.  
+
+The only IO operations allowed in the IO action passed to
+@unsafeLocalState@ are (a) local allocation (@alloca@, @allocaBytes@
+and derived operations such as @withArray@ and @withCString@), and (b)
+pointer operations (@Foreign.Storable@ and @Foreign.Ptr@) on the
+pointers to local storage, and (c) foreign functions whose only
+observable effect is to read and/or write the locally allocated
+memory.  Passing an IO operation that does not obey these rules
+results in undefined behaviour.
+
+It is expected that this operation will be
+replaced in a future revision of Haskell.
+-}</span></span><span class="mpre">
+</span><a href="#loc_44_1_44_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_17&#39;)"><span class="mpre">unsafeLocalState</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_44_1_44_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_17&#39;)"><span class="hl_vardecl"><span class="mpre">unsafeLocalState</span></span></a><span class="mpre"> = </span><a href="GHC.IO.html#loc_182_1_182_23" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_182_1_182_23&#39;)"><span class="hl_varref"><span class="mpre">unsafeDupablePerformIO</span></span></a><span class="mpre">
+
+</span></div></body></html>

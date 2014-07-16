@@ -1,0 +1,79 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, MagicHash #-}
+
+#ifdef USE_MONO_PAT_BINDS
+{-# LANGUAGE MonoPatBinds #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Blaze.ByteString.Builder.Internal.UncheckedShifts</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) 2010 Simon Meier</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--               Original serialization code from &#39;Data.Binary.Builder&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--               (c) Lennart Kolmodin, Ross Patterson</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD3-style (see LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Simon Meier &lt;iridcode@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : tested on GHC only</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Utilty module defining unchecked shifts.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+#if defined(__GLASGOW_HASKELL__) &amp;&amp; !defined(__HADDOCK__)
+#include &quot;MachDeps.h&quot;
+#endif
+
+module Blaze.ByteString.Builder.Internal.UncheckedShifts (
+    shiftr_w16
+  , shiftr_w32
+  , shiftr_w64
+  ) where
+
+</span><span class="hl_comment"><span class="mpre">-- TODO: Check validity of this implementation</span></span><span class="mpre">
+
+#if defined(__GLASGOW_HASKELL__) &amp;&amp; !defined(__HADDOCK__)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/Blaze/ByteString/Builder/Internal/UncheckedShifts.hs&quot;, srcSpanStartLine = 35, srcSpanStartColumn = 8, srcSpanEndLine = 35, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/Blaze/ByteString/Builder/Internal/UncheckedShifts.hs&quot;, srcSpanStartLine = 36, srcSpanStartColumn = 8, srcSpanEndLine = 36, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Word&quot;"><span class="mpre">GHC.Word</span></span><span class="mpre"> (Word32(..),Word16(..),Word64(..))
+
+#if WORD_SIZE_IN_BITS &lt; 64 &amp;&amp; __GLASGOW_HASKELL__ &gt;= 608
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/Blaze/ByteString/Builder/Internal/UncheckedShifts.hs&quot;, srcSpanStartLine = 39, srcSpanStartColumn = 8, srcSpanEndLine = 39, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Word&quot;"><span class="mpre">GHC.Word</span></span><span class="mpre"> (uncheckedShiftRL64#)
+#endif
+#else
+import Data.Word
+#endif
+
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Unchecked shifts</span></span><span class="mpre">
+
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_57_1_57_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_1_57_11&#39;)"><span class="mpre">shiftr_w16</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_57_1_57_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_1_57_11&#39;)"><span class="mpre">shiftr_w16</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word16</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Word16</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_58_1_58_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_58_1_58_11&#39;)"><span class="mpre">shiftr_w32</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_58_1_58_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_58_1_58_11&#39;)"><span class="mpre">shiftr_w32</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word32</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Word32</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_61_1_61_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_1_61_11&#39;)"><span class="mpre">shiftr_w64</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_61_1_61_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_1_61_11&#39;)"><span class="mpre">shiftr_w64</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word64</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Word64</span></span><span class="mpre">
+
+#if defined(__GLASGOW_HASKELL__) &amp;&amp; !defined(__HADDOCK__)
+</span><a name="loc_57_1_57_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_1_57_11&#39;)"><span class="hl_fundecl"><span class="mpre">shiftr_w16</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">W16#</span></span><span class="mpre"> </span><a name="loc_57_18_57_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_18_57_19&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre">) (</span><span class="hl_conref"><span class="mpre">I#</span></span><span class="mpre"> </span><a name="loc_57_25_57_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_25_57_26&#39;)"><span class="hl_vardecl"><span class="mpre">i</span></span></a><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">W16#</span></span><span class="mpre"> (</span><a href="#loc_57_18_57_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_18_57_19&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`uncheckedShiftRL#`</span></span><span class="mpre">   </span><a href="#loc_57_25_57_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_25_57_26&#39;)"><span class="hl_varref"><span class="mpre">i</span></span></a><span class="mpre">)
+</span><a name="loc_58_1_58_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_58_1_58_11&#39;)"><span class="hl_fundecl"><span class="mpre">shiftr_w32</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">W32#</span></span><span class="mpre"> </span><a name="loc_58_18_58_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_58_18_58_19&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre">) (</span><span class="hl_conref"><span class="mpre">I#</span></span><span class="mpre"> </span><a name="loc_58_25_58_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_58_25_58_26&#39;)"><span class="hl_vardecl"><span class="mpre">i</span></span></a><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">W32#</span></span><span class="mpre"> (</span><a href="#loc_58_18_58_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_58_18_58_19&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`uncheckedShiftRL#`</span></span><span class="mpre">   </span><a href="#loc_58_25_58_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_58_25_58_26&#39;)"><span class="hl_varref"><span class="mpre">i</span></span></a><span class="mpre">)
+
+#if WORD_SIZE_IN_BITS &lt; 64
+</span><a name="loc_61_1_61_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_1_61_11&#39;)"><span class="hl_fundecl"><span class="mpre">shiftr_w64</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">W64#</span></span><span class="mpre"> </span><a name="loc_61_18_61_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_18_61_19&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre">) (</span><span class="hl_conref"><span class="mpre">I#</span></span><span class="mpre"> </span><a name="loc_61_25_61_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_25_61_26&#39;)"><span class="hl_vardecl"><span class="mpre">i</span></span></a><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">W64#</span></span><span class="mpre"> (</span><a href="#loc_61_18_61_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_18_61_19&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`uncheckedShiftRL64#`</span></span><span class="mpre"> </span><a href="#loc_61_25_61_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_25_61_26&#39;)"><span class="hl_varref"><span class="mpre">i</span></span></a><span class="mpre">)
+
+#if __GLASGOW_HASKELL__ &lt;= 606
+</span><span class="hl_comment"><span class="mpre">-- Exported by GHC.Word in GHC 6.8 and higher</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/Blaze/ByteString/Builder/Internal/UncheckedShifts.hs&quot;, srcSpanStartLine = 65, srcSpanStartColumn = 1, srcSpanEndLine = 66, srcSpanEndColumn = 58}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/Blaze/ByteString/Builder/Internal/UncheckedShifts.hs&quot;, srcSpanStartLine = 65, srcSpanStartColumn = 1, srcSpanEndLine = 65, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/"><span class="mpre">foreign import ccall unsafe &quot;stg_uncheckedShiftRL64&quot;
+    uncheckedShiftRL64#     :: Word64# -&gt; Int# -&gt; Word64#</span></span><span class="mpre">
+#endif
+
+#else
+</span><span class="hl_fundecl"><span class="mpre">shiftr_w64</span></span><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">W64#</span></span><span class="mpre"> </span><a name="loc_70_18_70_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_18_70_19&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre">) (</span><span class="hl_conref"><span class="mpre">I#</span></span><span class="mpre"> </span><a name="loc_70_25_70_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_25_70_26&#39;)"><span class="hl_vardecl"><span class="mpre">i</span></span></a><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">W64#</span></span><span class="mpre"> (</span><a href="#loc_70_18_70_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_18_70_19&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`uncheckedShiftRL#`</span></span><span class="mpre"> </span><a href="#loc_70_25_70_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_25_70_26&#39;)"><span class="hl_varref"><span class="mpre">i</span></span></a><span class="mpre">)
+#endif
+
+#else
+</span><span class="hl_vardecl"><span class="mpre">shiftr_w16</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">shiftR</span></span><span class="mpre">
+</span><span class="hl_vardecl"><span class="mpre">shiftr_w32</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">shiftR</span></span><span class="mpre">
+</span><span class="hl_vardecl"><span class="mpre">shiftr_w64</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">shiftR</span></span><span class="mpre">
+#endif
+
+</span></div></body></html>

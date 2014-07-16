@@ -1,0 +1,37 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">module Options.Applicative (
+  </span><span class="hl_comment"><span class="mpre">-- * Applicative option parsers</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | This is an empty module which simply re-exports all the public definitions</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- of this package.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- See &lt;https://github.com/pcapriotti/optparse-applicative&gt; for a tutorial,</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- and a general introduction to applicative option parsers.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- See the documentation of individual modules for more details.</span></span><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- * Exported modules</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | The standard @Applicative@ module is re-exported here for convenience.</span></span><span class="mpre">
+  module Control.Applicative,
+
+  </span><span class="hl_comment"><span class="mpre">-- | Parser type and low-level parsing functionality.</span></span><span class="mpre">
+  module Options.Applicative.Common,
+
+  </span><span class="hl_comment"><span class="mpre">-- | Utilities to build parsers out of basic primitives.</span></span><span class="mpre">
+  module Options.Applicative.Builder,
+
+  </span><span class="hl_comment"><span class="mpre">-- | Common completion functions.</span></span><span class="mpre">
+  module Options.Applicative.Builder.Completer,
+
+  </span><span class="hl_comment"><span class="mpre">-- | Utilities to run parsers and display a help text.</span></span><span class="mpre">
+  module Options.Applicative.Extra,
+  ) where
+
+</span><span class="hl_comment"><span class="mpre">-- reexport Applicative here for convenience</span></span><span class="mpre">
+import Control.Applicative
+
+import Options.Applicative.Common
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/optparse-applicative-0.9.0/Options/Applicative.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 8, srcSpanEndLine = 34, srcSpanEndColumn = 35}, srcInfoPoints = []}) &quot;Options.Applicative.Builder&quot;"><span class="mpre">Options.Applicative.Builder</span></span><span class="mpre">
+import Options.Applicative.Builder.Completer
+import Options.Applicative.Extra
+</span></div></body></html>

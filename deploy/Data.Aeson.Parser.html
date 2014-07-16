@@ -1,0 +1,64 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE BangPatterns, OverloadedStrings #-}
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module:      Data.Aeson.Parser</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright:   (c) 2012 Bryan O&#39;Sullivan</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--              (c) 2011 MailRank, Inc.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License:     Apache</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer:  Bryan O&#39;Sullivan &lt;bos@serpentine.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability:   experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability: portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Efficiently and correctly parse a JSON string.  The string must be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- encoded as UTF-8.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- It can be useful to think of parsing as occurring in two phases:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * Identification of the textual boundaries of a JSON value.  This</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   is always strict, so that an invalid JSON document can be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   rejected as soon as possible.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * Conversion of a JSON value to a Haskell value.  This may be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   either immediate (strict) or deferred (lazy); see below for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   details.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The question of whether to choose a lazy or strict parser is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- subtle, but it can have significant performance implications,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- resulting in changes in CPU use and memory footprint of 30% to 50%,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- or occasionally more.  Measure the performance of your application</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- with each!</span></span><span class="mpre">
+
+module Data.Aeson.Parser
+    (
+    </span><span class="hl_comment"><span class="mpre">-- * Lazy parsers</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $lazy</span></span><span class="mpre">
+      json
+    , value
+    , jstring
+    </span><span class="hl_comment"><span class="mpre">-- * Strict parsers</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $strict</span></span><span class="mpre">
+    , json&#39;
+    , value&#39;
+    ) where
+
+import Data.Aeson.Parser.Internal (</span><a href="Data.Aeson.Parser.Internal.html#loc_88_1_88_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_88_1_88_5&#39;)"><span class="mpre">json</span></a><span class="mpre">, </span><a href="Data.Aeson.Parser.Internal.html#loc_97_1_97_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_97_1_97_6&#39;)"><span class="mpre">json&#39;</span></a><span class="mpre">, </span><a href="Data.Aeson.Parser.Internal.html#loc_200_1_200_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_200_1_200_8&#39;)"><span class="mpre">jstring</span></a><span class="mpre">, </span><a href="Data.Aeson.Parser.Internal.html#loc_166_1_166_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_166_1_166_6&#39;)"><span class="mpre">value</span></a><span class="mpre">, </span><a href="Data.Aeson.Parser.Internal.html#loc_181_1_181_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_181_1_181_7&#39;)"><span class="mpre">value&#39;</span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- $lazy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;json&#39; and &#39;value&#39; parsers decouple identification from</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- conversion.  Identification occurs immediately (so that an invalid</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- JSON document can be rejected as early as possible), but conversion</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to a Haskell value is deferred until that value is needed.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This decoupling can be time-efficient if only a smallish subset of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- elements in a JSON value need to be inspected, since the cost of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- conversion is zero for uninspected elements.  The trade off is an</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- increase in memory usage, due to allocation of thunks for values</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that have not yet been converted.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $strict</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;json&#39;&#39; and &#39;value&#39;&#39; parsers combine identification with</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- conversion.  They consume more CPU cycles up front, but have a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- smaller memory footprint.</span></span><span class="mpre">
+</span></div></body></html>

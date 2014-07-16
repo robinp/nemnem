@@ -1,0 +1,77 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  System.Exit</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Exiting the program.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module System.Exit
+    (
+      ExitCode(ExitSuccess,ExitFailure)
+    , exitWith
+    , exitFailure
+    , exitSuccess
+  ) where
+
+import Prelude
+
+import GHC.IO
+import GHC.IO.Exception
+
+</span><span class="hl_comment"><span class="mpre">-- ---------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- exitWith</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Computation &#39;exitWith&#39; @code@ throws &#39;ExitCode&#39; @code@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Normally this terminates the program, returning @code@ to the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- program&#39;s caller.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- On program termination, the standard &#39;Handle&#39;s &#39;stdout&#39; and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;stderr&#39; are flushed automatically; any other buffered &#39;Handle&#39;s</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- need to be flushed manually, otherwise the buffered data will be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- discarded.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A program that fails in any other way is treated as if it had</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- called &#39;exitFailure&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A program that terminates successfully without calling &#39;exitWith&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- explicitly is treated as it it had called &#39;exitWith&#39; &#39;ExitSuccess&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- As an &#39;ExitCode&#39; is not an &#39;IOError&#39;, &#39;exitWith&#39; bypasses</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the error handling in the &#39;IO&#39; monad and cannot be intercepted by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;catch&#39; from the &quot;Prelude&quot;.  However it is a &#39;SomeException&#39;, and can</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- be caught using the functions of &quot;Control.Exception&quot;.  This means</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that cleanup computations added with &#39;Control.Exception.bracket&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (from &quot;Control.Exception&quot;) are also executed properly on &#39;exitWith&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note: in GHC, &#39;exitWith&#39; should be called from the main program</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- thread in order to exit the process.  When called from another</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- thread, &#39;exitWith&#39; will throw an &#39;ExitException&#39; as normal, but the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- exception will not cause the process itself to exit.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_60_1_60_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_9&#39;)"><span class="mpre">exitWith</span></a><span class="mpre"> :: </span><a href="GHC.IO.Exception.html#loc_205_6_205_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_205_6_205_14&#39;)"><span class="hl_tyconref"><span class="mpre">ExitCode</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_60_1_60_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_9&#39;)"><span class="hl_fundecl"><span class="mpre">exitWith</span></span></a><span class="mpre"> </span><a href="GHC.IO.Exception.html#loc_206_5_206_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_206_5_206_16&#39;)"><span class="hl_conref"><span class="mpre">ExitSuccess</span></span></a><span class="mpre"> = </span><a href="GHC.IO.html#loc_304_1_304_8" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_304_1_304_8&#39;)"><span class="hl_varref"><span class="mpre">throwIO</span></span></a><span class="mpre"> </span><a href="GHC.IO.Exception.html#loc_206_5_206_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_206_5_206_16&#39;)"><span class="hl_conref"><span class="mpre">ExitSuccess</span></span></a><span class="mpre">
+</span><a href="#loc_60_1_60_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_9&#39;)"><span class="hl_fundecl"><span class="mpre">exitWith</span></span></a><span class="mpre"> </span><a name="loc_61_10_61_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_10_61_14&#39;)"><span class="hl_specname"><span class="mpre">code</span></span></a><span class="mpre">@(</span><a href="GHC.IO.Exception.html#loc_207_5_207_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_207_5_207_16&#39;)"><span class="hl_conref"><span class="mpre">ExitFailure</span></span></a><span class="mpre"> </span><a name="loc_61_28_61_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_28_61_29&#39;)"><span class="hl_vardecl"><span class="mpre">n</span></span></a><span class="mpre">)
+  | </span><a href="#loc_61_28_61_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_28_61_29&#39;)"><span class="hl_varref"><span class="mpre">n</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">/=</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre"> = </span><a href="GHC.IO.html#loc_304_1_304_8" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_304_1_304_8&#39;)"><span class="hl_varref"><span class="mpre">throwIO</span></span></a><span class="mpre"> </span><a href="#loc_61_10_61_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_10_61_14&#39;)"><span class="hl_varref"><span class="mpre">code</span></span></a><span class="mpre">
+  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> = </span><a href="GHC.IO.Exception.html#loc_221_1_221_8" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_221_1_221_8&#39;)"><span class="hl_varref"><span class="mpre">ioError</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">IOError</span></span><span class="mpre"> </span><a href="Data.Maybe.html#loc_49_19_49_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_19_49_26&#39;)"><span class="hl_conref"><span class="mpre">Nothing</span></span></a><span class="mpre"> </span><a href="GHC.IO.Exception.html#loc_272_5_272_20" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_272_5_272_20&#39;)"><span class="hl_conref"><span class="mpre">InvalidArgument</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;exitWith&quot;</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;ExitFailure 0&quot;</span></span><span class="mpre"> </span><a href="Data.Maybe.html#loc_49_19_49_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_19_49_26&#39;)"><span class="hl_conref"><span class="mpre">Nothing</span></span></a><span class="mpre"> </span><a href="Data.Maybe.html#loc_49_19_49_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_19_49_26&#39;)"><span class="hl_conref"><span class="mpre">Nothing</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | The computation &#39;exitFailure&#39; is equivalent to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;exitWith&#39; @(@&#39;ExitFailure&#39; /exitfail/@)@,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- where /exitfail/ is implementation-dependent.</span></span><span class="mpre">
+</span><a href="#loc_69_1_69_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_1_69_12&#39;)"><span class="mpre">exitFailure</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_69_1_69_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_1_69_12&#39;)"><span class="hl_vardecl"><span class="mpre">exitFailure</span></span></a><span class="mpre"> = </span><a href="#loc_60_1_60_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_9&#39;)"><span class="hl_varref"><span class="mpre">exitWith</span></span></a><span class="mpre"> (</span><a href="GHC.IO.Exception.html#loc_207_5_207_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_207_5_207_16&#39;)"><span class="hl_conref"><span class="mpre">ExitFailure</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">1</span></span><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | The computation &#39;exitSuccess&#39; is equivalent to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;exitWith&#39; &#39;ExitSuccess&#39;, It terminates the program</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- successfully.</span></span><span class="mpre">
+</span><a href="#loc_75_1_75_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_12&#39;)"><span class="mpre">exitSuccess</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_75_1_75_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_12&#39;)"><span class="hl_vardecl"><span class="mpre">exitSuccess</span></span></a><span class="mpre"> = </span><a href="#loc_60_1_60_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_9&#39;)"><span class="hl_varref"><span class="mpre">exitWith</span></span></a><span class="mpre"> </span><a href="GHC.IO.Exception.html#loc_206_5_206_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_206_5_206_16&#39;)"><span class="hl_conref"><span class="mpre">ExitSuccess</span></span></a><span class="mpre">
+
+</span></div></body></html>

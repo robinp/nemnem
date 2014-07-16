@@ -1,0 +1,20 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.X509.Internal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : unknown</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Data.X509.Internal
+    ( module Data.ASN1.Parse
+    , asn1Container
+    , OID
+    ) where
+
+import Data.ASN1.Types
+import Data.ASN1.Parse
+
+</span><span class="hl_comment"><span class="mpre">-- | create a container around the stream of ASN1</span></span><span class="mpre">
+</span><a href="#loc_19_1_19_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_1_19_14&#39;)"><span class="mpre">asn1Container</span></a><span class="mpre"> :: </span><a href="Data.ASN1.Types.html#loc_32_6_32_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ASN1.Types.html#loc_32_6_32_26&#39;)"><span class="hl_tyconref"><span class="mpre">ASN1ConstructionType</span></span></a><span class="mpre"> -&gt; [</span><a href="Data.ASN1.Types.html#loc_43_6_43_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ASN1.Types.html#loc_43_6_43_10&#39;)"><span class="hl_tyconref"><span class="mpre">ASN1</span></span></a><span class="mpre">] -&gt; [</span><a href="Data.ASN1.Types.html#loc_43_6_43_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ASN1.Types.html#loc_43_6_43_10&#39;)"><span class="hl_tyconref"><span class="mpre">ASN1</span></span></a><span class="mpre">]
+</span><a name="loc_19_1_19_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_1_19_14&#39;)"><span class="hl_fundecl"><span class="mpre">asn1Container</span></span></a><span class="mpre"> </span><a name="loc_19_15_19_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_15_19_17&#39;)"><span class="hl_vardecl"><span class="mpre">ty</span></span></a><span class="mpre"> </span><a name="loc_19_18_19_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_18_19_19&#39;)"><span class="hl_vardecl"><span class="mpre">l</span></span></a><span class="mpre"> = [</span><a href="Data.ASN1.Types.html#loc_55_7_55_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ASN1.Types.html#loc_55_7_55_12&#39;)"><span class="hl_conref"><span class="mpre">Start</span></span></a><span class="mpre"> </span><a href="#loc_19_15_19_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_15_19_17&#39;)"><span class="hl_varref"><span class="mpre">ty</span></span></a><span class="mpre">] </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><a href="#loc_19_18_19_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_18_19_19&#39;)"><span class="hl_varref"><span class="mpre">l</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> [</span><a href="Data.ASN1.Types.html#loc_56_7_56_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ASN1.Types.html#loc_56_7_56_10&#39;)"><span class="hl_conref"><span class="mpre">End</span></span></a><span class="mpre"> </span><a href="#loc_19_15_19_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_15_19_17&#39;)"><span class="hl_varref"><span class="mpre">ty</span></span></a><span class="mpre">]
+</span></div></body></html>

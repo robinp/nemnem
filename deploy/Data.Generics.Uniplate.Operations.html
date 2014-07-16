@@ -1,0 +1,20 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, MultiParamTypeClasses #-}
+</span><span class="hl_comment"><span class="mpre">{- |
+Definitions of &#39;Uniplate&#39; and &#39;Biplate&#39; classes, along with all the standard operations.
+
+Import this module directly only if you are defining new Uniplate operations, otherwise
+import one of &quot;Data.Generics.Uniplate.Direct&quot;, &quot;Data.Generics.Uniplate.Typeable&quot; or
+&quot;Data.Generics.Uniplate.Data&quot;.
+
+Most functions have an example of a possible use for the function.
+To illustate, I have used the @Expr@ type as below:
+
+&gt; data Expr = Val Int
+&gt;           | Neg Expr
+&gt;           | Add Expr Expr
+-}</span></span><span class="mpre">
+
+module Data.Generics.Uniplate.Operations where
+
+#include &quot;Internal/OperationsInc.hs&quot;
+</span></div></body></html>

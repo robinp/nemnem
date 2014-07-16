@@ -1,0 +1,23 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Safe #-}
+#endif
+
+module MarshalError (
+        module Foreign.Marshal.Error,
+        IOErrorType,
+        mkIOError,
+        alreadyExistsErrorType,
+        doesNotExistErrorType,
+        alreadyInUseErrorType,
+        fullErrorType,
+        eofErrorType,
+        illegalOperationErrorType,
+        permissionErrorType,
+        userErrorType,
+        annotateIOError
+  ) where
+
+import System.IO.Error
+import Foreign.Marshal.Error
+</span></div></body></html>

@@ -1,0 +1,130 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE FlexibleContexts #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.ByteString.Lazy.Lens</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2012-2014 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Lazy &#39;ByteString&#39; lenses.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Data.ByteString.Lazy.Lens
+  ( packedBytes, unpackedBytes, bytes
+  , packedChars, unpackedChars, chars
+  ) where
+
+import Control.Lens
+import Control.Lens.Internal.ByteString
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Data/ByteString/Lazy/Lens.hs&quot;, srcSpanStartLine = 20, srcSpanStartColumn = 8, srcSpanEndLine = 20, srcSpanEndColumn = 28}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy&quot;"><span class="mpre">Data.ByteString.Lazy</span></span><span class="mpre">       as Words
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Data/ByteString/Lazy/Lens.hs&quot;, srcSpanStartLine = 21, srcSpanStartColumn = 8, srcSpanEndLine = 21, srcSpanEndColumn = 34}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy.Char8&quot;"><span class="mpre">Data.ByteString.Lazy.Char8</span></span><span class="mpre"> as Char8
+import Data.Word (Word8)
+import Data.Int (</span><a href="GHC.Int.html#loc_551_30_551_35" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Int.html#loc_551_30_551_35&#39;)"><span class="mpre">Int64</span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- $setup</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; :set -XOverloadedStrings</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; import Numeric.Lens</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | &#39;Data.ByteString.Lazy.pack&#39; (or &#39;Data.ByteString.Lazy.unpack&#39;) a list of bytes into a &#39;ByteString&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;packedBytes&#39; ≡ &#39;from&#39; &#39;unpackedBytes&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.ByteString.pack&#39; x ≡  x &#39;^.&#39; &#39;packedBytes&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.ByteString.unpack&#39; x ≡ x &#39;^.&#39; &#39;from&#39; &#39;packedBytes&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; [104,101,108,108,111]^.packedBytes == Char8.pack &quot;hello&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- True</span></span><span class="mpre">
+</span><a href="#loc_40_1_40_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_40_1_40_12&#39;)"><span class="mpre">packedBytes</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Iso&#39;</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre">] </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_40_1_40_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_40_1_40_12&#39;)"><span class="hl_vardecl"><span class="mpre">packedBytes</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Iso.html#loc_122_1_122_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Iso.html#loc_122_1_122_4&#39;)"><span class="hl_varref"><span class="mpre">iso</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Words.pack</span></span><span class="mpre"> </span><a href="Control.Lens.Internal.ByteString.html#loc_137_1_137_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Internal.ByteString.html#loc_137_1_137_11&#39;)"><span class="hl_varref"><span class="mpre">unpackLazy</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_40_1_40_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_40_1_40_12&#39;)"><span class="mpre">packedBytes</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | &#39;Data.ByteString.Lazy.unpack&#39; (or &#39;Data.ByteString.Lazy.pack&#39;) a &#39;ByteString&#39; into a list of bytes</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;unpackedBytes&#39; ≡ &#39;from&#39; &#39;packedBytes&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.ByteString.unpack&#39; x ≡ x &#39;^.&#39; &#39;unpackedBytes&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.ByteString.pack&#39; x ≡  x &#39;^.&#39; &#39;from&#39; &#39;unpackedBytes&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; &quot;hello&quot;^.packedChars.unpackedBytes</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- [104,101,108,108,111]</span></span><span class="mpre">
+</span><a href="#loc_54_1_54_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_1_54_14&#39;)"><span class="mpre">unpackedBytes</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Iso&#39;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre">]
+</span><a name="loc_54_1_54_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_1_54_14&#39;)"><span class="hl_vardecl"><span class="mpre">unpackedBytes</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Iso.html#loc_135_1_135_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Iso.html#loc_135_1_135_5&#39;)"><span class="hl_varref"><span class="mpre">from</span></span></a><span class="mpre"> </span><a href="#loc_40_1_40_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_40_1_40_12&#39;)"><span class="hl_varref"><span class="mpre">packedBytes</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_54_1_54_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_1_54_14&#39;)"><span class="mpre">unpackedBytes</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Traverse the individual bytes in a &#39;ByteString&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This &#39;Traversal&#39; walks each strict &#39;ByteString&#39; chunk in a tree-like fashion</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- enable zippers to seek to locations more quickly and accelerate</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- many monoidal queries, but up to associativity (and constant factors) it is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- equivalent to the much slower:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;bytes&#39; ≡ &#39;unpackedBytes&#39; &#39;.&#39; &#39;traversed&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; anyOf bytes (== 0x80) (Char8.pack &quot;hello&quot;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- False</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that when just using this as a &#39;Setter&#39;, @&#39;setting&#39; &#39;Data.ByteString.Lazy.map&#39;@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- can be more efficient.</span></span><span class="mpre">
+</span><a href="#loc_74_1_74_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_1_74_6&#39;)"><span class="mpre">bytes</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IndexedTraversal&#39;</span></span><span class="mpre"> </span><a href="GHC.Int.html#loc_551_30_551_35" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Int.html#loc_551_30_551_35&#39;)"><span class="hl_tyconref"><span class="mpre">Int64</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre">
+</span><a name="loc_74_1_74_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_1_74_6&#39;)"><span class="hl_vardecl"><span class="mpre">bytes</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Internal.ByteString.html#loc_142_1_142_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Internal.ByteString.html#loc_142_1_142_14&#39;)"><span class="hl_varref"><span class="mpre">traversedLazy</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_74_1_74_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_1_74_6&#39;)"><span class="mpre">bytes</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | &#39;Data.ByteString.Lazy.Char8.pack&#39; (or &#39;Data.ByteString.Lazy.Char8.unpack&#39;) a list of characters into a &#39;ByteString&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- When writing back to the &#39;ByteString&#39; it is assumed that every &#39;Char&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- lies between @&#39;\x00&#39;@ and @&#39;\xff&#39;@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;packedChars&#39; ≡ &#39;from&#39; &#39;unpackedChars&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.ByteString.Char8.pack&#39; x ≡ x &#39;^.&#39; &#39;packedChars&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.ByteString.Char8.unpack&#39; x ≡ x &#39;^.&#39; &#39;from&#39; &#39;packedChars&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; &quot;hello&quot;^.packedChars.each.re (base 16 . enum).to (\x -&gt; if Prelude.length x == 1 then &#39;0&#39;:x else x)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;68656c6c6f&quot;</span></span><span class="mpre">
+</span><a href="#loc_91_1_91_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_12&#39;)"><span class="mpre">packedChars</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Iso&#39;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_91_1_91_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_12&#39;)"><span class="hl_vardecl"><span class="mpre">packedChars</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Iso.html#loc_122_1_122_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Iso.html#loc_122_1_122_4&#39;)"><span class="hl_varref"><span class="mpre">iso</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Char8.pack</span></span><span class="mpre"> </span><a href="Control.Lens.Internal.ByteString.html#loc_151_1_151_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Internal.ByteString.html#loc_151_1_151_12&#39;)"><span class="hl_varref"><span class="mpre">unpackLazy8</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_91_1_91_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_12&#39;)"><span class="mpre">packedChars</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | &#39;Data.ByteString.Lazy.Char8.unpack&#39; (or &#39;Data.ByteString.Lazy.Char8.pack&#39;) a list of characters into a &#39;ByteString&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- When writing back to the &#39;ByteString&#39; it is assumed that every &#39;Char&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- lies between @&#39;\x00&#39;@ and @&#39;\xff&#39;@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;unpackedChars&#39; ≡ &#39;from&#39; &#39;packedChars&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.ByteString.Char8.unpack&#39; x ≡ x &#39;^.&#39; &#39;unpackedChars&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.ByteString.Char8.pack&#39; x ≡ x &#39;^.&#39; &#39;from&#39; &#39;unpackedChars&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; [104,101,108,108,111]^.packedBytes.unpackedChars</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;hello&quot;</span></span><span class="mpre">
+</span><a href="#loc_108_1_108_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_14&#39;)"><span class="mpre">unpackedChars</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Iso&#39;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_108_1_108_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_14&#39;)"><span class="hl_vardecl"><span class="mpre">unpackedChars</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Iso.html#loc_135_1_135_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Iso.html#loc_135_1_135_5&#39;)"><span class="hl_varref"><span class="mpre">from</span></span></a><span class="mpre"> </span><a href="#loc_91_1_91_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_12&#39;)"><span class="hl_varref"><span class="mpre">packedChars</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_108_1_108_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_14&#39;)"><span class="mpre">unpackedChars</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Traverse the individual bytes in a &#39;ByteString&#39; as characters.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- When writing back to the &#39;ByteString&#39; it is assumed that every &#39;Char&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- lies between @&#39;\x00&#39;@ and @&#39;\xff&#39;@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This &#39;Traversal&#39; walks each strict &#39;ByteString&#39; chunk in a tree-like fashion</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- enable zippers to seek to locations more quickly and accelerate</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- many monoidal queries, but up to associativity (and constant factors) it is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- equivalent to:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;chars&#39; = &#39;unpackedChars&#39; &#39;.&#39; &#39;traversed&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; anyOf chars (== &#39;h&#39;) &quot;hello&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- True</span></span><span class="mpre">
+</span><a href="#loc_128_1_128_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_6&#39;)"><span class="mpre">chars</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IndexedTraversal&#39;</span></span><span class="mpre"> </span><a href="GHC.Int.html#loc_551_30_551_35" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Int.html#loc_551_30_551_35&#39;)"><span class="hl_tyconref"><span class="mpre">Int64</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre">
+</span><a name="loc_128_1_128_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_6&#39;)"><span class="hl_vardecl"><span class="mpre">chars</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Internal.ByteString.html#loc_156_1_156_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Internal.ByteString.html#loc_156_1_156_15&#39;)"><span class="hl_varref"><span class="mpre">traversedLazy8</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_128_1_128_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_6&#39;)"><span class="mpre">chars</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span></div></body></html>

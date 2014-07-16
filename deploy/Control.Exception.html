@@ -1,0 +1,392 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE NoImplicitPrelude, ExistentialQuantification #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Exception</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (extended exceptions)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module provides support for raising and catching both built-in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and user-defined exceptions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In addition to exceptions thrown by &#39;IO&#39; operations, exceptions may</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- be thrown by pure code (imprecise exceptions) or by external events</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (asynchronous exceptions), but may only be caught in the &#39;IO&#39; monad.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For more details, see:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * /A semantics for imprecise exceptions/, by Simon Peyton Jones,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    Alastair Reid, Tony Hoare, Simon Marlow, Fergus Henderson,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    in /PLDI&#39;99/.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * /Asynchronous exceptions in Haskell/, by Simon Marlow, Simon Peyton</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    Jones, Andy Moran and John Reppy, in /PLDI&#39;01/.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * /An Extensible Dynamically-Typed Hierarchy of Exceptions/,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    by Simon Marlow, in /Haskell &#39;06/.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Control.Exception (
+
+        </span><span class="hl_comment"><span class="mpre">-- * The Exception type</span></span><span class="mpre">
+        SomeException(..),
+        Exception(..),          </span><span class="hl_comment"><span class="mpre">-- class</span></span><span class="mpre">
+        IOException,            </span><span class="hl_comment"><span class="mpre">-- instance Eq, Ord, Show, Typeable, Exception</span></span><span class="mpre">
+        ArithException(..),     </span><span class="hl_comment"><span class="mpre">-- instance Eq, Ord, Show, Typeable, Exception</span></span><span class="mpre">
+        ArrayException(..),     </span><span class="hl_comment"><span class="mpre">-- instance Eq, Ord, Show, Typeable, Exception</span></span><span class="mpre">
+        AssertionFailed(..),
+        SomeAsyncException(..),
+        AsyncException(..),     </span><span class="hl_comment"><span class="mpre">-- instance Eq, Ord, Show, Typeable, Exception</span></span><span class="mpre">
+        asyncExceptionToException, asyncExceptionFromException,
+
+        NonTermination(..),
+        NestedAtomically(..),
+        BlockedIndefinitelyOnMVar(..),
+        BlockedIndefinitelyOnSTM(..),
+        Deadlock(..),
+        NoMethodError(..),
+        PatternMatchFail(..),
+        RecConError(..),
+        RecSelError(..),
+        RecUpdError(..),
+        ErrorCall(..),
+
+        </span><span class="hl_comment"><span class="mpre">-- * Throwing exceptions</span></span><span class="mpre">
+        throw,
+        throwIO,
+        ioError,
+        throwTo,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Catching Exceptions</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- $catching</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Catching all exceptions</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- $catchall</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- ** The @catch@ functions</span></span><span class="mpre">
+        catch,
+        catches, Handler(..),
+        catchJust,
+
+        </span><span class="hl_comment"><span class="mpre">-- ** The @handle@ functions</span></span><span class="mpre">
+        handle,
+        handleJust,
+
+        </span><span class="hl_comment"><span class="mpre">-- ** The @try@ functions</span></span><span class="mpre">
+        try,
+        tryJust,
+
+        </span><span class="hl_comment"><span class="mpre">-- ** The @evaluate@ function</span></span><span class="mpre">
+        evaluate,
+
+        </span><span class="hl_comment"><span class="mpre">-- ** The @mapException@ function</span></span><span class="mpre">
+        mapException,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Asynchronous Exceptions</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- $async</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Asynchronous exception control</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- |The following functions allow a thread to control delivery of</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- asynchronous exceptions during a critical region.</span></span><span class="mpre">
+
+        mask,
+        mask_,
+        uninterruptibleMask,
+        uninterruptibleMask_,
+        MaskingState(..),
+        getMaskingState,
+        allowInterrupt,
+
+        </span><span class="hl_comment"><span class="mpre">-- *** Applying @mask@ to an exception handler</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- $block_handler</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- *** Interruptible operations</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- $interruptible</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- * Assertions</span></span><span class="mpre">
+
+        assert,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Utilities</span></span><span class="mpre">
+
+        bracket,
+        bracket_,
+        bracketOnError,
+
+        finally,
+        onException,
+
+  ) where
+
+import Control.Exception.Base
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Control/Exception.hs&quot;, srcSpanStartLine = 134, srcSpanStartColumn = 8, srcSpanEndLine = 134, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+import GHC.IO (</span><a href="GHC.IO.html#loc_335_1_335_13" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_335_1_335_13&#39;)"><span class="mpre">unsafeUnmask</span></a><span class="mpre">)
+import Data.Maybe
+
+</span><span class="hl_comment"><span class="mpre">-- | You need this when using &#39;catches&#39;.</span></span><span class="mpre">
+data </span><a name="loc_139_6_139_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_6_139_13&#39;)"><span class="hl_tycondecl"><span class="mpre">Handler</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> = forall e . Exception e =&gt; </span><a name="loc_139_44_139_51" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_44_139_51&#39;)"><span class="hl_condecl"><span class="mpre">Handler</span></span></a><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">e</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+
+instance </span><span class="hl_classref"><span class="mpre">Functor</span></span><span class="mpre"> </span><a href="#loc_139_6_139_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_6_139_13&#39;)"><span class="hl_tyconref"><span class="mpre">Handler</span></span></a><span class="mpre"> where
+     </span><span class="hl_fundecl"><span class="mpre">fmap</span></span><span class="mpre"> </span><a name="loc_142_11_142_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_142_11_142_12&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> (</span><a href="#loc_139_44_139_51" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_44_139_51&#39;)"><span class="hl_conref"><span class="mpre">Handler</span></span></a><span class="mpre"> </span><a name="loc_142_22_142_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_142_22_142_23&#39;)"><span class="hl_vardecl"><span class="mpre">h</span></span></a><span class="mpre">) = </span><a href="#loc_139_44_139_51" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_44_139_51&#39;)"><span class="hl_conref"><span class="mpre">Handler</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">fmap</span></span><span class="mpre"> </span><a href="#loc_142_11_142_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_142_11_142_12&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="#loc_142_22_142_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_142_22_142_23&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">{- |
+Sometimes you want to catch two different sorts of exception. You could
+do something like
+
+&gt; f = expr `catch` \ (ex :: ArithException) -&gt; handleArith ex
+&gt;          `catch` \ (ex :: IOException)    -&gt; handleIO    ex
+
+However, there are a couple of problems with this approach. The first is
+that having two exception handlers is inefficient. However, the more
+serious issue is that the second exception handler will catch exceptions
+in the first, e.g. in the example above, if @handleArith@ throws an
+@IOException@ then the second exception handler will catch it.
+
+Instead, we provide a function &#39;catches&#39;, which would be used thus:
+
+&gt; f = expr `catches` [Handler (\ (ex :: ArithException) -&gt; handleArith ex),
+&gt;                     Handler (\ (ex :: IOException)    -&gt; handleIO    ex)]
+-}</span></span><span class="mpre">
+</span><a href="#loc_163_1_163_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_1_163_8&#39;)"><span class="mpre">catches</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; [</span><a href="#loc_139_6_139_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_6_139_13&#39;)"><span class="hl_tyconref"><span class="mpre">Handler</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">] -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_163_1_163_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_1_163_8&#39;)"><span class="hl_fundecl"><span class="mpre">catches</span></span></a><span class="mpre"> </span><a name="loc_163_9_163_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_9_163_11&#39;)"><span class="hl_vardecl"><span class="mpre">io</span></span></a><span class="mpre"> </span><a name="loc_163_12_163_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_12_163_20&#39;)"><span class="hl_vardecl"><span class="mpre">handlers</span></span></a><span class="mpre"> = </span><a href="#loc_163_9_163_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_9_163_11&#39;)"><span class="hl_varref"><span class="mpre">io</span></span></a><span class="mpre"> </span><a href="Control.Exception.Base.html#loc_150_1_150_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_150_1_150_6&#39;)"><span class="hl_infix"><span class="mpre">`catch`</span></span></a><span class="mpre"> </span><a href="#loc_166_1_166_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_1_166_15&#39;)"><span class="hl_varref"><span class="mpre">catchesHandler</span></span></a><span class="mpre"> </span><a href="#loc_163_12_163_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_12_163_20&#39;)"><span class="hl_varref"><span class="mpre">handlers</span></span></a><span class="mpre">
+
+</span><a href="#loc_166_1_166_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_1_166_15&#39;)"><span class="mpre">catchesHandler</span></a><span class="mpre"> :: [</span><a href="#loc_139_6_139_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_6_139_13&#39;)"><span class="hl_tyconref"><span class="mpre">Handler</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">] -&gt; </span><span class="hl_tyconref"><span class="mpre">SomeException</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_166_1_166_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_1_166_15&#39;)"><span class="hl_fundecl"><span class="mpre">catchesHandler</span></span></a><span class="mpre"> </span><a name="loc_166_16_166_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_16_166_24&#39;)"><span class="hl_vardecl"><span class="mpre">handlers</span></span></a><span class="mpre"> </span><a name="loc_166_25_166_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_25_166_26&#39;)"><span class="hl_vardecl"><span class="mpre">e</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">foldr</span></span><span class="mpre"> </span><a href="#loc_167_11_167_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_11_167_21&#39;)"><span class="hl_varref"><span class="mpre">tryHandler</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">throw</span></span><span class="mpre"> </span><a href="#loc_166_25_166_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_25_166_26&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre">) </span><a href="#loc_166_16_166_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_16_166_24&#39;)"><span class="hl_varref"><span class="mpre">handlers</span></span></a><span class="mpre">
+    where </span><a name="loc_167_11_167_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_11_167_21&#39;)"><span class="hl_fundecl"><span class="mpre">tryHandler</span></span></a><span class="mpre"> (</span><a href="#loc_139_44_139_51" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_44_139_51&#39;)"><span class="hl_conref"><span class="mpre">Handler</span></span></a><span class="mpre"> </span><a name="loc_167_31_167_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_31_167_38&#39;)"><span class="hl_vardecl"><span class="mpre">handler</span></span></a><span class="mpre">) </span><a name="loc_167_40_167_43" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_40_167_43&#39;)"><span class="hl_vardecl"><span class="mpre">res</span></span></a><span class="mpre">
+              = case </span><span class="hl_varref"><span class="mpre">fromException</span></span><span class="mpre"> </span><a href="#loc_166_25_166_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_25_166_26&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre"> of
+                </span><a href="Data.Maybe.html#loc_49_29_49_33" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_29_49_33&#39;)"><span class="hl_conref"><span class="mpre">Just</span></span></a><span class="mpre"> </span><a name="loc_169_22_169_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_169_22_169_24&#39;)"><span class="hl_vardecl"><span class="mpre">e&#39;</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_167_31_167_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_31_167_38&#39;)"><span class="hl_varref"><span class="mpre">handler</span></span></a><span class="mpre"> </span><a href="#loc_169_22_169_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_169_22_169_24&#39;)"><span class="hl_varref"><span class="mpre">e&#39;</span></span></a><span class="mpre">
+                </span><a href="Data.Maybe.html#loc_49_19_49_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_19_49_26&#39;)"><span class="hl_conref"><span class="mpre">Nothing</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_167_40_167_43" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_40_167_43&#39;)"><span class="hl_varref"><span class="mpre">res</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- -----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Catching exceptions</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $catching
+
+There are several functions for catching and examining
+exceptions; all of them may only be used from within the
+&#39;IO&#39; monad.
+
+Here&#39;s a rule of thumb for deciding which catch-style function to
+use:
+
+ * If you want to do some cleanup in the event that an exception
+   is raised, use &#39;finally&#39;, &#39;bracket&#39; or &#39;onException&#39;.
+
+ * To recover after an exception and do something else, the best
+   choice is to use one of the &#39;try&#39; family.
+
+ * ... unless you are recovering from an asynchronous exception, in which
+   case use &#39;catch&#39; or &#39;catchJust&#39;.
+
+The difference between using &#39;try&#39; and &#39;catch&#39; for recovery is that in
+&#39;catch&#39; the handler is inside an implicit &#39;block&#39; (see \&quot;Asynchronous
+Exceptions\&quot;) which is important when catching asynchronous
+exceptions, but when catching other kinds of exception it is
+unnecessary.  Furthermore it is possible to accidentally stay inside
+the implicit &#39;block&#39; by tail-calling rather than returning from the
+handler, which is why we recommend using &#39;try&#39; rather than &#39;catch&#39; for
+ordinary exception recovery.
+
+A typical use of &#39;tryJust&#39; for recovery looks like this:
+
+&gt;  do r &lt;- tryJust (guard . isDoesNotExistError) $ getEnv &quot;HOME&quot;
+&gt;     case r of
+&gt;       Left  e    -&gt; ...
+&gt;       Right home -&gt; ...
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- -----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Asynchronous exceptions</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | When invoked inside &#39;mask&#39;, this function allows a blocked</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- asynchronous exception to be raised, if one exists.  It is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- equivalent to performing an interruptible operation (see</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- #interruptible#), but does not involve any actual blocking.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- When called outside &#39;mask&#39;, or inside &#39;uninterruptibleMask&#39;, this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- function has no effect.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.4.0.0/</span></span><span class="mpre">
+</span><a href="#loc_224_1_224_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_224_1_224_15&#39;)"><span class="mpre">allowInterrupt</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_224_1_224_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_224_1_224_15&#39;)"><span class="hl_vardecl"><span class="mpre">allowInterrupt</span></span></a><span class="mpre"> = </span><a href="GHC.IO.html#loc_335_1_335_13" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_335_1_335_13&#39;)"><span class="hl_varref"><span class="mpre">unsafeUnmask</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $async
+
+ #AsynchronousExceptions# Asynchronous exceptions are so-called because they arise due to
+external influences, and can be raised at any point during execution.
+&#39;StackOverflow&#39; and &#39;HeapOverflow&#39; are two examples of
+system-generated asynchronous exceptions.
+
+The primary source of asynchronous exceptions, however, is
+&#39;throwTo&#39;:
+
+&gt;  throwTo :: ThreadId -&gt; Exception -&gt; IO ()
+
+&#39;throwTo&#39; (also &#39;Control.Concurrent.killThread&#39;) allows one
+running thread to raise an arbitrary exception in another thread.  The
+exception is therefore asynchronous with respect to the target thread,
+which could be doing anything at the time it receives the exception.
+Great care should be taken with asynchronous exceptions; it is all too
+easy to introduce race conditions by the over zealous use of
+&#39;throwTo&#39;.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $block_handler
+There\&#39;s an implied &#39;mask&#39; around every exception handler in a call
+to one of the &#39;catch&#39; family of functions.  This is because that is
+what you want most of the time - it eliminates a common race condition
+in starting an exception handler, because there may be no exception
+handler on the stack to handle another exception if one arrives
+immediately.  If asynchronous exceptions are masked on entering the
+handler, though, we have time to install a new exception handler
+before being interrupted.  If this weren\&#39;t the default, one would have
+to write something like
+
+&gt;      mask $ \restore -&gt;
+&gt;           catch (restore (...))
+&gt;                 (\e -&gt; handler)
+
+If you need to unblock asynchronous exceptions again in the exception
+handler, &#39;restore&#39; can be used there too.
+
+Note that &#39;try&#39; and friends /do not/ have a similar default, because
+there is no exception handler in this case.  Don&#39;t use &#39;try&#39; for
+recovering from an asynchronous exception.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $interruptible
+
+ #interruptible#
+Some operations are /interruptible/, which means that they can receive
+asynchronous exceptions even in the scope of a &#39;mask&#39;.  Any function
+which may itself block is defined as interruptible; this includes
+&#39;Control.Concurrent.MVar.takeMVar&#39;
+(but not &#39;Control.Concurrent.MVar.tryTakeMVar&#39;),
+and most operations which perform
+some I\/O with the outside world.  The reason for having
+interruptible operations is so that we can write things like
+
+&gt;      mask $ \restore -&gt; do
+&gt;         a &lt;- takeMVar m
+&gt;         catch (restore (...))
+&gt;               (\e -&gt; ...)
+
+if the &#39;Control.Concurrent.MVar.takeMVar&#39; was not interruptible,
+then this particular
+combination could lead to deadlock, because the thread itself would be
+blocked in a state where it can\&#39;t receive any asynchronous exceptions.
+With &#39;Control.Concurrent.MVar.takeMVar&#39; interruptible, however, we can be
+safe in the knowledge that the thread can receive exceptions right up
+until the point when the &#39;Control.Concurrent.MVar.takeMVar&#39; succeeds.
+Similar arguments apply for other interruptible operations like
+&#39;System.IO.openFile&#39;.
+
+It is useful to think of &#39;mask&#39; not as a way to completely prevent
+asynchronous exceptions, but as a way to switch from asynchronous mode
+to polling mode.  The main difficulty with asynchronous
+exceptions is that they normally can occur anywhere, but within a
+&#39;mask&#39; an asynchronous exception is only raised by operations that are
+interruptible (or call other interruptible operations).  In many cases
+these operations may themselves raise exceptions, such as I\/O errors,
+so the caller will usually be prepared to handle exceptions arising from the
+operation anyway.  To perfom an explicit poll for asynchronous exceptions
+inside &#39;mask&#39;, use &#39;allowInterrupt&#39;.
+
+Sometimes it is too onerous to handle exceptions in the middle of a
+critical piece of stateful code.  There are three ways to handle this
+kind of situation:
+
+ * Use STM.  Since a transaction is always either completely executed
+   or not at all, transactions are a good way to maintain invariants
+   over state in the presence of asynchronous (and indeed synchronous)
+   exceptions.
+
+ * Use &#39;mask&#39;, and avoid interruptible operations.  In order to do
+   this, we have to know which operations are interruptible.  It is
+   impossible to know for any given library function whether it might
+   invoke an interruptible operation internally; so instead we give a
+   list of guaranteed-not-to-be-interruptible operations below.
+
+ * Use &#39;uninterruptibleMask&#39;.  This is generally not recommended,
+   unless you can guarantee that any interruptible operations invoked
+   during the scope of &#39;uninterruptibleMask&#39; can only ever block for
+   a short time.  Otherwise, &#39;uninterruptibleMask&#39; is a good way to
+   make your program deadlock and be unresponsive to user interrupts.
+
+The following operations are guaranteed not to be interruptible:
+
+ * operations on &#39;IORef&#39; from &quot;Data.IORef&quot;
+
+ * STM transactions that do not use &#39;retry&#39;
+
+ * everything from the @Foreign@ modules
+
+ * everything from @Control.Exception@ except for &#39;throwTo&#39;
+
+ * @tryTakeMVar@, @tryPutMVar@, @isEmptyMVar@
+
+ * @takeMVar@ if the @MVar@ is definitely full, and conversely @putMVar@ if the @MVar@ is definitely empty
+
+ * @newEmptyMVar@, @newMVar@
+
+ * @forkIO@, @forkIOUnmasked@, @myThreadId@
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $catchall
+
+It is possible to catch all exceptions, by using the type &#39;SomeException&#39;:
+
+&gt; catch f (\e -&gt; ... (e :: SomeException) ...)
+
+HOWEVER, this is normally not what you want to do!
+
+For example, suppose you want to read a file, but if it doesn&#39;t exist
+then continue as if it contained \&quot;\&quot;.  You might be tempted to just
+catch all exceptions and return \&quot;\&quot; in the handler. However, this has
+all sorts of undesirable consequences.  For example, if the user
+presses control-C at just the right moment then the &#39;UserInterrupt&#39;
+exception will be caught, and the program will continue running under
+the belief that the file contains \&quot;\&quot;.  Similarly, if another thread
+tries to kill the thread reading the file then the &#39;ThreadKilled&#39;
+exception will be ignored.
+
+Instead, you should only catch exactly the exceptions that you really
+want. In this case, this would likely be more specific than even
+\&quot;any IO exception\&quot;; a permissions error would likely also want to be
+handled differently. Instead, you would probably want something like:
+
+&gt; e &lt;- tryJust (guard . isDoesNotExistError) (readFile f)
+&gt; let str = either (const &quot;&quot;) id e
+
+There are occassions when you really do need to catch any sort of
+exception. However, in most cases this is just so you can do some
+cleaning up; you aren&#39;t actually interested in the exception itself.
+For example, if you open a file then you want to close it again,
+whether processing the file executes normally or throws an exception.
+However, in these cases you can use functions like &#39;bracket&#39;, &#39;finally&#39;
+and &#39;onException&#39;, which never actually pass you the exception, but
+just call the cleanup functions at the appropriate points.
+
+But sometimes you really do need to catch any exception, and actually
+see what the exception is. One example is at the very top-level of a
+program, you may wish to catch any exception, print it to a logfile or
+the screen, and then exit gracefully. For these cases, you can use
+&#39;catch&#39; (or one of the other exception-catching functions) with the
+&#39;SomeException&#39; type.
+-}</span></span><span class="mpre">
+
+</span></div></body></html>

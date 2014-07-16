@@ -1,0 +1,21 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE BangPatterns, DeriveDataTypeable #-}
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.Text.Lazy.Internal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) 2013 Bryan O&#39;Sullivan</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : bos@serpentine.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : GHC</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module has been renamed to &#39;Data.Text.Internal.Lazy&#39;. This</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- name for the module will be removed in the next major release.</span></span><span class="mpre">
+
+module Data.Text.Lazy.Internal
+    {-# DEPRECATED &quot;Use Data.Text.Internal.Lazy instead&quot; #-}
+    (
+      module Data.Text.Internal.Lazy
+    ) where
+
+import Data.Text.Internal.Lazy
+</span></div></body></html>

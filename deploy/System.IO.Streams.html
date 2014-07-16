@@ -1,0 +1,148 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+
+</span><span class="hl_comment"><span class="mpre">-- | This module is a top-level convenience module which re-exports most of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @io-streams@ library.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- It is recommended to import this module qualified, as follows:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- import           &quot;System.IO.Streams&quot; (&#39;Generator&#39;, &#39;InputStream&#39;, &#39;OutputStream&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- import qualified &quot;System.IO.Streams&quot; as Streams</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For an in-depth tutorial on how to use @io-streams@, please see the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;System.IO.Streams.Tutorial&quot; module.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Is there a function missing from this library? Interested in contributing?</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Send a pull request to &lt;http://github.com/snapframework/io-streams&gt;.</span></span><span class="mpre">
+module System.IO.Streams
+ ( </span><span class="hl_comment"><span class="mpre">-- * Stream types</span></span><span class="mpre">
+   InputStream
+ , OutputStream
+
+
+   </span><span class="hl_comment"><span class="mpre">-- ** A note about resource acquisition\/release semantics</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- $resource</span></span><span class="mpre">
+
+   </span><span class="hl_comment"><span class="mpre">-- * Creating streams</span></span><span class="mpre">
+ , makeInputStream
+ , makeOutputStream
+
+   </span><span class="hl_comment"><span class="mpre">-- * Primitive stream operations</span></span><span class="mpre">
+ , read
+ , unRead
+ , peek
+ , write
+ , atEOF
+
+   </span><span class="hl_comment"><span class="mpre">-- * Connecting streams together</span></span><span class="mpre">
+ , connect
+ , connectTo
+ , supply
+ , supplyTo
+ , appendInputStream
+ , concatInputStreams
+
+   </span><span class="hl_comment"><span class="mpre">-- * Thread safety \/ concurrency</span></span><span class="mpre">
+ , lockingInputStream
+ , lockingOutputStream
+
+   </span><span class="hl_comment"><span class="mpre">-- * Utility streams</span></span><span class="mpre">
+ , nullInput
+ , nullOutput
+
+    </span><span class="hl_comment"><span class="mpre">-- * Generator monad</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $generator</span></span><span class="mpre">
+  , Generator
+  , fromGenerator
+  , yield
+
+   </span><span class="hl_comment"><span class="mpre">-- * Batteries included</span></span><span class="mpre">
+ , module System.IO.Streams.Builder
+ , module System.IO.Streams.ByteString
+ , module System.IO.Streams.Combinators
+ , module System.IO.Streams.Handle
+ , module System.IO.Streams.File
+ , module System.IO.Streams.List
+ , module System.IO.Streams.Network
+ , module System.IO.Streams.Process
+ , module System.IO.Streams.Text
+ , module System.IO.Streams.Vector
+ , module System.IO.Streams.Zlib
+ ) where
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+import           Prelude                       ()
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+import           System.IO.Streams.Internal
+
+import           System.IO.Streams.Builder
+import           System.IO.Streams.ByteString
+import           System.IO.Streams.Combinators
+import           System.IO.Streams.File
+import           System.IO.Streams.Handle
+import           System.IO.Streams.List
+import           System.IO.Streams.Network
+import           System.IO.Streams.Process
+import           System.IO.Streams.Text
+import           System.IO.Streams.Vector
+import           System.IO.Streams.Zlib
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- $generator</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- #generator#</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;Generator&#39; monad makes it easier for you to define more complicated</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;InputStream&#39;s. Generators have a couple of basic features:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Generator&#39; is a &#39;MonadIO&#39;, so you can run IO actions from within it using</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;liftIO&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- foo :: &#39;Generator&#39; r a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- foo = &#39;liftIO&#39; fireTheMissiles</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Generator&#39; has a &#39;yield&#39; function:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;yield&#39; :: r -&gt; &#39;Generator&#39; r ()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A call to \&quot;&#39;yield&#39; @x@\&quot; causes \&quot;&#39;Just&#39; @x@\&quot; to appear when reading the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;InputStream&#39;. Finally, &#39;Generator&#39; comes with a function to turn a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Generator&#39; into an &#39;InputStream&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;fromGenerator&#39; :: &#39;Generator&#39; r a -&gt; &#39;IO&#39; (&#39;InputStream&#39; r)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Once the &#39;Generator&#39; action finishes, &#39;fromGenerator&#39; will cause an</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- end-of-stream &#39;Nothing&#39; marker to appear at the output. Example:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ghci&gt; (Streams.&#39;fromGenerator&#39; $ &#39;Control.Monad.sequence&#39; $ &#39;Prelude.map&#39; Streams.&#39;yield&#39; [1..5::Int]) &gt;&gt;= Streams.&#39;toList&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- [1,2,3,4,5]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- $resource</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- #resource#</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In general, the convention within this library is that input and output</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- streams do not deal with resource acquisition\/release semantics, with rare</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- exceptions like &#39;System.IO.Streams.withFileAsInput&#39;. For example, sending</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- \&quot;end-of-stream\&quot; to an &#39;OutputStream&#39; wrapped around a &#39;System.IO.Handle&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- doesn&#39;t cause the handle to be closed. You can think of streams as little</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- state machines that are attached to the underlying resources, and the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- finalization\/release of these resources is up to you.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This means that you can use standard Haskell idioms like</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Exception.bracket&#39; to handle resource acquisition and cleanup in an</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- exception-safe way.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+
+</span></div></body></html>

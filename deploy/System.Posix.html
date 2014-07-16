@@ -1,0 +1,192 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#ifdef __GLASGOW_HASKELL__
+{-# LANGUAGE Safe #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  System.Posix</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2002</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (requires POSIX)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- POSIX support</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module System.Posix (
+  module System.Posix.Types,
+  module System.Posix.Signals,
+  module System.Posix.Directory,
+  module System.Posix.Files,
+  module System.Posix.Unistd,
+  module System.Posix.IO,
+  module System.Posix.Env,
+  module System.Posix.Process,
+  module System.Posix.Temp,
+  module System.Posix.Terminal,
+  module System.Posix.Time,
+  module System.Posix.User,
+  module System.Posix.Resource,
+  module System.Posix.Semaphore,
+  module System.Posix.SharedMem,
+  module System.Posix.DynamicLinker,
+</span><span class="hl_comment"><span class="mpre">-- XXX &#39;Module&#39; type clashes with GHC</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  module System.Posix.DynamicLinker.Module</span></span><span class="mpre">
+ ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 40, srcSpanStartColumn = 8, srcSpanEndLine = 40, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;System.Posix.Types&quot;"><span class="mpre">System.Posix.Types</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 41, srcSpanStartColumn = 8, srcSpanEndLine = 41, srcSpanEndColumn = 28}, srcInfoPoints = []}) &quot;System.Posix.Signals&quot;"><span class="mpre">System.Posix.Signals</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 42, srcSpanStartColumn = 8, srcSpanEndLine = 42, srcSpanEndColumn = 30}, srcInfoPoints = []}) &quot;System.Posix.Directory&quot;"><span class="mpre">System.Posix.Directory</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 43, srcSpanStartColumn = 8, srcSpanEndLine = 43, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;System.Posix.Files&quot;"><span class="mpre">System.Posix.Files</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 44, srcSpanStartColumn = 8, srcSpanEndLine = 44, srcSpanEndColumn = 27}, srcInfoPoints = []}) &quot;System.Posix.Unistd&quot;"><span class="mpre">System.Posix.Unistd</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 45, srcSpanStartColumn = 8, srcSpanEndLine = 45, srcSpanEndColumn = 28}, srcInfoPoints = []}) &quot;System.Posix.Process&quot;"><span class="mpre">System.Posix.Process</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 46, srcSpanStartColumn = 8, srcSpanEndLine = 46, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;System.Posix.IO&quot;"><span class="mpre">System.Posix.IO</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 47, srcSpanStartColumn = 8, srcSpanEndLine = 47, srcSpanEndColumn = 24}, srcInfoPoints = []}) &quot;System.Posix.Env&quot;"><span class="mpre">System.Posix.Env</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 48, srcSpanStartColumn = 8, srcSpanEndLine = 48, srcSpanEndColumn = 25}, srcInfoPoints = []}) &quot;System.Posix.Temp&quot;"><span class="mpre">System.Posix.Temp</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 49, srcSpanStartColumn = 8, srcSpanEndLine = 49, srcSpanEndColumn = 29}, srcInfoPoints = []}) &quot;System.Posix.Terminal&quot;"><span class="mpre">System.Posix.Terminal</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 50, srcSpanStartColumn = 8, srcSpanEndLine = 50, srcSpanEndColumn = 25}, srcInfoPoints = []}) &quot;System.Posix.Time&quot;"><span class="mpre">System.Posix.Time</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 51, srcSpanStartColumn = 8, srcSpanEndLine = 51, srcSpanEndColumn = 25}, srcInfoPoints = []}) &quot;System.Posix.User&quot;"><span class="mpre">System.Posix.User</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 52, srcSpanStartColumn = 8, srcSpanEndLine = 52, srcSpanEndColumn = 29}, srcInfoPoints = []}) &quot;System.Posix.Resource&quot;"><span class="mpre">System.Posix.Resource</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 53, srcSpanStartColumn = 8, srcSpanEndLine = 53, srcSpanEndColumn = 30}, srcInfoPoints = []}) &quot;System.Posix.Semaphore&quot;"><span class="mpre">System.Posix.Semaphore</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 54, srcSpanStartColumn = 8, srcSpanEndLine = 54, srcSpanEndColumn = 30}, srcInfoPoints = []}) &quot;System.Posix.SharedMem&quot;"><span class="mpre">System.Posix.SharedMem</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- XXX: bad planning, we have two constructors called &quot;Default&quot;</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix.hs&quot;, srcSpanStartLine = 56, srcSpanStartColumn = 8, srcSpanEndLine = 56, srcSpanEndColumn = 34}, srcInfoPoints = []}) &quot;System.Posix.DynamicLinker&quot;"><span class="mpre">System.Posix.DynamicLinker</span></span><span class="mpre"> hiding (Default)
+</span><span class="hl_comment"><span class="mpre">--import System.Posix.DynamicLinker.Module</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- TODO
+
+Here we detail our support for the IEEE Std 1003.1-2001 standard.  For
+each header file defined by the standard, we categorise its
+functionality as
+
+ - &quot;supported&quot; 
+
+   Full equivalent functionality is provided by the specified Haskell
+   module.
+
+ - &quot;unsupported&quot; (functionality not provided by a Haskell module)
+
+   The functionality is not currently provided.
+
+ - &quot;to be supported&quot; 
+
+   Currently unsupported, but support is planned for the future.
+
+Exceptions are listed where appropriate.
+
+Interfaces supported
+--------------------
+
+unix package:
+
+dirent.h         System.Posix.Directory
+dlfcn.h         System.Posix.DynamicLinker
+errno.h         Foreign.C.Error
+fcntl.h         System.Posix.IO
+signal.h        System.Posix.Signals
+sys/stat.h        System.Posix.Files
+sys/times.h        System.Posix.Process
+sys/types.h        System.Posix.Types (with exceptions...)
+sys/utsname.h        System.Posix.Unistd
+sys/wait.h        System.Posix.Process
+termios.h        System.Posix.Terminal (check exceptions)
+unistd.h        System.Posix.*
+utime.h                System.Posix.Files
+pwd.h                System.Posix.User
+grp.h                System.Posix.User
+stdlib.h:         System.Posix.Env (getenv()/setenv()/unsetenv())
+                System.Posix.Temp (mkstemp())
+sys/resource.h: System.Posix.Resource (get/setrlimit() only)
+
+regex-posix package:
+
+regex.h                Text.Regex.Posix
+
+network package:
+
+arpa/inet.h
+net/if.h
+netinet/in.h
+netinet/tcp.h
+sys/socket.h
+sys/un.h
+
+To be supported
+---------------
+
+limits.h        (pathconf()/fpathconf() already done)
+poll.h
+sys/resource.h  (getrusage(): use instead of times() for getProcessTimes?)
+sys/select.h
+sys/statvfs.h         (?)
+sys/time.h        (but maybe not the itimer?)
+time.h                (System.Posix.Time)
+stdio.h                (popen only: System.Posix.IO)
+sys/mman.h
+
+Unsupported interfaces
+----------------------
+
+aio.h
+assert.h
+complex.h
+cpio.h 
+ctype.h 
+fenv.h
+float.h
+fmtmsg.h
+fnmatch.h
+ftw.h
+glob.h
+iconv.h 
+inttypes.h 
+iso646.h 
+langinfo.h
+libgen.h
+locale.h        (see System.Locale)
+math.h
+monetary.h
+mqueue.h
+ndbm.h
+netdb.h
+nl_types.h
+pthread.h
+sched.h
+search.h
+semaphore.h
+setjmp.h
+spawn.h
+stdarg.h
+stdbool.h
+stddef.h
+stdint.h
+stdio.h                except: popen()
+stdlib.h        except: exit(): System.Posix.Process
+                        free()/malloc(): Foreign.Marshal.Alloc
+                        getenv()/setenv(): ?? System.Environment
+                        rand() etc.: System.Random
+string.h
+strings.h
+stropts.h
+sys/ipc.h
+sys/msg.h
+sys/sem.h
+sys/shm.h
+sys/timeb.h
+sys/uio.h
+syslog.h
+tar.h
+tgmath.h
+trace.h
+ucontext.h
+ulimit.h
+utmpx.h
+wchar.h
+wctype.h
+wordexp.h
+
+-}</span></span><span class="mpre">
+</span></div></body></html>

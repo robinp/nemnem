@@ -1,0 +1,21 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, TypeFamilies #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Safe #-}
+#endif
+
+module Compiler.Hoopl.Checkpoint
+  ( CheckpointMonad(..)
+  )
+where
+
+</span><span class="hl_comment"><span class="mpre">-- | Obeys the following law:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for all @m@ </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    do { s &lt;- checkpoint; m; restart s } == return ()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+class </span><span class="warning" data-warning="ClassDecl ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/hoopl-3.10.0.1/src/Compiler/Hoopl/Checkpoint.hs&quot;, srcSpanStartLine = 16, srcSpanStartColumn = 7, srcSpanEndLine = 16, srcSpanEndColumn = 17}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/hoopl-3.10.0.1/src/Compiler/Hoopl/Checkpoint.hs&quot;, srcSpanStartLine = 16, srcSpanStartColumn = 15, srcSpanEndLine = 16, srcSpanEndColumn = 17}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nem"><span class="mpre">Monad m =&gt;</span></span><span class="mpre"> </span><a name="loc_16_18_16_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_16_18_16_33&#39;)"><span class="hl_classdecl"><span class="mpre">CheckpointMonad</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> where
+  </span><span class="warning" data-warning="ClassDecl ClsTyFam (SrcSpanInfo {srcInfoClsTyFam (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/hoopl-3.10.0.1/src/Compiler/Hoopl/Checkpoint.hs&quot;, srcSpanStartLine = 17, srcSpanStartColumn = 3, srcSpanEndLine = 17, srcSpanEndColumn = 20}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/hoopl-3.10.0.1/src/Compiler/Hoopl/Checkpoint.hs&quot;, srcSpanStartLine = 17, srcSpanStartColumn = 3, srcSpanEndLine = 17, srcSpanEndColumn = 7}]}) (DHead (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem"><span class="mpre">type Checkpoint m</span></span><span class="mpre">
+  </span><a name="loc_18_3_18_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_3_18_13&#39;)"><span class="mpre">checkpoint</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Checkpoint</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre">)
+  </span><a name="loc_19_3_19_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_3_19_10&#39;)"><span class="mpre">restart</span></a><span class="mpre">    :: </span><span class="hl_tyconref"><span class="mpre">Checkpoint</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre"> 
+
+</span></div></body></html>

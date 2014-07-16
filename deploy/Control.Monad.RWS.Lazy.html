@@ -1,0 +1,54 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Monad.RWS.Lazy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Andy Gill 2001,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Oregon Graduate Institute of Science and Technology, 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (multi-param classes, functional dependencies)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Lazy RWS monad.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      Inspired by the paper</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      /Functional Programming with Overloading and Higher-Order Polymorphism/,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--        Mark P Jones (&lt;http://web.cecs.pdx.edu/~mpj/&gt;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          Advanced School of Functional Programming, 1995.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Control.Monad.RWS.Lazy (
+    </span><span class="hl_comment"><span class="mpre">-- * The RWS monad</span></span><span class="mpre">
+    RWS,
+    rws,
+    runRWS,
+    evalRWS,
+    execRWS,
+    mapRWS,
+    withRWS,
+    </span><span class="hl_comment"><span class="mpre">-- * The RWST monad transformer</span></span><span class="mpre">
+    RWST(RWST),
+    runRWST,
+    evalRWST,
+    execRWST,
+    mapRWST,
+    withRWST,
+    </span><span class="hl_comment"><span class="mpre">-- * Lazy Reader-writer-state monads</span></span><span class="mpre">
+    module Control.Monad.RWS.Class,
+    module Control.Monad,
+    module Control.Monad.Fix,
+    module Control.Monad.Trans,
+    module Data.Monoid,
+  ) where
+
+import Control.Monad.RWS.Class
+
+import Control.Monad.Trans
+import Control.Monad.Trans.RWS.Lazy (
+    RWS, </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_73_1_73_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_73_1_73_4&#39;)"><span class="mpre">rws</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_78_1_78_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_78_1_78_7&#39;)"><span class="mpre">runRWS</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_86_1_86_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_86_1_86_8&#39;)"><span class="mpre">evalRWS</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_96_1_96_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_96_1_96_8&#39;)"><span class="mpre">execRWS</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_105_1_105_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_105_1_105_7&#39;)"><span class="mpre">mapRWS</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_112_1_112_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_112_1_112_8&#39;)"><span class="mpre">withRWS</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_118_9_118_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_118_9_118_13&#39;)"><span class="mpre">RWST</span></a><span class="mpre">(RWST), </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_118_33_118_40" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_118_33_118_40&#39;)"><span class="mpre">runRWST</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_127_1_127_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_127_1_127_9&#39;)"><span class="mpre">evalRWST</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_138_1_138_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_138_1_138_9&#39;)"><span class="mpre">execRWST</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_146_1_146_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_146_1_146_8&#39;)"><span class="mpre">mapRWST</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.RWS.Lazy.html#loc_153_1_153_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.RWS.Lazy.html#loc_153_1_153_9&#39;)"><span class="mpre">withRWST</span></a><span class="mpre">)
+
+import Control.Monad
+import Control.Monad.Fix
+import Data.Monoid
+</span></div></body></html>

@@ -1,0 +1,63 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Safe #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Word</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Unsigned integer types.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Word
+  (
+        </span><span class="hl_comment"><span class="mpre">-- * Unsigned integral types</span></span><span class="mpre">
+
+        Word,
+        Word8, Word16, Word32, Word64,
+
+        </span><span class="hl_comment"><span class="mpre">-- * byte swapping</span></span><span class="mpre">
+        byteSwap16, byteSwap32, byteSwap64,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Notes</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- $notes</span></span><span class="mpre">
+        ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Word.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 8, srcSpanEndLine = 33, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Word&quot;"><span class="mpre">GHC.Word</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $notes
+
+* All arithmetic is performed modulo 2^n, where n is the number of
+  bits in the type.  One non-obvious consequence of this is that &#39;Prelude.negate&#39;
+  should /not/ raise an error on negative arguments.
+
+* For coercing between any two integer types, use
+  &#39;Prelude.fromIntegral&#39;, which is specialized for all the
+  common cases so should be fast enough.  Coercing word types to and
+  from integer types preserves representation, not sign.
+
+* It would be very natural to add a type @Natural@ providing an unbounded 
+  size unsigned integer, just as &#39;Prelude.Integer&#39; provides unbounded
+  size signed integers.  We do not do that yet since there is no demand
+  for it.
+
+* The rules that hold for &#39;Prelude.Enum&#39; instances over a bounded type
+  such as &#39;Prelude.Int&#39; (see the section of the Haskell report dealing
+  with arithmetic sequences) also hold for the &#39;Prelude.Enum&#39; instances
+  over the various &#39;Word&#39; types defined here.
+
+* Right and left shifts by amounts greater than or equal to the width
+  of the type result in a zero result.  This is contrary to the
+  behaviour in C, which is undefined; a common interpretation is to
+  truncate the shift count to the width of the type, for example @1 \&lt;\&lt;
+  32 == 1@ in some C implementations. 
+-}</span></span><span class="mpre">
+
+</span></div></body></html>

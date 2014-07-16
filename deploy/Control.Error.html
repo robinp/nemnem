@@ -1,0 +1,104 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{-| Import this module in your code to access the entire library&#39;s
+    functionality:
+
+&gt; import Control.Error
+
+    This module exports the entire library as well as useful exports from other
+    standard error-handling libraries:
+
+    * &quot;Control.Error.Safe&quot;: Generalizes the @safe@ library, including &#39;Either&#39;,
+      &#39;EitherT&#39;, and &#39;MonadPlus&#39; variations on total functions
+
+    * &quot;Control.Error.Script&quot;: Support for simple scripts that catch all errors
+      and transform them to &#39;String&#39;s
+
+    * &quot;Control.Error.Util&quot;: Utility functions and conversions between common
+      error-handling types
+
+    * @Control.Monad.Trans.Either@: The &#39;EitherT&#39; monad transformer
+
+    * @Control.Monad.Trans.Maybe@: The &#39;MaybeT&#39; monad transformer
+
+    * @Data.Either@: &#39;Either&#39; utility functions
+
+    * &quot;Data.EitherR&quot;: throw and catch functions, and their corresponding
+      \&quot;success\&quot; monads
+
+    * @Data.Maybe@: &#39;Maybe&#39; utility functions
+
+    * @Safe@: Total versions of partial Prelude functions
+
+    This module does not re-export partial functions from other libraries.
+-}</span></span><span class="mpre">
+
+module Control.Error (
+    </span><span class="hl_comment"><span class="mpre">-- * Re-exports</span></span><span class="mpre">
+    module Control.Error.Safe,
+    module Control.Error.Script,
+    module Control.Error.Util,
+    module Control.Monad.Trans.Either,
+    module Control.Monad.Trans.Maybe,
+    module Data.Either,
+    module Data.EitherR,
+    module Data.Maybe,
+    module Safe
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/errors-1.4.7/Control/Error.hs&quot;, srcSpanStartLine = 47, srcSpanStartColumn = 8, srcSpanEndLine = 47, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;Control.Error.Safe&quot;"><span class="mpre">Control.Error.Safe</span></span><span class="mpre">
+import Control.Error.Script
+import Control.Error.Util
+import Control.Monad.Trans.Either (
+    </span><a href="Control.Monad.Trans.Either.html#loc_69_9_69_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_69_9_69_16&#39;)"><span class="mpre">EitherT</span></a><span class="mpre">(EitherT),
+    </span><a href="Control.Monad.Trans.Either.html#loc_69_35_69_45" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_69_35_69_45&#39;)"><span class="mpre">runEitherT</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Either.html#loc_94_1_94_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_94_1_94_8&#39;)"><span class="mpre">eitherT</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Either.html#loc_111_1_111_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_111_1_111_13&#39;)"><span class="mpre">bimapEitherT</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Either.html#loc_122_1_122_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_122_1_122_11&#39;)"><span class="mpre">mapEitherT</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Either.html#loc_127_1_127_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_127_1_127_12&#39;)"><span class="mpre">hoistEither</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Either.html#loc_101_1_101_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_101_1_101_5&#39;)"><span class="mpre">left</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Either.html#loc_106_1_106_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Either.html#loc_106_1_106_6&#39;)"><span class="mpre">right</span></a><span class="mpre"> )
+import Control.Monad.Trans.Maybe (
+    </span><a href="Control.Monad.Trans.Maybe.html#loc_57_9_57_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Maybe.html#loc_57_9_57_15&#39;)"><span class="mpre">MaybeT</span></a><span class="mpre">(MaybeT),
+    </span><a href="Control.Monad.Trans.Maybe.html#loc_57_31_57_40" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Maybe.html#loc_57_31_57_40&#39;)"><span class="mpre">runMaybeT</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Maybe.html#loc_80_1_80_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Maybe.html#loc_80_1_80_10&#39;)"><span class="mpre">mapMaybeT</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Maybe.html#loc_138_1_138_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Maybe.html#loc_138_1_138_11&#39;)"><span class="mpre">liftCallCC</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Maybe.html#loc_143_1_143_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Maybe.html#loc_143_1_143_10&#39;)"><span class="mpre">liftCatch</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Maybe.html#loc_147_1_147_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Maybe.html#loc_147_1_147_11&#39;)"><span class="mpre">liftListen</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Maybe.html#loc_153_1_153_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Maybe.html#loc_153_1_153_9&#39;)"><span class="mpre">liftPass</span></a><span class="mpre"> )
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/errors-1.4.7/Control/Error.hs&quot;, srcSpanStartLine = 67, srcSpanStartColumn = 8, srcSpanEndLine = 67, srcSpanEndColumn = 19}, srcInfoPoints = []}) &quot;Data.Either&quot;"><span class="mpre">Data.Either</span></span><span class="mpre"> (either, lefts, rights, partitionEithers)
+import Data.EitherR
+import Data.Maybe (
+    </span><a href="Data.Maybe.html#loc_74_1_74_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_74_1_74_6&#39;)"><span class="mpre">maybe</span></a><span class="mpre">,
+    </span><a href="Data.Maybe.html#loc_80_1_80_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_80_1_80_7&#39;)"><span class="mpre">isJust</span></a><span class="mpre">,
+    </span><a href="Data.Maybe.html#loc_85_1_85_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_85_1_85_10&#39;)"><span class="mpre">isNothing</span></a><span class="mpre">,
+    </span><a href="Data.Maybe.html#loc_98_1_98_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_98_1_98_10&#39;)"><span class="mpre">fromMaybe</span></a><span class="mpre">,
+    </span><a href="Data.Maybe.html#loc_109_1_109_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_109_1_109_12&#39;)"><span class="mpre">listToMaybe</span></a><span class="mpre">,
+    </span><a href="Data.Maybe.html#loc_103_1_103_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_103_1_103_12&#39;)"><span class="mpre">maybeToList</span></a><span class="mpre">,
+    </span><a href="Data.Maybe.html#loc_115_1_115_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_115_1_115_10&#39;)"><span class="mpre">catMaybes</span></a><span class="mpre">,
+    </span><a href="Data.Maybe.html#loc_123_1_123_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_123_1_123_9&#39;)"><span class="mpre">mapMaybe</span></a><span class="mpre"> )
+import Safe (
+    </span><a href="Safe.html#loc_98_1_98_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_98_1_98_8&#39;)"><span class="mpre">tailDef</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_92_1_92_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_92_1_92_8&#39;)"><span class="mpre">tailMay</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_110_1_110_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_110_1_110_9&#39;)"><span class="mpre">tailSafe</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_117_1_117_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_117_1_117_8&#39;)"><span class="mpre">initDef</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_114_1_114_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_114_1_114_8&#39;)"><span class="mpre">initMay</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_123_1_123_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_123_1_123_9&#39;)"><span class="mpre">initSafe</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_132_1_132_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_132_1_132_8&#39;)"><span class="mpre">headDef</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_128_1_128_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_128_1_128_8&#39;)"><span class="mpre">headMay</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_133_1_133_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_133_1_133_8&#39;)"><span class="mpre">lastDef</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_129_1_129_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_129_1_129_8&#39;)"><span class="mpre">lastMay</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_144_1_144_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_144_1_144_11&#39;)"><span class="mpre">minimumDef</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_140_1_140_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_140_1_140_11&#39;)"><span class="mpre">minimumMay</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_145_1_145_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_145_1_145_11&#39;)"><span class="mpre">maximumDef</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_141_1_141_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_141_1_141_11&#39;)"><span class="mpre">maximumMay</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_170_1_170_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_170_1_170_10&#39;)"><span class="mpre">foldr1Def</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_165_1_165_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_165_1_165_10&#39;)"><span class="mpre">foldr1May</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_172_1_172_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_172_1_172_11&#39;)"><span class="mpre">foldl1Def&#39;</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_167_1_167_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_167_1_167_11&#39;)"><span class="mpre">foldl1May&#39;</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_194_1_194_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_194_1_194_12&#39;)"><span class="mpre">fromJustDef</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_212_1_212_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_212_1_212_6&#39;)"><span class="mpre">atDef</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_209_1_209_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_209_1_209_6&#39;)"><span class="mpre">atMay</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_222_1_222_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_222_1_222_8&#39;)"><span class="mpre">readDef</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_219_1_219_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_219_1_219_8&#39;)"><span class="mpre">readMay</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_233_1_233_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_233_1_233_14&#39;)"><span class="mpre">lookupJustDef</span></a><span class="mpre">,
+    </span><a href="Safe.html#loc_244_1_244_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Safe.html#loc_244_1_244_12&#39;)"><span class="mpre">findJustDef</span></a><span class="mpre"> )
+</span></div></body></html>

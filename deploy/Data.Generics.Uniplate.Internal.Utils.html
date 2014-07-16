@@ -1,0 +1,60 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, Rank2Types, MagicHash, UnboxedTuples, ExistentialQuantification #-}
+{-# OPTIONS_GHC -fno-warn-unused-binds #-} </span><span class="hl_comment"><span class="mpre">-- SPEC2</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Internal module, do not import or use.</span></span><span class="mpre">
+module Data.Generics.Uniplate.Internal.Utils(
+    unsafeCoerce, builder, unsafePerformIO, inlinePerformIO, concatCont, SPEC(SPEC)
+    ) where
+
+#if __GLASGOW_HASKELL__ &gt;= 702
+import System.IO.Unsafe(</span><a href="GHC.IO.html#loc_165_1_165_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_165_1_165_16&#39;)"><span class="mpre">unsafePerformIO</span></a><span class="mpre">)
+#else
+import Foreign(unsafePerformIO)
+#endif
+import Unsafe.Coerce(</span><a href="Unsafe.Coerce.html#loc_59_1_59_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Unsafe.Coerce.html#loc_59_1_59_13&#39;)"><span class="mpre">unsafeCoerce</span></a><span class="mpre">)
+
+#ifdef __GLASGOW_HASKELL__
+import GHC.Exts(build, realWorld#)
+#if __GLASGOW_HASKELL__ &lt; 612
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/uniplate-1.6.12/Data/Generics/Uniplate/Internal/Utils.hs&quot;, srcSpanStartLine = 19, srcSpanStartColumn = 8, srcSpanEndLine = 19, srcSpanEndColumn = 18}, srcInfoPoints = []}) &quot;GHC.IOBase&quot;"><span class="mpre">GHC.IOBase</span></span><span class="mpre">(IO(IO))
+#else
+import GHC.IO(IO(IO))
+#endif
+#endif
+
+#if __GLASGOW_HASKELL__ &gt;= 701
+import GHC.Exts(</span><a href="GHC.Exts.html#loc_141_6_141_26" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Exts.html#loc_141_6_141_26&#39;)"><span class="mpre">SpecConstrAnnotation</span></a><span class="mpre">(..))
+</span><span class="warning" data-warning="DeclAnnPragma (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/uniplate-1.6.12/Data/Generics/Uniplate/Internal/Utils.hs&quot;, srcSpanStartLine = 27, srcSpanStartColumn = 1, srcSpanEndLine = 27, srcSpanEndColumn = 38}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/uniplate-1.6.12/Data/Generics/Uniplate/Internal/Utils.hs&quot;, srcSpanStartLine = 27, srcSpanStartColumn = 1, srcSpanEndLine = 27, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/uniplate-1.6."><span class="mpre">{-# ANN type SPEC ForceSpecConstr #-}</span></span><span class="mpre">
+#endif
+
+
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_35_1_35_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_1_35_8&#39;)"><span class="mpre">builder</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | GHCs @foldr@\/@build@ system, but on all platforms</span></span><span class="mpre">
+#ifdef __GLASGOW_HASKELL__
+</span><a href="#loc_35_1_35_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_1_35_8&#39;)"><span class="mpre">builder</span></a><span class="mpre"> :: forall </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> . (forall </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> . (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) -&gt; [</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">]
+</span><a name="loc_35_1_35_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_1_35_8&#39;)"><span class="hl_vardecl"><span class="mpre">builder</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">build</span></span><span class="mpre">
+#else
+</span><a href="#loc_35_1_35_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_1_35_8&#39;)"><span class="mpre">builder</span></a><span class="mpre"> :: ((</span><span class="hl_tyvar"><span class="mpre">x</span></span><span class="mpre"> -&gt; [</span><span class="hl_tyvar"><span class="mpre">x</span></span><span class="mpre">] -&gt; [</span><span class="hl_tyvar"><span class="mpre">x</span></span><span class="mpre">]) -&gt; [</span><span class="hl_tyvar"><span class="mpre">x</span></span><span class="mpre">] -&gt; [</span><span class="hl_tyvar"><span class="mpre">x</span></span><span class="mpre">]) -&gt; [</span><span class="hl_tyvar"><span class="mpre">x</span></span><span class="mpre">]
+</span><span class="hl_fundecl"><span class="mpre">builder</span></span><span class="mpre"> </span><a name="loc_38_9_38_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_9_38_10&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = </span><a href="#loc_38_9_38_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_9_38_10&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">(:)</span></span><span class="mpre"> []
+#endif
+
+
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_46_1_46_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_1_46_16&#39;)"><span class="mpre">inlinePerformIO</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | &#39;unsafePerformIO&#39;, but suitable for inlining. Copied from &quot;Data.ByteString.Base&quot;.</span></span><span class="mpre">
+</span><a href="#loc_46_1_46_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_1_46_16&#39;)"><span class="mpre">inlinePerformIO</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+#ifdef __GLASGOW_HASKELL__
+</span><a name="loc_46_1_46_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_1_46_16&#39;)"><span class="hl_fundecl"><span class="mpre">inlinePerformIO</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">IO</span></span><span class="mpre"> </span><a name="loc_46_21_46_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_21_46_22&#39;)"><span class="hl_vardecl"><span class="mpre">m</span></span></a><span class="mpre">) = case </span><a href="#loc_46_21_46_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_21_46_22&#39;)"><span class="hl_varref"><span class="mpre">m</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">realWorld#</span></span><span class="mpre"> of (# _, </span><a name="loc_46_53_46_54" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_53_46_54&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre"> #) -&gt; </span><a href="#loc_46_53_46_54" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_53_46_54&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre">
+#else
+</span><span class="hl_vardecl"><span class="mpre">inlinePerformIO</span></span><span class="mpre"> = </span><a href="GHC.IO.html#loc_165_1_165_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_165_1_165_16&#39;)"><span class="hl_varref"><span class="mpre">unsafePerformIO</span></span></a><span class="mpre">
+#endif
+
+
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_55_1_55_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_1_55_11&#39;)"><span class="mpre">concatCont</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | Perform concatentation of continuations</span></span><span class="mpre">
+</span><a href="#loc_55_1_55_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_1_55_11&#39;)"><span class="mpre">concatCont</span></a><span class="mpre"> :: [</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">] -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_55_1_55_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_1_55_11&#39;)"><span class="hl_fundecl"><span class="mpre">concatCont</span></span></a><span class="mpre"> </span><a name="loc_55_12_55_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_12_55_14&#39;)"><span class="hl_vardecl"><span class="mpre">xs</span></span></a><span class="mpre"> </span><a name="loc_55_15_55_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_15_55_19&#39;)"><span class="hl_vardecl"><span class="mpre">rest</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">foldr</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">($)</span></span><span class="mpre"> </span><a href="#loc_55_15_55_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_15_55_19&#39;)"><span class="hl_varref"><span class="mpre">rest</span></span></a><span class="mpre"> </span><a href="#loc_55_12_55_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_12_55_14&#39;)"><span class="hl_varref"><span class="mpre">xs</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Constructor specialisation on newer GHC</span></span><span class="mpre">
+data </span><a name="loc_59_6_59_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_6_59_10&#39;)"><span class="hl_tycondecl"><span class="mpre">SPEC</span></span></a><span class="mpre"> = </span><a name="loc_59_13_59_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_13_59_17&#39;)"><span class="hl_condecl"><span class="mpre">SPEC</span></span></a><span class="mpre"> | </span><span class="hl_condecl"><span class="mpre">SPEC2</span></span><span class="mpre">
+</span></div></body></html>

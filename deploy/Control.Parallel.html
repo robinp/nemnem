@@ -1,0 +1,73 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Parallel</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Parallel Constructs</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Control.Parallel (
+          par, pseq
+    ) where
+
+#ifdef __GLASGOW_HASKELL__
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parallel-3.2.0.4/Control/Parallel.hs&quot;, srcSpanStartLine = 22, srcSpanStartColumn = 18, srcSpanEndLine = 22, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;GHC.Conc&quot;"><span class="mpre">GHC.Conc</span></span><span class="mpre">       ( par, pseq )
+
+</span><span class="warning" data-warning="DeclInfixDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parallel-3.2.0.4/Control/Parallel.hs&quot;, srcSpanStartLine = 24, srcSpanStartColumn = 1, srcSpanEndLine = 24, srcSpanEndColumn = 23}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parallel-3.2.0.4/Control/Parallel.hs&quot;, srcSpanStartLine = 24, srcSpanStartColumn = 8, srcSpanEndLine = 24, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parallel-3.2.0.4/Control/Parallel.hs&quot;, srcSpanStartLi"><span class="mpre">infixr 0 `par`, `pseq`</span></span><span class="mpre">
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- Maybe parIO and the like could be added here later.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Indicates that it may be beneficial to evaluate the first</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- argument in parallel with the second.  Returns the value of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- second argument.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @a ``par`` b@ is exactly equivalent semantically to @b@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @par@ is generally used when the value of @a@ is likely to be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- required later, but not immediately.  Also it is a good idea to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ensure that @a@ is not a trivial computation, otherwise the cost of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- spawning it in parallel overshadows the benefits obtained by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- running it in parallel.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that actual parallelism is only supported by certain</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- implementations (GHC with the @-threaded@ option, and GPH, for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- now).  On other implementations, @par a b = b@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_47_1_47_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_4&#39;)"><span class="mpre">par</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+#ifdef __GLASGOW_HASKELL__
+</span><a name="loc_47_1_47_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_4&#39;)"><span class="hl_vardecl"><span class="mpre">par</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">GHC.Conc.par</span></span><span class="mpre">
+#else
+</span><span class="hl_comment"><span class="mpre">-- For now, Hugs does not support par properly.</span></span><span class="mpre">
+</span><span class="hl_fundecl"><span class="mpre">par</span></span><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">a</span></span><span class="mpre"> </span><a name="loc_50_7_50_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_50_7_50_8&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> = </span><a href="#loc_50_7_50_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_50_7_50_8&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | Semantically identical to &#39;seq&#39;, but with a subtle operational</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- difference: &#39;seq&#39; is strict in both its arguments, so the compiler</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- may, for example, rearrange @a ``seq`` b@ into @b ``seq`` a ``seq`` b@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This is normally no problem when using &#39;seq&#39; to express strictness,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- but it can be a problem when annotating code for parallelism,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- because we need more control over the order of evaluation; we may</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- want to evaluate @a@ before @b@, because we know that @b@ has</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- already been sparked in parallel with &#39;par&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This is why we have &#39;pseq&#39;.  In contrast to &#39;seq&#39;, &#39;pseq&#39; is only</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- strict in its first argument (as far as the compiler is concerned),</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- which restricts the transformations that the compiler can do, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ensures that the user can retain control of the evaluation order.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_69_1_69_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_1_69_5&#39;)"><span class="mpre">pseq</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+#ifdef __GLASGOW_HASKELL__
+</span><a name="loc_69_1_69_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_1_69_5&#39;)"><span class="hl_vardecl"><span class="mpre">pseq</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">GHC.Conc.pseq</span></span><span class="mpre">
+#else
+</span><span class="hl_vardecl"><span class="mpre">pseq</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">seq</span></span><span class="mpre">
+#endif
+</span></div></body></html>

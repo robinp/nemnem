@@ -1,0 +1,16 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# OPTIONS -fglasgow-exts #-}
+
+module Newtype (tests) where
+
+</span><span class="hl_comment"><span class="mpre">-- The type of a newtype should treat the newtype as opaque</span></span><span class="mpre">
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Newtype.hs&quot;, srcSpanStartLine = 7, srcSpanStartColumn = 8, srcSpanEndLine = 7, srcSpanEndColumn = 18}, srcInfoPoints = []}) &quot;Test.HUnit&quot;"><span class="mpre">Test.HUnit</span></span><span class="mpre">
+
+import Data.Generics
+
+newtype </span><a name="loc_11_9_11_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_11_9_11_10&#39;)"><span class="hl_tycondecl"><span class="mpre">T</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">MkT</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Newtype.hs&quot;, srcSpanStartLine = 11, srcSpanStartColumn = 21, srcSpanEndLine = 11, srcSpanEndColumn = 41}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Newtype.hs&quot;, srcSpanStartLine = 11, srcSpanStartColumn = 21, srcSpanEndLine = 11, srcSpanEndColumn = 29},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Newtype.hs&quot;, srcSpanStartLine = 11, srcSpanStartColumn "><span class="mpre">deriving( Typeable )</span></span><span class="mpre">
+
+</span><a name="loc_13_1_13_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_13_1_13_6&#39;)"><span class="hl_vardecl"><span class="mpre">tests</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">typeOf</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">undefined</span></span><span class="mpre"> :: </span><a href="#loc_11_9_11_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_11_9_11_10&#39;)"><span class="hl_tyconref"><span class="mpre">T</span></span></a><span class="mpre">)) </span><span class="hl_infix"><span class="mpre">~=?</span></span><span class="mpre"> </span><a href="#loc_15_1_15_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_15_1_15_7&#39;)"><span class="hl_varref"><span class="mpre">output</span></span></a><span class="mpre">
+
+</span><a name="loc_15_1_15_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_15_1_15_7&#39;)"><span class="hl_vardecl"><span class="mpre">output</span></span></a><span class="mpre"> = </span><span class="hl_string"><span class="mpre">&quot;T&quot;</span></span><span class="mpre">
+</span></div></body></html>

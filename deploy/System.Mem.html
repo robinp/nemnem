@@ -1,0 +1,37 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Safe #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  System.Mem</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Memory-related system things.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module System.Mem
+       ( performGC
+       , performMajorGC
+       , performMinorGC
+       ) where
+import Prelude
+
+</span><span class="hl_comment"><span class="mpre">-- | Triggers an immediate garbage collection.</span></span><span class="mpre">
+</span><a href="#loc_26_1_26_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_26_1_26_10&#39;)"><span class="mpre">performGC</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_26_1_26_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_26_1_26_10&#39;)"><span class="hl_vardecl"><span class="mpre">performGC</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">performMajorGC</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Triggers an immediate garbage collection.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.7.0.0/</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Mem.hs&quot;, srcSpanStartLine = 31, srcSpanStartColumn = 1, srcSpanEndLine = 31, srcSpanEndColumn = 62}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Mem.hs&quot;, srcSpanStartLine = 31, srcSpanStartColumn = 1, srcSpanEndLine = 31, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Mem.hs&quot;, srcSpanStartLine = 31, srcSpanStartColumn = 9, "><span class="mpre">foreign import ccall &quot;performMajorGC&quot; performMajorGC :: IO ()</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Triggers an immediate minor garbage collection.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.7.0.0/</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Mem.hs&quot;, srcSpanStartLine = 36, srcSpanStartColumn = 1, srcSpanEndLine = 36, srcSpanEndColumn = 57}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Mem.hs&quot;, srcSpanStartLine = 36, srcSpanStartColumn = 1, srcSpanEndLine = 36, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Mem.hs&quot;, srcSpanStartLine = 36, srcSpanStartColumn = 9, "><span class="mpre">foreign import ccall &quot;performGC&quot; performMinorGC :: IO ()</span></span><span class="mpre">
+</span></div></body></html>

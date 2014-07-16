@@ -1,0 +1,149 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Distribution.Simple.Program.Types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  Isaac Jones 2006, Duncan Coutts 2007-2009</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  cabal-devel@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This provides an abstraction which deals with configuring and running</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- programs. A &#39;Program&#39; is a static notion of a known program. A</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;ConfiguredProgram&#39; is a &#39;Program&#39; that has been found on the current</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- machine and is ready to be run (possibly with some user-supplied default</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- args). Configuring a program involves finding its location and if necessary</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- finding its version. There&#39;s reasonable default behavior for trying to find</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- \&quot;foo\&quot; in PATH, being able to override its location, etc.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Distribution.Simple.Program.Types (
+    </span><span class="hl_comment"><span class="mpre">-- * Program and functions for constructing them</span></span><span class="mpre">
+    Program(..),
+    ProgramSearchPath,
+    ProgramSearchPathEntry(..),
+    simpleProgram,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Configured program and related functions</span></span><span class="mpre">
+    ConfiguredProgram(..),
+    programPath,
+    suppressOverrideArgs,
+    ProgArg,
+    ProgramLocation(..),
+    simpleConfiguredProgram,
+  ) where
+
+import Distribution.Simple.Program.Find
+         ( ProgramSearchPath, </span><a href="Distribution.Simple.Program.Find.html#loc_60_6_60_28" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Find.html#loc_60_6_60_28&#39;)"><span class="mpre">ProgramSearchPathEntry</span></a><span class="mpre">(..)
+         , </span><a href="Distribution.Simple.Program.Find.html#loc_69_1_69_24" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Find.html#loc_69_1_69_24&#39;)"><span class="mpre">findProgramOnSearchPath</span></a><span class="mpre"> )
+import Distribution.Version
+         ( </span><a href="Data.Version.html#loc_68_6_68_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_68_6_68_13&#39;)"><span class="mpre">Version</span></a><span class="mpre"> )
+import Distribution.Verbosity
+         ( </span><a href="Distribution.Verbosity.html#loc_58_6_58_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Verbosity.html#loc_58_6_58_15&#39;)"><span class="mpre">Verbosity</span></a><span class="mpre"> )
+
+</span><span class="hl_comment"><span class="mpre">-- | Represents a program which can be configured.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note: rather than constructing this directly, start with &#39;simpleProgram&#39; and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- override any extra fields.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+data </span><a name="loc_46_6_46_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_6_46_13&#39;)"><span class="hl_tycondecl"><span class="mpre">Program</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">Program</span></span><span class="mpre"> {
+       </span><span class="hl_comment"><span class="mpre">-- | The simple name of the program, eg. ghc</span></span><span class="mpre">
+       </span><a name="loc_48_8_48_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_8_48_19&#39;)"><span class="hl_fielddecl"><span class="mpre">programName</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">,
+
+       </span><span class="hl_comment"><span class="mpre">-- | A function to search for the program if its location was not</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- specified by the user. Usually this will just be a call to</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- &#39;findProgramOnSearchPath&#39;.</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- It is supplied with the prevailing search path which will typically</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- just be used as-is, but can be extended or ignored as needed.</span></span><span class="mpre">
+       </span><a name="loc_56_8_56_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_8_56_27&#39;)"><span class="hl_fielddecl"><span class="mpre">programFindLocation</span></span></a><span class="mpre"> :: </span><a href="Distribution.Verbosity.html#loc_58_6_58_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Verbosity.html#loc_58_6_58_15&#39;)"><span class="hl_tyconref"><span class="mpre">Verbosity</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ProgramSearchPath</span></span><span class="mpre">
+                              -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">),
+
+       </span><span class="hl_comment"><span class="mpre">-- | Try to find the version of the program. For many programs this is</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- not possible or is not necessary so it&#39;s ok to return Nothing.</span></span><span class="mpre">
+       </span><a name="loc_61_8_61_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_8_61_26&#39;)"><span class="hl_fielddecl"><span class="mpre">programFindVersion</span></span></a><span class="mpre"> :: </span><a href="Distribution.Verbosity.html#loc_58_6_58_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Verbosity.html#loc_58_6_58_15&#39;)"><span class="hl_tyconref"><span class="mpre">Verbosity</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><a href="Data.Version.html#loc_68_6_68_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_68_6_68_13&#39;)"><span class="hl_tyconref"><span class="mpre">Version</span></span></a><span class="mpre">),
+
+       </span><span class="hl_comment"><span class="mpre">-- | A function to do any additional configuration after we have</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- located the program (and perhaps identified its version). For example</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- it could add args, or environment vars.</span></span><span class="mpre">
+       </span><a name="loc_66_8_66_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_8_66_23&#39;)"><span class="hl_fielddecl"><span class="mpre">programPostConf</span></span></a><span class="mpre"> :: </span><a href="Distribution.Verbosity.html#loc_58_6_58_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Verbosity.html#loc_58_6_58_15&#39;)"><span class="hl_tyconref"><span class="mpre">Verbosity</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_77_6_77_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_6_77_23&#39;)"><span class="hl_tyconref"><span class="mpre">ConfiguredProgram</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><a href="#loc_77_6_77_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_6_77_23&#39;)"><span class="hl_tyconref"><span class="mpre">ConfiguredProgram</span></span></a><span class="mpre">
+     }
+
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 69, srcSpanStartColumn = 1, srcSpanEndLine = 69, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 69, srcSpanStartColumn = 1, srcSpanEndLine = 69, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribut"><span class="mpre">type ProgArg = String</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Represents a program which has been configured and is thus ready to be run.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- These are usually made by configuring a &#39;Program&#39;, but if you have to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- construct one directly then start with &#39;simpleConfiguredProgram&#39; and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- override any extra fields.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+data </span><a name="loc_77_6_77_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_6_77_23&#39;)"><span class="hl_tycondecl"><span class="mpre">ConfiguredProgram</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">ConfiguredProgram</span></span><span class="mpre"> {
+       </span><span class="hl_comment"><span class="mpre">-- | Just the name again</span></span><span class="mpre">
+       </span><a name="loc_79_8_79_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_8_79_17&#39;)"><span class="hl_fielddecl"><span class="mpre">programId</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">,
+
+       </span><span class="hl_comment"><span class="mpre">-- | The version of this program, if it is known.</span></span><span class="mpre">
+       </span><a name="loc_82_8_82_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_82_8_82_22&#39;)"><span class="hl_fielddecl"><span class="mpre">programVersion</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><a href="Data.Version.html#loc_68_6_68_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_68_6_68_13&#39;)"><span class="hl_tyconref"><span class="mpre">Version</span></span></a><span class="mpre">,
+
+       </span><span class="hl_comment"><span class="mpre">-- | Default command-line args for this program.</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- These flags will appear first on the command line, so they can be</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- overridden by subsequent flags.</span></span><span class="mpre">
+       </span><a name="loc_87_8_87_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_8_87_26&#39;)"><span class="hl_fielddecl"><span class="mpre">programDefaultArgs</span></span></a><span class="mpre"> :: [</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">],
+
+       </span><span class="hl_comment"><span class="mpre">-- | Override command-line args for this program.</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- These flags will appear last on the command line, so they override</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- all earlier flags.</span></span><span class="mpre">
+       </span><a name="loc_92_8_92_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_8_92_27&#39;)"><span class="hl_fielddecl"><span class="mpre">programOverrideArgs</span></span></a><span class="mpre"> :: [</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">],
+
+       </span><span class="hl_comment"><span class="mpre">-- | Override environment variables for this program.</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- These env vars will extend\/override the prevailing environment of</span></span><span class="mpre">
+       </span><span class="hl_comment"><span class="mpre">-- the current to form the environment for the new process.</span></span><span class="mpre">
+       </span><a name="loc_97_8_97_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_8_97_26&#39;)"><span class="hl_fielddecl"><span class="mpre">programOverrideEnv</span></span></a><span class="mpre"> :: [(</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">)],
+
+       </span><span class="hl_comment"><span class="mpre">-- | Location of the program. eg. @\/usr\/bin\/ghc-6.4@</span></span><span class="mpre">
+       </span><a name="loc_100_8_100_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_8_100_23&#39;)"><span class="hl_fielddecl"><span class="mpre">programLocation</span></span></a><span class="mpre"> :: </span><a href="#loc_105_6_105_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_6_105_21&#39;)"><span class="hl_tyconref"><span class="mpre">ProgramLocation</span></span></a><span class="mpre">
+     } </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 101, srcSpanStartColumn = 8, srcSpanEndLine = 101, srcSpanEndColumn = 33}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 101, srcSpanStartColumn = 8, srcSpanEndLine = 101, srcSpanEndColumn = 16},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Dist"><span class="mpre">deriving (Read, Show, Eq)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Where a program was found. Also tells us whether it&#39;s specifed by user or</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- not.  This includes not just the path, but the program as well.</span></span><span class="mpre">
+data </span><a name="loc_105_6_105_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_6_105_21&#39;)"><span class="hl_tycondecl"><span class="mpre">ProgramLocation</span></span></a><span class="mpre">
+    = </span><span class="hl_condecl"><span class="mpre">UserSpecified</span></span><span class="mpre"> { </span><a name="loc_106_23_106_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_23_106_35&#39;)"><span class="hl_fielddecl"><span class="mpre">locationPath</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> }
+      </span><span class="hl_comment"><span class="mpre">-- ^The user gave the path to this program,</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- eg. --ghc-path=\/usr\/bin\/ghc-6.6</span></span><span class="mpre">
+    | </span><span class="hl_condecl"><span class="mpre">FoundOnSystem</span></span><span class="mpre"> { </span><span class="hl_fielddecl"><span class="mpre">locationPath</span></span><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> }
+      </span><span class="hl_comment"><span class="mpre">-- ^The program was found automatically.</span></span><span class="mpre">
+      </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 111, srcSpanStartColumn = 7, srcSpanEndLine = 111, srcSpanEndColumn = 32}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 111, srcSpanStartColumn = 7, srcSpanEndLine = 111, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Dist"><span class="mpre">deriving (Read, Show, Eq)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The full path of a configured program.</span></span><span class="mpre">
+</span><a href="#loc_115_1_115_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_1_115_12&#39;)"><span class="mpre">programPath</span></a><span class="mpre"> :: </span><a href="#loc_77_6_77_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_6_77_23&#39;)"><span class="hl_tyconref"><span class="mpre">ConfiguredProgram</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+</span><a name="loc_115_1_115_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_1_115_12&#39;)"><span class="hl_vardecl"><span class="mpre">programPath</span></span></a><span class="mpre"> = </span><a href="#loc_106_23_106_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_23_106_35&#39;)"><span class="hl_varref"><span class="mpre">locationPath</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="#loc_100_8_100_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_8_100_23&#39;)"><span class="hl_varref"><span class="mpre">programLocation</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Suppress any extra arguments added by the user.</span></span><span class="mpre">
+</span><a href="#loc_119_1_119_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_1_119_21&#39;)"><span class="mpre">suppressOverrideArgs</span></a><span class="mpre"> :: </span><a href="#loc_77_6_77_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_6_77_23&#39;)"><span class="hl_tyconref"><span class="mpre">ConfiguredProgram</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_77_6_77_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_6_77_23&#39;)"><span class="hl_tyconref"><span class="mpre">ConfiguredProgram</span></span></a><span class="mpre">
+</span><a name="loc_119_1_119_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_1_119_21&#39;)"><span class="hl_fundecl"><span class="mpre">suppressOverrideArgs</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">prog</span></span><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 119, srcSpanStartColumn = 29, srcSpanEndLine = 119, srcSpanEndColumn = 62}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 119, srcSpanStartColumn = 34, srcSpanEndLine = 119, srcSpanEndColumn = 35},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/D"><span class="mpre">prog { programOverrideArgs = [] }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Make a simple named program.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- By default we&#39;ll just search for it in the path and not try to find the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- version name. You can override these behaviours if necessary, eg:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; simpleProgram &quot;foo&quot; { programFindLocation = ... , programFindVersion ... }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_129_1_129_14&#39;)"><span class="mpre">simpleProgram</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_129_1_129_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_129_1_129_14&#39;)"><span class="hl_fundecl"><span class="mpre">simpleProgram</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">name</span></span><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 129, srcSpanStartColumn = 22, srcSpanEndLine = 134, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 129, srcSpanStartColumn = 30, srcSpanEndLine = 129, srcSpanEndColumn = 31},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Di"><span class="mpre">Program {
+    programName         = name,
+    programFindLocation = \v p -&gt; findProgramOnSearchPath v p name,
+    programFindVersion  = \_ _ -&gt; return Nothing,
+    programPostConf     = \_ p -&gt; return p
+  }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Make a simple &#39;ConfiguredProgram&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; simpleConfiguredProgram &quot;foo&quot; (FoundOnSystem path)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_141_1_141_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_1_141_24&#39;)"><span class="mpre">simpleConfiguredProgram</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="#loc_105_6_105_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_6_105_21&#39;)"><span class="hl_tyconref"><span class="mpre">ProgramLocation</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_77_6_77_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_6_77_23&#39;)"><span class="hl_tyconref"><span class="mpre">ConfiguredProgram</span></span></a><span class="mpre">
+</span><a name="loc_141_1_141_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_1_141_24&#39;)"><span class="hl_fundecl"><span class="mpre">simpleConfiguredProgram</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">name</span></span><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">loc</span></span><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 141, srcSpanStartColumn = 36, srcSpanEndLine = 148, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Types.hs&quot;, srcSpanStartLine = 141, srcSpanStartColumn = 54, srcSpanEndLine = 141, srcSpanEndColumn = 55},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Di"><span class="mpre">ConfiguredProgram {
+     programId           = name,
+     programVersion      = Nothing,
+     programDefaultArgs  = [],
+     programOverrideArgs = [],
+     programOverrideEnv  = [],
+     programLocation     = loc
+  }</span></span><span class="mpre">
+</span></div></body></html>

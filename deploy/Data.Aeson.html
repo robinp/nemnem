@@ -1,0 +1,386 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module:      Data.Aeson</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright:   (c) 2011, 2012 Bryan O&#39;Sullivan</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--              (c) 2011 MailRank, Inc.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License:     Apache</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer:  Bryan O&#39;Sullivan &lt;bos@serpentine.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability:   experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability: portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Types and functions for working efficiently with JSON data.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (A note on naming: in Greek mythology, Aeson was the father of Jason.)</span></span><span class="mpre">
+
+module Data.Aeson
+    (
+    </span><span class="hl_comment"><span class="mpre">-- * How to use this library</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $use</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Working with the AST</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $ast</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Decoding to a Haskell value</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $haskell</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Decoding a mixed-type object</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $mixed</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Automatically decoding data types</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $typeable</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Pitfalls</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $pitfalls</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Encoding and decoding</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $encoding_and_decoding</span></span><span class="mpre">
+      decode
+    , decode&#39;
+    , eitherDecode
+    , eitherDecode&#39;
+    , encode
+    </span><span class="hl_comment"><span class="mpre">-- ** Variants for strict bytestrings</span></span><span class="mpre">
+    , decodeStrict
+    , decodeStrict&#39;
+    , eitherDecodeStrict
+    , eitherDecodeStrict&#39;
+    </span><span class="hl_comment"><span class="mpre">-- * Core JSON types</span></span><span class="mpre">
+    , Value(..)
+    , Array
+    , Object
+    </span><span class="hl_comment"><span class="mpre">-- * Convenience types</span></span><span class="mpre">
+    , DotNetTime(..)
+    </span><span class="hl_comment"><span class="mpre">-- * Type conversion</span></span><span class="mpre">
+    , FromJSON(..)
+    , Result(..)
+    , fromJSON
+    , ToJSON(..)
+#ifdef GENERICS
+    </span><span class="hl_comment"><span class="mpre">-- ** Generic JSON classes</span></span><span class="mpre">
+    , GFromJSON(..)
+    , GToJSON(..)
+    , genericToJSON
+    , genericParseJSON
+#endif
+    </span><span class="hl_comment"><span class="mpre">-- * Inspecting @&#39;Value&#39;s@</span></span><span class="mpre">
+    , withObject
+    , withText
+    , withArray
+    , withNumber
+    , withScientific
+    , withBool
+    </span><span class="hl_comment"><span class="mpre">-- * Constructors and accessors</span></span><span class="mpre">
+    , (.=)
+    , (.:)
+    , (.:?)
+    , (.!=)
+    , object
+    </span><span class="hl_comment"><span class="mpre">-- * Parsing</span></span><span class="mpre">
+    , json
+    , json&#39;
+    ) where
+
+import Data.Aeson.Encode (</span><a href="Data.Aeson.Encode.html#loc_56_1_56_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Encode.html#loc_56_1_56_7&#39;)"><span class="mpre">encode</span></a><span class="mpre">)
+import Data.Aeson.Parser.Internal (</span><a href="Data.Aeson.Parser.Internal.html#loc_271_1_271_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_271_1_271_11&#39;)"><span class="mpre">decodeWith</span></a><span class="mpre">, </span><a href="Data.Aeson.Parser.Internal.html#loc_281_1_281_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_281_1_281_17&#39;)"><span class="mpre">decodeStrictWith</span></a><span class="mpre">,
+                                   </span><a href="Data.Aeson.Parser.Internal.html#loc_289_1_289_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_289_1_289_17&#39;)"><span class="mpre">eitherDecodeWith</span></a><span class="mpre">, </span><a href="Data.Aeson.Parser.Internal.html#loc_299_1_299_23" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_299_1_299_23&#39;)"><span class="mpre">eitherDecodeStrictWith</span></a><span class="mpre">,
+                                   </span><a href="Data.Aeson.Parser.Internal.html#loc_327_1_327_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_327_1_327_8&#39;)"><span class="mpre">jsonEOF</span></a><span class="mpre">, </span><a href="Data.Aeson.Parser.Internal.html#loc_88_1_88_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_88_1_88_5&#39;)"><span class="mpre">json</span></a><span class="mpre">, </span><a href="Data.Aeson.Parser.Internal.html#loc_332_1_332_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_332_1_332_9&#39;)"><span class="mpre">jsonEOF&#39;</span></a><span class="mpre">, </span><a href="Data.Aeson.Parser.Internal.html#loc_97_1_97_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_97_1_97_6&#39;)"><span class="mpre">json&#39;</span></a><span class="mpre">)
+import Data.Aeson.Types
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 89, srcSpanStartColumn = 18, srcSpanEndLine = 89, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> as B
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 90, srcSpanStartColumn = 18, srcSpanEndLine = 90, srcSpanEndColumn = 38}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy&quot;"><span class="mpre">Data.ByteString.Lazy</span></span><span class="mpre"> as L
+
+</span><span class="hl_comment"><span class="mpre">-- | Efficiently deserialize a JSON value from a lazy &#39;L.ByteString&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If this fails due to incomplete or invalid input, &#39;Nothing&#39; is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- returned.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The input must consist solely of a JSON document, with no trailing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data except for whitespace. This restriction is necessary to ensure</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that if data is being lazily read from a file handle, the file</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- handle will be closed in a timely fashion once the document has</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- been parsed.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This function parses immediately, but defers conversion.  See</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;json&#39; for details.</span></span><span class="mpre">
+</span><a href="#loc_105_1_105_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_7&#39;)"><span class="mpre">decode</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 104, srcSpanStartColumn = 11, srcSpanEndLine = 104, srcSpanEndColumn = 26}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 104, srcSpanStartColumn = 11, srcSpanEndLine = 104, srcSpanEndColumn = 12},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 104, srcSpanStart"><span class="mpre">(FromJSON a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_105_1_105_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_7&#39;)"><span class="hl_vardecl"><span class="mpre">decode</span></span></a><span class="mpre"> = </span><a href="Data.Aeson.Parser.Internal.html#loc_271_1_271_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_271_1_271_11&#39;)"><span class="hl_varref"><span class="mpre">decodeWith</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Parser.Internal.html#loc_327_1_327_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_327_1_327_8&#39;)"><span class="hl_varref"><span class="mpre">jsonEOF</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Types.Instances.html#loc_722_1_722_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Types.Instances.html#loc_722_1_722_9&#39;)"><span class="hl_varref"><span class="mpre">fromJSON</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_105_1_105_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_7&#39;)"><span class="mpre">decode</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Efficiently deserialize a JSON value from a strict &#39;B.ByteString&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If this fails due to incomplete or invalid input, &#39;Nothing&#39; is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- returned.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The input must consist solely of a JSON document, with no trailing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data except for whitespace.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This function parses immediately, but defers conversion.  See</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;json&#39; for details.</span></span><span class="mpre">
+</span><a href="#loc_118_1_118_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_1_118_13&#39;)"><span class="mpre">decodeStrict</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 117, srcSpanStartColumn = 17, srcSpanEndLine = 117, srcSpanEndColumn = 32}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 117, srcSpanStartColumn = 17, srcSpanEndLine = 117, srcSpanEndColumn = 18},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 117, srcSpanStart"><span class="mpre">(FromJSON a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_118_1_118_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_1_118_13&#39;)"><span class="hl_vardecl"><span class="mpre">decodeStrict</span></span></a><span class="mpre"> = </span><a href="Data.Aeson.Parser.Internal.html#loc_281_1_281_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_281_1_281_17&#39;)"><span class="hl_varref"><span class="mpre">decodeStrictWith</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Parser.Internal.html#loc_327_1_327_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_327_1_327_8&#39;)"><span class="hl_varref"><span class="mpre">jsonEOF</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Types.Instances.html#loc_722_1_722_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Types.Instances.html#loc_722_1_722_9&#39;)"><span class="hl_varref"><span class="mpre">fromJSON</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_118_1_118_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_1_118_13&#39;)"><span class="mpre">decodeStrict</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Efficiently deserialize a JSON value from a lazy &#39;L.ByteString&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If this fails due to incomplete or invalid input, &#39;Nothing&#39; is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- returned.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The input must consist solely of a JSON document, with no trailing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data except for whitespace. This restriction is necessary to ensure</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that if data is being lazily read from a file handle, the file</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- handle will be closed in a timely fashion once the document has</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- been parsed.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This function parses and performs conversion immediately.  See</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;json&#39;&#39; for details.</span></span><span class="mpre">
+</span><a href="#loc_134_1_134_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_134_1_134_8&#39;)"><span class="mpre">decode&#39;</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 133, srcSpanStartColumn = 12, srcSpanEndLine = 133, srcSpanEndColumn = 27}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 133, srcSpanStartColumn = 12, srcSpanEndLine = 133, srcSpanEndColumn = 13},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 133, srcSpanStart"><span class="mpre">(FromJSON a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_134_1_134_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_134_1_134_8&#39;)"><span class="hl_vardecl"><span class="mpre">decode&#39;</span></span></a><span class="mpre"> = </span><a href="Data.Aeson.Parser.Internal.html#loc_271_1_271_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_271_1_271_11&#39;)"><span class="hl_varref"><span class="mpre">decodeWith</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Parser.Internal.html#loc_332_1_332_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_332_1_332_9&#39;)"><span class="hl_varref"><span class="mpre">jsonEOF&#39;</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Types.Instances.html#loc_722_1_722_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Types.Instances.html#loc_722_1_722_9&#39;)"><span class="hl_varref"><span class="mpre">fromJSON</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_134_1_134_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_134_1_134_8&#39;)"><span class="mpre">decode&#39;</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Efficiently deserialize a JSON value from a lazy &#39;L.ByteString&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If this fails due to incomplete or invalid input, &#39;Nothing&#39; is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- returned.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The input must consist solely of a JSON document, with no trailing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data except for whitespace.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This function parses and performs conversion immediately.  See</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;json&#39;&#39; for details.</span></span><span class="mpre">
+</span><a href="#loc_147_1_147_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_147_1_147_14&#39;)"><span class="mpre">decodeStrict&#39;</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 146, srcSpanStartColumn = 18, srcSpanEndLine = 146, srcSpanEndColumn = 33}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 146, srcSpanStartColumn = 18, srcSpanEndLine = 146, srcSpanEndColumn = 19},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 146, srcSpanStart"><span class="mpre">(FromJSON a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_147_1_147_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_147_1_147_14&#39;)"><span class="hl_vardecl"><span class="mpre">decodeStrict&#39;</span></span></a><span class="mpre"> = </span><a href="Data.Aeson.Parser.Internal.html#loc_281_1_281_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_281_1_281_17&#39;)"><span class="hl_varref"><span class="mpre">decodeStrictWith</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Parser.Internal.html#loc_332_1_332_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_332_1_332_9&#39;)"><span class="hl_varref"><span class="mpre">jsonEOF&#39;</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Types.Instances.html#loc_722_1_722_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Types.Instances.html#loc_722_1_722_9&#39;)"><span class="hl_varref"><span class="mpre">fromJSON</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_147_1_147_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_147_1_147_14&#39;)"><span class="mpre">decodeStrict&#39;</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Like &#39;decode&#39; but returns an error message when decoding fails.</span></span><span class="mpre">
+</span><a href="#loc_152_1_152_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_152_1_152_13&#39;)"><span class="mpre">eitherDecode</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 151, srcSpanStartColumn = 17, srcSpanEndLine = 151, srcSpanEndColumn = 32}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 151, srcSpanStartColumn = 17, srcSpanEndLine = 151, srcSpanEndColumn = 18},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 151, srcSpanStart"><span class="mpre">(FromJSON a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_152_1_152_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_152_1_152_13&#39;)"><span class="hl_vardecl"><span class="mpre">eitherDecode</span></span></a><span class="mpre"> = </span><a href="Data.Aeson.Parser.Internal.html#loc_289_1_289_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_289_1_289_17&#39;)"><span class="hl_varref"><span class="mpre">eitherDecodeWith</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Parser.Internal.html#loc_327_1_327_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_327_1_327_8&#39;)"><span class="hl_varref"><span class="mpre">jsonEOF</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Types.Instances.html#loc_722_1_722_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Types.Instances.html#loc_722_1_722_9&#39;)"><span class="hl_varref"><span class="mpre">fromJSON</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_152_1_152_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_152_1_152_13&#39;)"><span class="mpre">eitherDecode</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Like &#39;decodeStrict&#39; but returns an error message when decoding fails.</span></span><span class="mpre">
+</span><a href="#loc_157_1_157_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_1_157_19&#39;)"><span class="mpre">eitherDecodeStrict</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 156, srcSpanStartColumn = 23, srcSpanEndLine = 156, srcSpanEndColumn = 38}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 156, srcSpanStartColumn = 23, srcSpanEndLine = 156, srcSpanEndColumn = 24},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 156, srcSpanStart"><span class="mpre">(FromJSON a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_157_1_157_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_1_157_19&#39;)"><span class="hl_vardecl"><span class="mpre">eitherDecodeStrict</span></span></a><span class="mpre"> = </span><a href="Data.Aeson.Parser.Internal.html#loc_299_1_299_23" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_299_1_299_23&#39;)"><span class="hl_varref"><span class="mpre">eitherDecodeStrictWith</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Parser.Internal.html#loc_327_1_327_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_327_1_327_8&#39;)"><span class="hl_varref"><span class="mpre">jsonEOF</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Types.Instances.html#loc_722_1_722_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Types.Instances.html#loc_722_1_722_9&#39;)"><span class="hl_varref"><span class="mpre">fromJSON</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_157_1_157_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_1_157_19&#39;)"><span class="mpre">eitherDecodeStrict</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Like &#39;decode&#39;&#39; but returns an error message when decoding fails.</span></span><span class="mpre">
+</span><a href="#loc_162_1_162_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_162_1_162_14&#39;)"><span class="mpre">eitherDecode&#39;</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 161, srcSpanStartColumn = 18, srcSpanEndLine = 161, srcSpanEndColumn = 33}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 161, srcSpanStartColumn = 18, srcSpanEndLine = 161, srcSpanEndColumn = 19},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 161, srcSpanStart"><span class="mpre">(FromJSON a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_162_1_162_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_162_1_162_14&#39;)"><span class="hl_vardecl"><span class="mpre">eitherDecode&#39;</span></span></a><span class="mpre"> = </span><a href="Data.Aeson.Parser.Internal.html#loc_289_1_289_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_289_1_289_17&#39;)"><span class="hl_varref"><span class="mpre">eitherDecodeWith</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Parser.Internal.html#loc_332_1_332_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_332_1_332_9&#39;)"><span class="hl_varref"><span class="mpre">jsonEOF&#39;</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Types.Instances.html#loc_722_1_722_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Types.Instances.html#loc_722_1_722_9&#39;)"><span class="hl_varref"><span class="mpre">fromJSON</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_162_1_162_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_162_1_162_14&#39;)"><span class="mpre">eitherDecode&#39;</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Like &#39;decodeStrict&#39;&#39; but returns an error message when decoding fails.</span></span><span class="mpre">
+</span><a href="#loc_167_1_167_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_1_167_20&#39;)"><span class="mpre">eitherDecodeStrict&#39;</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 166, srcSpanStartColumn = 24, srcSpanEndLine = 166, srcSpanEndColumn = 39}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 166, srcSpanStartColumn = 24, srcSpanEndLine = 166, srcSpanEndColumn = 25},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/aeson-0.7.0.6/Data/Aeson.hs&quot;, srcSpanStartLine = 166, srcSpanStart"><span class="mpre">(FromJSON a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_167_1_167_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_1_167_20&#39;)"><span class="hl_vardecl"><span class="mpre">eitherDecodeStrict&#39;</span></span></a><span class="mpre"> = </span><a href="Data.Aeson.Parser.Internal.html#loc_299_1_299_23" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_299_1_299_23&#39;)"><span class="hl_varref"><span class="mpre">eitherDecodeStrictWith</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Parser.Internal.html#loc_332_1_332_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Parser.Internal.html#loc_332_1_332_9&#39;)"><span class="hl_varref"><span class="mpre">jsonEOF&#39;</span></span></a><span class="mpre"> </span><a href="Data.Aeson.Types.Instances.html#loc_722_1_722_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Aeson.Types.Instances.html#loc_722_1_722_9&#39;)"><span class="hl_varref"><span class="mpre">fromJSON</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_167_1_167_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_1_167_20&#39;)"><span class="mpre">eitherDecodeStrict&#39;</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $use</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This section contains basic information on the different ways to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- decode data using this library. These range from simple but</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- inflexible, to complex but flexible.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The most common way to use the library is to define a data type,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- corresponding to some JSON data you want to work with, and then</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- write either a &#39;FromJSON&#39; instance, a to &#39;ToJSON&#39; instance, or both</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for that type. For example, given this JSON data:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; { &quot;name&quot;: &quot;Joe&quot;, &quot;age&quot;: 12 }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- we create a matching data type:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Person = Person</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     { name :: Text</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     , age  :: Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     } deriving Show</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To decode data, we need to define a &#39;FromJSON&#39; instance:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {-# LANGUAGE OverloadedStrings #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance FromJSON Person where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     parseJSON (Object v) = Person &lt;$&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                            v .: &quot;name&quot; &lt;*&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                            v .: &quot;age&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     -- A non-Object value is of the wrong type, so fail.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     parseJSON _          = mzero</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We can now parse the JSON data like so:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; decode &quot;{\&quot;name\&quot;:\&quot;Joe\&quot;,\&quot;age\&quot;:12}&quot; :: Maybe Person</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just (Person {name = &quot;Joe&quot;, age = 12})</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To encode data, we need to define a &#39;ToJSON&#39; instance:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance ToJSON Person where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     toJSON (Person name age) = object [&quot;name&quot; .= name, &quot;age&quot; .= age]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We can now encode a value like so:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; encode (Person {name = &quot;Joe&quot;, age = 12})</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &quot;{\&quot;name\&quot;:\&quot;Joe\&quot;,\&quot;age\&quot;:12}&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- There are predefined &#39;FromJSON&#39; and &#39;ToJSON&#39; instances for many</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- types. Here&#39;s an example using lists and &#39;Int&#39;s:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; decode &quot;[1,2,3]&quot; :: Maybe [Int]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just [1,2,3]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- And here&#39;s an example using the &#39;Data.Map.Map&#39; type to get a map of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Int&#39;s.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; decode &quot;{\&quot;foo\&quot;:1,\&quot;bar\&quot;:2}&quot; :: Maybe (Map String Int)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just (fromList [(&quot;bar&quot;,2),(&quot;foo&quot;,1)])</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- While the notes below focus on decoding, you can apply almost the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- same techniques to /encoding/ data. (The main difference is that</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- encoding always succeeds, but decoding has to handle the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- possibility of failure, where an input doesn&#39;t match our</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- expectations.)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- See the documentation of &#39;FromJSON&#39; and &#39;ToJSON&#39; for some examples</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of how you can automatically derive instances in some</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- circumstances.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $ast</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Sometimes you want to work with JSON data directly, without first</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- converting it to a custom data type. This can be useful if you want</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to e.g. convert JSON data to YAML data, without knowing what the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- contents of the original JSON data was. The &#39;Value&#39; type, which is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- an instance of &#39;FromJSON&#39;, is used to represent an arbitrary JSON</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- AST (abstract syntax tree). Example usage:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; decode &quot;{\&quot;foo\&quot;: 123}&quot; :: Maybe Value</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just (Object (fromList [(&quot;foo&quot;,Number 123)]))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; decode &quot;{\&quot;foo\&quot;: [\&quot;abc\&quot;,\&quot;def\&quot;]}&quot; :: Maybe Value</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just (Object (fromList [(&quot;foo&quot;,Array (fromList [String &quot;abc&quot;,String &quot;def&quot;]))]))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Once you have a &#39;Value&#39; you can write functions to traverse it and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- make arbitrary transformations.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $haskell</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Any instance of &#39;FromJSON&#39; can be specified (but see the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- \&quot;Pitfalls\&quot; section here&amp;#8212;&quot;Data.Aeson#pitfalls&quot;):</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; decode &quot;[1,2,3]&quot; :: Maybe [Int]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just [1,2,3]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Alternatively, there are instances for standard data types, so you</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- can use them directly. For example, use the &#39;Data.Map.Map&#39; type to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- get a map of &#39;Int&#39;s.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; :m + Data.Map</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; decode &quot;{\&quot;foo\&quot;:1,\&quot;bar\&quot;:2}&quot; :: Maybe (Map String Int)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just (fromList [(&quot;bar&quot;,2),(&quot;foo&quot;,1)])</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $mixed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The above approach with maps of course will not work for mixed-type</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- objects that don&#39;t follow a strict schema, but there are a couple</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of approaches available for these.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;Object&#39; type contains JSON objects:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; decode &quot;{\&quot;name\&quot;:\&quot;Dave\&quot;,\&quot;age\&quot;:2}&quot; :: Maybe Object</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just (fromList) [(&quot;name&quot;,String &quot;Dave&quot;),(&quot;age&quot;,Number 2)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can extract values from it with a parser using &#39;parse&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;parseEither&#39; or, in this example, &#39;parseMaybe&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; do result &lt;- decode &quot;{\&quot;name\&quot;:\&quot;Dave\&quot;,\&quot;age\&quot;:2}&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;       flip parseMaybe result $ \obj -&gt; do</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;         age &lt;- obj .: &quot;age&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;         name &lt;- obj .: &quot;name&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;         return (name ++ &quot;: &quot; ++ show (age*2))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just &quot;Dave: 4&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Considering that any type that implements &#39;FromJSON&#39; can be used</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- here, this is quite a powerful way to parse JSON. See the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- documentation in &#39;FromJSON&#39; for how to implement this class for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- your own data types.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The downside is that you have to write the parser yourself; the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- upside is that you have complete control over the way the JSON is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- parsed.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $typeable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If you don&#39;t want fine control and would prefer the JSON be parsed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to your own data types automatically according to some reasonably</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- sensible isomorphic implementation, you can use the generic parser</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- based on &#39;Data.Typeable.Typeable&#39; and &#39;Data.Data.Data&#39;. Switch to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the &#39;Data.Aeson.Generic&#39; module, and you can do the following:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; decode &quot;[1]&quot; :: Maybe [Int]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just [1]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; :m + Data.Typeable Data.Data</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; :set -XDeriveDataTypeable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; data Person = Person { personName :: String, personAge :: Int } deriving (Data,Typeable,Show)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; encode Person { personName = &quot;Chris&quot;, personAge = 123 }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &quot;{\&quot;personAge\&quot;:123,\&quot;personName\&quot;:\&quot;Chris\&quot;}&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; decode &quot;{\&quot;personAge\&quot;:123,\&quot;personName\&quot;:\&quot;Chris\&quot;}&quot; :: Maybe Person</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just (Person {</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; personName = &quot;Chris&quot;, personAge = 123</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; })</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Be aware that the encoding may not always be what you&#39;d naively</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- expect:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; data Foo = Foo Int Int deriving (Data,Typeable,Show)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; λ&gt; encode (Foo 1 2)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &quot;[1,2]&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- With this approach, it&#39;s best to treat the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.Aeson.Generic.decode&#39; and &#39;Data.Aeson.Generic.encode&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- functions as an isomorphism, and not to rely upon (or care about)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the specific intermediate representation.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $pitfalls</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- #pitfalls#</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that the JSON standard requires that the top-level value be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- either an array or an object. If you try to use &#39;decode&#39; with a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- result type that is /not/ represented in JSON as an array or</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- object, your code will typecheck, but it will always \&quot;fail\&quot; at</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- runtime:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; decode &quot;1&quot; :: Maybe Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Nothing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; decode &quot;1&quot; :: Maybe String</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Nothing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- So stick to objects (e.g. maps in Haskell) or arrays (lists or</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- vectors in Haskell):</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; decode &quot;[1,2,3]&quot; :: Maybe [Int]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just [1,2,3]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- When encoding to JSON you can encode anything that&#39;s an instance of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;ToJSON&#39;, and this may include simple types. So beware that this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- aspect of the API is not isomorphic. You can round-trip arrays and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- maps, but not simple values:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; encode [1,2,3]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &quot;[1,2,3]&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; decode (encode [1]) :: Maybe [Int]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Just [1]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; encode 1</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &quot;1&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt;&gt;&gt; decode (encode (1 :: Int)) :: Maybe Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Nothing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Alternatively, see &#39;Data.Aeson.Parser.value&#39; to parse non-top-level</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- JSON values.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $encoding_and_decoding</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Encoding and decoding are each two-step processes.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * To encode a value, it is first converted to an abstract syntax</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   tree (AST), using &#39;ToJSON&#39;. This generic representation is then</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encoded as bytes.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * When decoding a value, the process is reversed: the bytes are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   converted to an AST, then the &#39;FromJSON&#39; class is used to convert</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   to the desired type.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For convenience, the &#39;encode&#39; and &#39;decode&#39; functions combine both</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- steps.</span></span><span class="mpre">
+</span></div></body></html>

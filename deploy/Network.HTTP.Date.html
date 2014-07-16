@@ -1,0 +1,16 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{-|
+  Fast parser and formatter for HTTP Date.
+-}</span></span><span class="mpre">
+module Network.HTTP.Date (
+    module Network.HTTP.Date.Types
+  </span><span class="hl_comment"><span class="mpre">-- * Utility functions</span></span><span class="mpre">
+  , parseHTTPDate
+  , formatHTTPDate
+  , epochTimeToHTTPDate
+  ) where
+
+import Network.HTTP.Date.Converter
+import Network.HTTP.Date.Formatter
+import Network.HTTP.Date.Parser
+import Network.HTTP.Date.Types
+</span></div></body></html>

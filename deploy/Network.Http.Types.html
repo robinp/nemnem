@@ -1,0 +1,70 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- HTTP types for use with io-streams and pipes</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright © 2012-2013 Operational Dynamics Consulting, Pty Ltd</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The code in this file, and the program it is a part of, is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- made available to you by its authors as open source software:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- you can redistribute it and/or modify it under the terms of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the BSD licence.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+
+{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_HADDOCK not-home #-}
+
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | Basic types used in HTTP communications. This modules is re-exported by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- both &quot;Network.Http.Client&quot; and &quot;Pipes.Http.Client&quot;, so if you&#39;re using</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- either of those you don&#39;t need to explicitly import this module.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+
+module Network.Http.Types (
+    </span><span class="hl_comment"><span class="mpre">-- * Requests</span></span><span class="mpre">
+    Hostname,
+    Port,
+    Request,
+    EntityBody(..),
+    ExpectMode(..),
+
+    RequestBuilder,
+    buildRequest,
+    http,
+    setHostname,
+    setAccept,
+    setAccept&#39;,
+    setAuthorizationBasic,
+    ContentType,
+    setContentType,
+    setContentLength,
+    setExpectContinue,
+    setTransferEncoding,
+    setHeader,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Responses</span></span><span class="mpre">
+    Response,
+    StatusCode,
+    TransferEncoding(..),
+    ContentEncoding(..),
+    getStatusCode,
+    getStatusMessage,
+    getHeader,
+    Method(..),
+
+    </span><span class="hl_comment"><span class="mpre">-- * Headers</span></span><span class="mpre">
+    Headers,
+    emptyHeaders,
+    updateHeader,
+    removeHeader,
+    buildHeaders,
+    lookupHeader,
+    retrieveHeaders,
+    HttpType (getHeaders),
+
+    </span><span class="hl_comment"><span class="mpre">-- * Exceptions</span></span><span class="mpre">
+    HttpParseException(..)
+
+) where
+
+import Network.Http.Internal
+import Network.Http.RequestBuilder
+</span></div></body></html>

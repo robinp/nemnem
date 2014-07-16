@@ -1,0 +1,742 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, BangPatterns, ScopedTypeVariables #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Trustworthy #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">{- | Copyright : (c) 2010-2011 Simon Meier
+                 (c) 2010      Jasper van der Jeugt
+License        : BSD3-style (see LICENSE)
+Maintainer     : Simon Meier &lt;iridcode@gmail.com&gt;
+Portability    : GHC
+
+This module provides &#39;Builder&#39; /primitives/, which are lower level building
+blocks for constructing &#39;Builder&#39;s. You don&#39;t need to go down to this level but
+it can be slightly faster.
+
+Morally, builder primitives are like functions @a -&gt; Builder@, that is they
+take a value and encode it as a sequence of bytes, represented as a &#39;Builder&#39;.
+Of course their implementation is a bit more specialised.
+
+Builder primitives come in two forms: fixed-size and bounded-size.
+
+* /Fixed(-size) primitives/ are builder primitives that always result in a
+  sequence of bytes of a fixed length. That is, the length is independent of
+  the value that is encoded. An example of a fixed size primitive is the
+  big-endian encoding of a &#39;Word64&#39;, which always results in exactly 8 bytes.
+
+* /Bounded(-size) primitives/ are builder primitives that always result in a
+  sequence of bytes that is no larger than a predetermined bound. That is, the
+  bound is independent of the value that is encoded but the actual length will
+  depend on the value. An example for a bounded primitive is the UTF-8 encoding
+  of a &#39;Char&#39;, which can be 1,2,3 or 4 bytes long, so the bound is 4 bytes.
+
+Note that fixed primitives can be considered as a special case of bounded
+primitives, and we can lift from fixed to bounded.
+
+Because bounded primitives are the more general case, in this documentation we
+only refer to fixed size primitives where it matters that the resulting
+sequence of bytes is of a fixed length. Otherwise, we just refer to bounded
+size primitives.
+
+The purpose of using builder primitives is to improve the performance of
+&#39;Builder&#39;s. These improvements stem from making the two most common steps
+performed by a &#39;Builder&#39; more efficient. We explain these two steps in turn.
+
+The first most common step is the concatenation of two &#39;Builder&#39;s. Internally,
+concatenation corresponds to function composition. (Note that &#39;Builder&#39;s can
+be seen as difference-lists of buffer-filling functions; cf.
+&lt;http://hackage.haskell.org/cgi-bin/hackage-scripts/package/dlist&gt;. )
+Function composition is a fast /O(1)/ operation. However, we can use bounded
+primitives to remove some of these function compositions altogether, which is
+more efficient.
+
+The second most common step performed by a &#39;Builder&#39; is to fill a buffer using
+a bounded primitives, which works as follows. The &#39;Builder&#39; checks whether
+there is enough space left to execute the bounded primitive. If there is, then
+the &#39;Builder&#39; executes the bounded primitive and calls the next &#39;Builder&#39; with
+the updated buffer. Otherwise, the &#39;Builder&#39; signals its driver that it
+requires a new buffer. This buffer must be at least as large as the bound of
+the primitive. We can use bounded primitives to reduce the number of
+buffer-free checks by fusing the buffer-free checks of consecutive &#39;Builder&#39;s.
+We can also use bounded primitives to simplify the control flow for signalling
+that a buffer is full by ensuring that we check first that there is enough
+space left and only then decide on how to encode a given value.
+
+Let us illustrate these improvements on the CSV-table rendering example from
+&quot;Data.ByteString.Builder&quot;. Its \&quot;hot code\&quot; is the rendering of a table&#39;s
+cells, which we implement as follows using only the functions from the
+&#39;Builder&#39; API.
+
+@
+import &quot;Data.ByteString.Builder&quot; as B
+
+renderCell :: Cell -&gt; Builder
+renderCell (StringC cs) = renderString cs
+renderCell (IntC i)     = B.intDec i
+
+renderString :: String -&gt; Builder
+renderString cs = B.charUtf8 \&#39;\&quot;\&#39; \&lt;\&gt; foldMap escape cs \&lt;\&gt; B.charUtf8 \&#39;\&quot;\&#39;
+  where
+    escape \&#39;\\\\\&#39; = B.charUtf8 \&#39;\\\\\&#39; \&lt;\&gt; B.charUtf8 \&#39;\\\\\&#39;
+    escape \&#39;\\\&quot;\&#39; = B.charUtf8 \&#39;\\\\\&#39; \&lt;\&gt; B.charUtf8 \&#39;\\\&quot;\&#39;
+    escape c    = B.charUtf8 c
+@
+
+Efficient encoding of &#39;Int&#39;s as decimal numbers is performed by @intDec@.
+Optimization potential exists for the escaping of &#39;String&#39;s. The above
+implementation has two optimization opportunities. First, the buffer-free
+checks of the &#39;Builder&#39;s for escaping double quotes and backslashes can be
+fused. Second, the concatenations performed by &#39;foldMap&#39; can be eliminated.
+The following implementation exploits these optimizations.
+
+@
+import qualified Data.ByteString.Builder.Prim  as P
+import           Data.ByteString.Builder.Prim
+                 ( &#39;condB&#39;, &#39;liftFixedToBounded&#39;, (&#39;&gt;*&lt;&#39;), (&#39;&gt;$&lt;&#39;) )
+
+renderString :: String -\&gt; Builder
+renderString cs =
+    B.charUtf8 \&#39;\&quot;\&#39; \&lt;\&gt; E.&#39;encodeListWithB&#39; escape cs \&lt;\&gt; B.charUtf8 \&#39;\&quot;\&#39;
+  where
+    escape :: E.&#39;BoundedPrim&#39; Char
+    escape =
+      &#39;condB&#39; (== \&#39;\\\\\&#39;) (fixed2 (\&#39;\\\\\&#39;, \&#39;\\\\\&#39;)) $
+      &#39;condB&#39; (== \&#39;\\\&quot;\&#39;) (fixed2 (\&#39;\\\\\&#39;, \&#39;\\\&quot;\&#39;)) $
+      E.&#39;charUtf8&#39;
+    &amp;#160;
+    {&amp;#45;\# INLINE fixed2 \#&amp;#45;}
+    fixed2 x = &#39;liftFixedToBounded&#39; $ const x &#39;&gt;$&lt;&#39; E.&#39;char7&#39; &#39;&gt;*&lt;&#39; E.&#39;char7&#39;
+@
+
+The code should be mostly self-explanatory. The slightly awkward syntax is
+because the combinators are written such that the size-bound of the resulting
+&#39;BoundedPrim&#39; can be computed at compile time. We also explicitly inline the
+&#39;fixed2&#39; primitive, which encodes a fixed tuple of characters, to ensure that
+the bound computation happens at compile time. When encoding the following list
+of &#39;String&#39;s, the optimized implementation of &#39;renderString&#39; is two times
+faster.
+
+@
+maxiStrings :: [String]
+maxiStrings = take 1000 $ cycle [\&quot;hello\&quot;, \&quot;\\\&quot;1\\\&quot;\&quot;, \&quot;&amp;#955;-w&amp;#246;rld\&quot;]
+@
+
+Most of the performance gain stems from using &#39;primMapListBounded&#39;, which
+encodes a list of values from left-to-right with a &#39;BoundedPrim&#39;. It exploits
+the &#39;Builder&#39; internals to avoid unnecessary function compositions (i.e.,
+concatenations). In the future, we might expect the compiler to perform the
+optimizations implemented in &#39;primMapListBounded&#39;. However, it seems that the
+code is currently to complicated for the compiler to see through. Therefore, we
+provide the &#39;BoundedPrim&#39; escape hatch, which allows data structures to provide
+very efficient encoding traversals, like &#39;primMapListBounded&#39; for lists.
+
+Note that &#39;BoundedPrim&#39;s are a bit verbose, but quite versatile. Here is an
+example of a &#39;BoundedPrim&#39; for combined HTML escaping and UTF-8 encoding. It
+exploits that the escaped character with the maximal Unicode codepoint is \&#39;&gt;\&#39;.
+
+@
+{&amp;#45;\# INLINE charUtf8HtmlEscaped \#&amp;#45;}
+charUtf8HtmlEscaped :: E.BoundedPrim Char
+charUtf8HtmlEscaped =
+    &#39;condB&#39; (&gt;  \&#39;\&gt;\&#39; ) E.&#39;charUtf8&#39; $
+    &#39;condB&#39; (== \&#39;\&lt;\&#39; ) (fixed4 (\&#39;&amp;\&#39;,(\&#39;l\&#39;,(\&#39;t\&#39;,\&#39;;\&#39;)))) $        -- &amp;lt;
+    &#39;condB&#39; (== \&#39;\&gt;\&#39; ) (fixed4 (\&#39;&amp;\&#39;,(\&#39;g\&#39;,(\&#39;t\&#39;,\&#39;;\&#39;)))) $        -- &amp;gt;
+    &#39;condB&#39; (== \&#39;&amp;\&#39; ) (fixed5 (\&#39;&amp;\&#39;,(\&#39;a\&#39;,(\&#39;m\&#39;,(\&#39;p\&#39;,\&#39;;\&#39;))))) $  -- &amp;amp;
+    &#39;condB&#39; (== \&#39;\&quot;\&#39; ) (fixed5 (\&#39;&amp;\&#39;,(\&#39;\#\&#39;,(\&#39;3\&#39;,(\&#39;4\&#39;,\&#39;;\&#39;))))) $  -- &amp;\#34;
+    &#39;condB&#39; (== \&#39;\\\&#39;\&#39;) (fixed5 (\&#39;&amp;\&#39;,(\&#39;\#\&#39;,(\&#39;3\&#39;,(\&#39;9\&#39;,\&#39;;\&#39;))))) $  -- &amp;\#39;
+    (&#39;liftFixedToBounded&#39; E.&#39;char7&#39;)         -- fallback for &#39;Char&#39;s smaller than \&#39;\&gt;\&#39;
+  where
+    {&amp;#45;\# INLINE fixed4 \#&amp;#45;}
+    fixed4 x = &#39;liftFixedToBounded&#39; $ const x &#39;&gt;$&lt;&#39;
+      E.char7 &#39;&gt;*&lt;&#39; E.char7 &#39;&gt;*&lt;&#39; E.char7 &#39;&gt;*&lt;&#39; E.char7
+    &amp;#160;
+    {&amp;#45;\# INLINE fixed5 \#&amp;#45;}
+    fixed5 x = &#39;liftFixedToBounded&#39; $ const x &#39;&gt;$&lt;&#39;
+      E.char7 &#39;&gt;*&lt;&#39; E.char7 &#39;&gt;*&lt;&#39; E.char7 &#39;&gt;*&lt;&#39; E.char7 &#39;&gt;*&lt;&#39; E.char7
+@
+
+This module currently does not expose functions that require the special
+properties of fixed-size primitives. They are useful for prefixing &#39;Builder&#39;s
+with their size or for implementing chunked encodings. We will expose the
+corresponding functions in future releases of this library.
+-}</span></span><span class="mpre">
+
+
+
+</span><span class="hl_comment"><span class="mpre">{-
+--
+--
+-- A /bounded primitive/ is a builder primitive that never results in a sequence
+-- longer than some fixed number of bytes. This number of bytes must be
+-- independent of the value being encoded. Typical examples of bounded
+-- primitives are the big-endian encoding of a &#39;Word64&#39;, which results always
+-- in exactly 8 bytes, or the UTF-8 encoding of a &#39;Char&#39;, which results always
+-- in less or equal to 4 bytes.
+--
+-- Typically, primitives are implemented efficiently by allocating a buffer (an
+-- array of bytes) and repeatedly executing the following two steps: (1)
+-- writing to the buffer until it is full and (2) handing over the filled part
+-- to the consumer of the encoded value. Step (1) is where bounded primitives
+-- are used. We must use a bounded primitive, as we must check that there is
+-- enough free space /before/ actually writing to the buffer.
+--
+-- In term of expressiveness, it would be sufficient to construct all encodings
+-- from the single bounded encoding that encodes a &#39;Word8&#39; as-is. However,
+-- this is not sufficient in terms of efficiency. It results in unnecessary
+-- buffer-full checks and it complicates the program-flow for writing to the
+-- buffer, as buffer-full checks are interleaved with analysing the value to be
+-- encoded (e.g., think about the program-flow for UTF-8 encoding). This has a
+-- significant effect on overall encoding performance, as encoding primitive
+-- Haskell values such as &#39;Word8&#39;s or &#39;Char&#39;s lies at the heart of every
+-- encoding implementation.
+--
+-- The bounded &#39;Encoding&#39;s provided by this module remove this performance
+-- problem. Intuitively, they consist of a tuple of the bound on the maximal
+-- number of bytes written and the actual implementation of the encoding as a
+-- function that modifies a mutable buffer. Hence when executing a bounded
+-- &#39;Encoding&#39;, the buffer-full check can be done once before the actual writing
+-- to the buffer. The provided &#39;Encoding&#39;s also take care to implement the
+-- actual writing to the buffer efficiently. Moreover, combinators are
+-- provided to construct new bounded encodings from the provided ones.
+--
+-- A typical example for using the combinators is a bounded &#39;Encoding&#39; that
+-- combines escaping the &#39; and \\ characters with UTF-8 encoding. More
+-- precisely, the escaping to be done is the one implemented by the following
+-- @escape@ function.
+--
+-- &gt; escape :: Char -&gt; [Char]
+-- &gt; escape &#39;\&#39;&#39; = &quot;\\&#39;&quot;
+-- &gt; escape &#39;\\&#39; = &quot;\\\\&quot;
+-- &gt; escape c    = [c]
+--
+-- The bounded &#39;Encoding&#39; that combines this escaping with UTF-8 encoding is
+-- the following.
+--
+-- &gt; import Data.ByteString.Builder.Prim.Utf8 (char)
+-- &gt;
+-- &gt; {-# INLINE escapeChar #-}
+-- &gt; escapeUtf8 :: BoundedPrim Char
+-- &gt; escapeUtf8 =
+-- &gt;     encodeIf (&#39;\&#39;&#39; ==) (char &lt;#&gt; char #. const (&#39;\\&#39;,&#39;\&#39;&#39;)) $
+-- &gt;     encodeIf (&#39;\\&#39; ==) (char &lt;#&gt; char #. const (&#39;\\&#39;,&#39;\\&#39;)) $
+-- &gt;     char
+--
+-- The definition of &#39;escapeUtf8&#39; is more complicated than &#39;escape&#39;, because
+-- the combinators (&#39;encodeIf&#39;, &#39;encodePair&#39;, &#39;#.&#39;, and &#39;char&#39;) used in
+-- &#39;escapeChar&#39; compute both the bound on the maximal number of bytes written
+-- (8 for &#39;escapeUtf8&#39;) as well as the low-level buffer manipulation required
+-- to implement the encoding. Bounded &#39;Encoding&#39;s should always be inlined.
+-- Otherwise, the compiler cannot compute the bound on the maximal number of
+-- bytes written at compile-time. Without inlinining, it would also fail to
+-- optimize the constant encoding of the escape characters in the above
+-- example. Functions that execute bounded &#39;Encoding&#39;s also perform
+-- suboptimally, if the definition of the bounded &#39;Encoding&#39; is not inlined.
+-- Therefore we add an &#39;INLINE&#39; pragma to &#39;escapeUtf8&#39;.
+--
+-- Currently, the only library that executes bounded &#39;Encoding&#39;s is the
+-- &#39;bytestring&#39; library (&lt;http://hackage.haskell.org/package/bytestring&gt;). It
+-- uses bounded &#39;Encoding&#39;s to implement most of its lazy bytestring builders.
+-- Executing a bounded encoding should be done using the corresponding
+-- functions in the lazy bytestring builder &#39;Extras&#39; module.
+--
+-- TODO: Merge with explanation/example below
+--
+-- Bounded &#39;E.Encoding&#39;s abstract encodings of Haskell values that can be implemented by
+-- writing a bounded-size sequence of bytes directly to memory. They are
+-- lifted to conversions from Haskell values to &#39;Builder&#39;s by wrapping them
+-- with a bound-check. The compiler can implement this bound-check very
+-- efficiently (i.e, a single comparison of the difference of two pointers to a
+-- constant), because the bound of a &#39;E.Encoding&#39; is always independent of the
+-- value being encoded and, in most cases, a literal constant.
+--
+-- &#39;E.Encoding&#39;s are the primary means for defining conversion functions from
+-- primitive Haskell values to &#39;Builder&#39;s. Most &#39;Builder&#39; constructors
+-- provided by this library are implemented that way.
+-- &#39;E.Encoding&#39;s are also used to construct conversions that exploit the internal
+-- representation of data-structures.
+--
+-- For example, &#39;encodeByteStringWith&#39; works directly on the underlying byte
+-- array and uses some tricks to reduce the number of variables in its inner
+-- loop. Its efficiency is exploited for implementing the @filter@ and @map@
+-- functions in &quot;Data.ByteString.Lazy&quot; as
+--
+-- &gt; import qualified Codec.Bounded.Encoding as E
+-- &gt;
+-- &gt; filter :: (Word8 -&gt; Bool) -&gt; ByteString -&gt; ByteString
+-- &gt; filter p = toLazyByteString . encodeLazyByteStringWithB write
+-- &gt;   where
+-- &gt;     write = E.encodeIf p E.word8 E.emptyEncoding
+-- &gt;
+-- &gt; map :: (Word8 -&gt; Word8) -&gt; ByteString -&gt; ByteString
+-- &gt; map f = toLazyByteString . encodeLazyByteStringWithB (E.word8 E.#. f)
+--
+-- Compared to earlier versions of @filter@ and @map@ on lazy &#39;L.ByteString&#39;s,
+-- these versions use a more efficient inner loop and have the additional
+-- advantage that they always result in well-chunked &#39;L.ByteString&#39;s; i.e, they
+-- also perform automatic defragmentation.
+--
+-- We can also use &#39;E.Encoding&#39;s to improve the efficiency of the following
+-- &#39;renderString&#39; function from our UTF-8 CSV table encoding example in
+-- &quot;Data.ByteString.Builder&quot;.
+--
+-- &gt; renderString :: String -&gt; Builder
+-- &gt; renderString cs = charUtf8 &#39;&quot;&#39; &lt;&gt; foldMap escape cs &lt;&gt; charUtf8 &#39;&quot;&#39;
+-- &gt;   where
+-- &gt;     escape &#39;\\&#39; = charUtf8 &#39;\\&#39; &lt;&gt; charUtf8 &#39;\\&#39;
+-- &gt;     escape &#39;\&quot;&#39; = charUtf8 &#39;\\&#39; &lt;&gt; charUtf8 &#39;\&quot;&#39;
+-- &gt;     escape c    = charUtf8 c
+--
+-- The idea is to save on &#39;mappend&#39;s by implementing a &#39;E.Encoding&#39; that escapes
+-- characters and using &#39;encodeListWith&#39;, which implements writing a list of
+-- values with a tighter inner loop and no &#39;mappend&#39;.
+--
+-- &gt; import Data.ByteString.Builder.Extra     -- assume these
+-- &gt; import Data.ByteString.Builder.Prim      -- imports are present
+-- &gt;        ( BoundedPrim, encodeIf, (&lt;#&gt;), (#.) )
+-- &gt; import Data.ByteString.Builder.Prim.Utf8 (char)
+-- &gt;
+-- &gt; renderString :: String -&gt; Builder
+-- &gt; renderString cs =
+-- &gt;     charUtf8 &#39;&quot;&#39; &lt;&gt; encodeListWithB escapedUtf8 cs &lt;&gt; charUtf8 &#39;&quot;&#39;
+-- &gt;   where
+-- &gt;     escapedUtf8 :: BoundedPrim Char
+-- &gt;     escapedUtf8 =
+-- &gt;       encodeIf (== &#39;\\&#39;) (char &lt;#&gt; char #. const (&#39;\\&#39;, &#39;\\&#39;)) $
+-- &gt;       encodeIf (== &#39;\&quot;&#39;) (char &lt;#&gt; char #. const (&#39;\\&#39;, &#39;\&quot;&#39;)) $
+-- &gt;       char
+--
+-- This &#39;Builder&#39; considers a buffer with less than 8 free bytes as full. As
+-- all functions are inlined, the compiler is able to optimize the constant
+-- &#39;E.Encoding&#39;s as two sequential &#39;poke&#39;s. Compared to the first implementation of
+-- &#39;renderString&#39; this implementation is 1.7x faster.
+--
+-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{-
+Internally, &#39;Builder&#39;s are buffer-fill operations that are
+given a continuation buffer-fill operation and a buffer-range to be filled.
+A &#39;Builder&#39; first checks if the buffer-range is large enough. If that&#39;s
+the case, the &#39;Builder&#39; writes the sequences of bytes to the buffer and
+calls its continuation.  Otherwise, it returns a signal that it requires a
+new buffer together with a continuation to be called on this new buffer.
+Ignoring the rare case of a full buffer-range, the execution cost of a
+&#39;Builder&#39; consists of three parts:
+
+  1. The time taken to read the parameters; i.e., the buffer-fill
+     operation to call after the &#39;Builder&#39; is done and the buffer-range to
+     fill.
+
+  2. The time taken to check for the size of the buffer-range.
+
+  3. The time taken for the actual encoding.
+
+We can reduce cost (1) by ensuring that fewer buffer-fill function calls are
+required. We can reduce cost (2) by fusing buffer-size checks of sequential
+writes. For example, when escaping a &#39;String&#39; using &#39;renderString&#39;, it would
+be sufficient to check before encoding a character that at least 8 bytes are
+free. We can reduce cost (3) by implementing better primitive &#39;Builder&#39;s.
+For example, &#39;renderCell&#39; builds an intermediate list containing the decimal
+representation of an &#39;Int&#39;. Implementing a direct decimal encoding of &#39;Int&#39;s
+to memory would be more efficient, as it requires fewer buffer-size checks
+and less allocation. It is also a planned extension of this library.
+
+The first two cost reductions are supported for user code through functions
+in &quot;Data.ByteString.Builder.Extra&quot;. There, we continue the above example
+and drop the generation time to 0.8ms by implementing &#39;renderString&#39; more
+cleverly. The third reduction requires meddling with the internals of
+&#39;Builder&#39;s and is not recommended in code outside of this library. However,
+patches to this library are very welcome.
+-}</span></span><span class="mpre">
+module Data.ByteString.Builder.Prim (
+
+  </span><span class="hl_comment"><span class="mpre">-- * Bounded-size primitives</span></span><span class="mpre">
+
+    BoundedPrim
+
+  </span><span class="hl_comment"><span class="mpre">-- ** Combinators</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | The combinators for &#39;BoundedPrim&#39;s are implemented such that the</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- size of the resulting &#39;BoundedPrim&#39; can be computed at compile time.</span></span><span class="mpre">
+  , emptyB
+  , (&gt;*&lt;)
+  , (&gt;$&lt;)
+  , eitherB
+  , condB
+
+  </span><span class="hl_comment"><span class="mpre">-- ** Builder construction</span></span><span class="mpre">
+  , primBounded
+  , primMapListBounded
+  , primUnfoldrBounded
+
+  , primMapByteStringBounded
+  , primMapLazyByteStringBounded
+
+  </span><span class="hl_comment"><span class="mpre">-- * Fixed-size primitives</span></span><span class="mpre">
+  , FixedPrim
+
+  </span><span class="hl_comment"><span class="mpre">-- ** Combinators</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | The combinators for &#39;FixedPrim&#39;s are implemented such that the &#39;size&#39;</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- of the resulting &#39;FixedPrim&#39; is computed at compile time.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- The &#39;(&gt;*&lt;)&#39; and &#39;(&gt;$&lt;)&#39; pairing and mapping operators can be used</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- with &#39;FixedPrim&#39;.</span></span><span class="mpre">
+  , emptyF
+  , liftFixedToBounded
+
+  </span><span class="hl_comment"><span class="mpre">-- ** Builder construction</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | In terms of expressivity, the function &#39;fixedPrim&#39; would be sufficient</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- for constructing &#39;Builder&#39;s from &#39;FixedPrim&#39;s. The fused variants of</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- this function are provided because they allow for more efficient</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- implementations. Our compilers are just not smart enough yet; and for some</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- of the employed optimizations (see the code of &#39;encodeByteStringWithF&#39;)</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- they will very likely never be.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Note that functions marked with \&quot;/Heavy inlining./\&quot; are forced to be</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- inlined because they must be specialized for concrete encodings,</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- but are rather heavy in terms of code size. We recommend to define a</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- top-level function for every concrete instantiation of such a function in</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- order to share its code. A typical example is the function</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &#39;byteStringHex&#39; from &quot;Data.ByteString.Builder.ASCII&quot;, which is</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- implemented as follows.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- byteStringHex :: S.ByteString -&gt; Builder</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- byteStringHex = &#39;encodeByteStringWithF&#39; &#39;word8HexFixed&#39;</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  , primFixed
+  , primMapListFixed
+  , primUnfoldrFixed
+
+  , primMapByteStringFixed
+  , primMapLazyByteStringFixed
+
+  </span><span class="hl_comment"><span class="mpre">-- * Standard encodings of Haskell values</span></span><span class="mpre">
+
+  , module Data.ByteString.Builder.Prim.Binary
+
+  </span><span class="hl_comment"><span class="mpre">-- ** Character encodings</span></span><span class="mpre">
+  , module Data.ByteString.Builder.Prim.ASCII
+
+  </span><span class="hl_comment"><span class="mpre">-- *** ISO/IEC 8859-1 (Char8)</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | The ISO/IEC 8859-1 encoding is an 8-bit encoding often known as Latin-1.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- The /Char8/ encoding implemented here works by truncating the Unicode</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- codepoint to 8-bits and encoding them as a single byte. For the codepoints</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- 0-255 this corresponds to the ISO/IEC 8859-1 encoding. Note that the</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Char8 encoding is equivalent to the ASCII encoding on the Unicode</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- codepoints 0-127. Hence, functions such as &#39;intDec&#39; can also be used for</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- encoding &#39;Int&#39;s as a decimal number with Char8 encoded characters.</span></span><span class="mpre">
+  , char8
+
+  </span><span class="hl_comment"><span class="mpre">-- *** UTF-8</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | The UTF-8 encoding can encode all Unicode codepoints.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- It is equivalent to the ASCII encoding on the Unicode codepoints 0-127.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Hence, functions such as &#39;intDec&#39; can also be used for encoding &#39;Int&#39;s as</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- a decimal number with UTF-8 encoded characters.</span></span><span class="mpre">
+  , charUtf8
+
+</span><span class="hl_comment"><span class="mpre">{-
+  -- * Testing support
+  -- | The following four functions are intended for testing use
+  -- only. They are /not/ efficient. Basic encodings are efficently executed by
+  -- creating &#39;Builder&#39;s from them using the @encodeXXX@ functions explained at
+  -- the top of this module.
+
+  , evalF
+  , evalB
+
+  , showF
+  , showB
+-}</span></span><span class="mpre">
+  ) where
+
+import           Data.ByteString.Builder.Internal
+import           </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/bytestring-0.10.4.0/Data/ByteString/Builder/Prim.hs&quot;, srcSpanStartLine = 452, srcSpanStartColumn = 18, srcSpanEndLine = 452, srcSpanEndColumn = 71}, srcInfoPoints = []}) &quot;Data.ByteString.Builder.Prim.Internal.UncheckedShifts&quot;"><span class="mpre">Data.ByteString.Builder.Prim.Internal.UncheckedShifts</span></span><span class="mpre">
+
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/bytestring-0.10.4.0/Data/ByteString/Builder/Prim.hs&quot;, srcSpanStartLine = 454, srcSpanStartColumn = 18, srcSpanEndLine = 454, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre">               as S
+import qualified Data.ByteString.Internal      as S
+import qualified Data.ByteString.Lazy.Internal as L
+
+import           Data.Monoid
+import           Data.List (</span><a href="Data.List.html#loc_984_1_984_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.List.html#loc_984_1_984_8&#39;)"><span class="mpre">unfoldr</span></a><span class="mpre">)  </span><span class="hl_comment"><span class="mpre">-- HADDOCK ONLY</span></span><span class="mpre">
+import           Data.Char (</span><a href="GHC.Char.html#loc_11_1_11_4" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Char.html#loc_11_1_11_4&#39;)"><span class="mpre">chr</span></a><span class="mpre">, ord)
+import           Control.Monad (</span><a href="Control.Monad.html#loc_184_1_184_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_184_1_184_6&#39;)"><span class="mpre">(&lt;=&lt;)</span></a><span class="mpre">, </span><a href="Control.Monad.html#loc_270_1_270_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_270_1_270_7&#39;)"><span class="mpre">unless</span></a><span class="mpre">)
+
+import           </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/bytestring-0.10.4.0/Data/ByteString/Builder/Prim.hs&quot;, srcSpanStartLine = 463, srcSpanStartColumn = 18, srcSpanEndLine = 463, srcSpanEndColumn = 55}, srcInfoPoints = []}) &quot;Data.ByteString.Builder.Prim.Internal&quot;"><span class="mpre">Data.ByteString.Builder.Prim.Internal</span></span><span class="mpre"> hiding (size, sizeBound)
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/bytestring-0.10.4.0/Data/ByteString/Builder/Prim.hs&quot;, srcSpanStartLine = 464, srcSpanStartColumn = 18, srcSpanEndLine = 464, srcSpanEndColumn = 55}, srcInfoPoints = []}) &quot;Data.ByteString.Builder.Prim.Internal&quot;"><span class="mpre">Data.ByteString.Builder.Prim.Internal</span></span><span class="mpre"> as I (size, sizeBound)
+import           Data.ByteString.Builder.Prim.Binary
+import           Data.ByteString.Builder.Prim.ASCII
+
+#if MIN_VERSION_base(4,4,0)
+#if MIN_VERSION_base(4,7,0)
+import           Foreign
+#else
+import           Foreign hiding (unsafeForeignPtrToPtr)
+#endif
+import           Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
+#else
+import           Foreign
+#endif
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Creating Builders from bounded primitives</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a value with a &#39;FixedPrim&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_486_1_486_10&#39;)"><span class="mpre">primFixed</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_486_1_486_10&#39;)"><span class="mpre">primFixed</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FixedPrim</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">)
+</span><a name="loc_486_1_486_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_486_1_486_10&#39;)"><span class="hl_vardecl"><span class="mpre">primFixed</span></span></a><span class="mpre"> = </span><a href="#loc_545_1_545_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_545_1_545_12&#39;)"><span class="hl_varref"><span class="mpre">primBounded</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">toB</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a list of values from left-to-right with a &#39;FixedPrim&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_491_1_491_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_491_1_491_17&#39;)"><span class="mpre">primMapListFixed</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_491_1_491_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_491_1_491_17&#39;)"><span class="mpre">primMapListFixed</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FixedPrim</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; ([</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">] -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">)
+</span><a name="loc_491_1_491_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_491_1_491_17&#39;)"><span class="hl_vardecl"><span class="mpre">primMapListFixed</span></span></a><span class="mpre"> = </span><a href="#loc_591_1_591_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_591_1_591_19&#39;)"><span class="hl_varref"><span class="mpre">primMapListBounded</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">toB</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a list of values represented as an &#39;unfoldr&#39; with a &#39;FixedPrim&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_496_1_496_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_496_1_496_17&#39;)"><span class="mpre">primUnfoldrFixed</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_496_1_496_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_496_1_496_17&#39;)"><span class="mpre">primUnfoldrFixed</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FixedPrim</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">, </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)) -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_496_1_496_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_496_1_496_17&#39;)"><span class="hl_vardecl"><span class="mpre">primUnfoldrFixed</span></span></a><span class="mpre"> = </span><a href="#loc_612_1_612_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_1_612_19&#39;)"><span class="hl_varref"><span class="mpre">primUnfoldrBounded</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">toB</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /Heavy inlining./ Encode all bytes of a strict &#39;S.ByteString&#39; from</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- left-to-right with a &#39;FixedPrim&#39;. This function is quite versatile. For</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- example, we can use it to construct a &#39;Builder&#39; that maps every byte before</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- copying it to the buffer to be filled.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; mapToBuilder :: (Word8 -&gt; Word8) -&gt; S.ByteString -&gt; Builder</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; mapToBuilder f = encodeByteStringWithF (contramapF f word8)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We can also use it to hex-encode a strict &#39;S.ByteString&#39; as shown by the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;byteStringHex&#39; example above.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_510_1_510_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_1_510_23&#39;)"><span class="mpre">primMapByteStringFixed</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_510_1_510_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_1_510_23&#39;)"><span class="mpre">primMapByteStringFixed</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FixedPrim</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; (</span><a href="Data.ByteString.Internal.html#loc_193_6_193_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Internal.html#loc_193_6_193_16&#39;)"><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span></a><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">)
+</span><a name="loc_510_1_510_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_1_510_23&#39;)"><span class="hl_vardecl"><span class="mpre">primMapByteStringFixed</span></span></a><span class="mpre"> = </span><a href="#loc_638_1_638_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_638_1_638_25&#39;)"><span class="hl_varref"><span class="mpre">primMapByteStringBounded</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">toB</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /Heavy inlining./ Encode all bytes of a lazy &#39;L.ByteString&#39; from</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- left-to-right with a &#39;FixedPrim&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_516_1_516_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_516_1_516_27&#39;)"><span class="mpre">primMapLazyByteStringFixed</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_516_1_516_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_516_1_516_27&#39;)"><span class="mpre">primMapLazyByteStringFixed</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FixedPrim</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; (</span><a href="Data.ByteString.Lazy.Internal.html#loc_82_6_82_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Lazy.Internal.html#loc_82_6_82_16&#39;)"><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span></a><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">)
+</span><a name="loc_516_1_516_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_516_1_516_27&#39;)"><span class="hl_vardecl"><span class="mpre">primMapLazyByteStringFixed</span></span></a><span class="mpre"> = </span><a href="#loc_672_1_672_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_672_1_672_29&#39;)"><span class="hl_varref"><span class="mpre">primMapLazyByteStringBounded</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">toB</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- IMPLEMENTATION NOTE: Sadly, &#39;encodeListWith&#39; cannot be used for foldr/build</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- fusion. Its performance relies on hoisting several variables out of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- inner loop.  That&#39;s not possible when writing &#39;encodeListWith&#39; as a &#39;foldr&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If we had stream fusion for lists, then we could fuse &#39;encodeListWith&#39;, as</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;encodeWithStream&#39; can keep control over the execution.</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Create a &#39;Builder&#39; that encodes values with the given &#39;BoundedPrim&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We rewrite consecutive uses of &#39;primBounded&#39; such that the bound-checks are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- fused. For example,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; primBounded (word32 c1) `mappend` primBounded (word32 c2)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is rewritten such that the resulting &#39;Builder&#39; checks only once, if ther are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- at 8 free bytes, instead of checking twice, if there are 4 free bytes. This</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- optimization is not observationally equivalent in a strict sense, as it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- influences the boundaries of the generated chunks. However, for a user of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- this library it is observationally equivalent, as chunk boundaries of a lazy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;L.ByteString&#39; can only be observed through the internal interface.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Morevoer, we expect that all primitives write much fewer than 4kb (the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- default short buffer size). Hence, it is safe to ignore the additional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- memory spilled due to the more agressive buffer wrapping introduced by this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- optimization.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE[1] </span><a href="#loc_545_1_545_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_545_1_545_12&#39;)"><span class="mpre">primBounded</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_545_1_545_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_545_1_545_12&#39;)"><span class="mpre">primBounded</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">BoundedPrim</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">)
+</span><a name="loc_545_1_545_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_545_1_545_12&#39;)"><span class="hl_fundecl"><span class="mpre">primBounded</span></span></a><span class="mpre"> </span><a name="loc_545_13_545_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_545_13_545_14&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre"> </span><a name="loc_545_15_545_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_545_15_545_16&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> =
+    </span><span class="hl_comment"><span class="mpre">-- It is important to avoid recursive &#39;BuildStep&#39;s where possible, as</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- their closure allocation is expensive. Using &#39;ensureFree&#39; allows the</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &#39;step&#39; to assume that at least &#39;sizeBound w&#39; free space is available.</span></span><span class="mpre">
+    </span><a href="Data.ByteString.Builder.Internal.html#loc_795_1_795_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_795_1_795_11&#39;)"><span class="hl_varref"><span class="mpre">ensureFree</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">I.sizeBound</span></span><span class="mpre"> </span><a href="#loc_545_13_545_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_545_13_545_14&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre">) </span><a href="Data.Monoid.html#loc_82_9_82_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_82_9_82_16&#39;)"><span class="hl_infix"><span class="mpre">`mappend`</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Internal.html#loc_364_1_364_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_364_1_364_8&#39;)"><span class="hl_varref"><span class="mpre">builder</span></span></a><span class="mpre"> </span><a href="#loc_551_5_551_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_5_551_9&#39;)"><span class="hl_varref"><span class="mpre">step</span></span></a><span class="mpre">
+  where
+    </span><a name="loc_551_5_551_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_5_551_9&#39;)"><span class="hl_fundecl"><span class="mpre">step</span></span></a><span class="mpre"> </span><a name="loc_551_10_551_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_10_551_11&#39;)"><span class="hl_vardecl"><span class="mpre">k</span></span></a><span class="mpre"> (</span><a href="Data.ByteString.Builder.Internal.html#loc_170_20_170_31" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_170_20_170_31&#39;)"><span class="hl_conref"><span class="mpre">BufferRange</span></span></a><span class="mpre"> </span><a name="loc_551_25_551_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_25_551_27&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre"> </span><a name="loc_551_28_551_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_28_551_31&#39;)"><span class="hl_vardecl"><span class="mpre">ope</span></span></a><span class="mpre">) = do
+        </span><a name="loc_552_9_552_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_552_9_552_12&#39;)"><span class="hl_vardecl"><span class="mpre">op&#39;</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">runB</span></span><span class="mpre"> </span><a href="#loc_545_13_545_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_545_13_545_14&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><a href="#loc_545_15_545_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_545_15_545_16&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="#loc_551_25_551_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_25_551_27&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre">
+        let !</span><a name="loc_553_14_553_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_553_14_553_17&#39;)"><span class="hl_vardecl"><span class="mpre">br&#39;</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Internal.html#loc_170_20_170_31" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_170_20_170_31&#39;)"><span class="hl_conref"><span class="mpre">BufferRange</span></span></a><span class="mpre"> </span><a href="#loc_552_9_552_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_552_9_552_12&#39;)"><span class="hl_varref"><span class="mpre">op&#39;</span></span></a><span class="mpre"> </span><a href="#loc_551_28_551_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_28_551_31&#39;)"><span class="hl_varref"><span class="mpre">ope</span></span></a><span class="mpre">
+        </span><a href="#loc_551_10_551_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_10_551_11&#39;)"><span class="hl_varref"><span class="mpre">k</span></span></a><span class="mpre"> </span><a href="#loc_553_14_553_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_553_14_553_17&#39;)"><span class="hl_varref"><span class="mpre">br&#39;</span></span></a><span class="mpre">
+
+</span><span class="hl_pragma"><span class="mpre">{-# RULES
+
+&quot;append/primBounded&quot; forall w1 w2 x1 x2.
+       append (primBounded w1 x1) (primBounded w2 x2)
+     = primBounded (pairB w1 w2) (x1, x2)
+
+&quot;append/primBounded/assoc_r&quot; forall w1 w2 x1 x2 b.
+       append (primBounded w1 x1) (append (primBounded w2 x2) b)
+     = append (primBounded (pairB w1 w2) (x1, x2)) b
+
+&quot;append/primBounded/assoc_l&quot; forall w1 w2 x1 x2 b.
+       append (append b (primBounded w1 x1)) (primBounded w2 x2)
+     = append b (primBounded (pairB w1 w2) (x1, x2))
+  #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- TODO: The same rules for &#39;putBuilder (..) &gt;&gt; putBuilder (..)&#39;</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Create a &#39;Builder&#39; that encodes a list of values consecutively using a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;BoundedPrim&#39; for each element. This function is more efficient than the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- canonical</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; filter p =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;  B.toLazyByteString .</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;  E.encodeLazyByteStringWithF (E.ifF p E.word8) E.emptyF)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; mconcat . map (primBounded w)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- or</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; foldMap (primBounded w)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- because it moves several variables out of the inner loop.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_591_1_591_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_591_1_591_19&#39;)"><span class="mpre">primMapListBounded</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_591_1_591_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_591_1_591_19&#39;)"><span class="mpre">primMapListBounded</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">BoundedPrim</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; [</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">] -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_591_1_591_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_591_1_591_19&#39;)"><span class="hl_fundecl"><span class="mpre">primMapListBounded</span></span></a><span class="mpre"> </span><a name="loc_591_20_591_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_591_20_591_21&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre"> </span><a name="loc_591_22_591_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_591_22_591_25&#39;)"><span class="hl_vardecl"><span class="mpre">xs0</span></span></a><span class="mpre"> =
+    </span><a href="Data.ByteString.Builder.Internal.html#loc_364_1_364_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_364_1_364_8&#39;)"><span class="hl_varref"><span class="mpre">builder</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_594_5_594_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_5_594_9&#39;)"><span class="hl_varref"><span class="mpre">step</span></span></a><span class="mpre"> </span><a href="#loc_591_22_591_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_591_22_591_25&#39;)"><span class="hl_varref"><span class="mpre">xs0</span></span></a><span class="mpre">
+  where
+    </span><a name="loc_594_5_594_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_5_594_9&#39;)"><span class="hl_fundecl"><span class="mpre">step</span></span></a><span class="mpre"> </span><a name="loc_594_10_594_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_10_594_13&#39;)"><span class="hl_vardecl"><span class="mpre">xs1</span></span></a><span class="mpre"> </span><a name="loc_594_14_594_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_14_594_15&#39;)"><span class="hl_vardecl"><span class="mpre">k</span></span></a><span class="mpre"> (</span><a href="Data.ByteString.Builder.Internal.html#loc_170_20_170_31" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_170_20_170_31&#39;)"><span class="hl_conref"><span class="mpre">BufferRange</span></span></a><span class="mpre"> </span><a name="loc_594_29_594_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_29_594_32&#39;)"><span class="hl_vardecl"><span class="mpre">op0</span></span></a><span class="mpre"> </span><a name="loc_594_33_594_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_33_594_37&#39;)"><span class="hl_vardecl"><span class="mpre">ope0</span></span></a><span class="mpre">) =
+        </span><a href="#loc_597_9_597_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_597_9_597_11&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre"> </span><a href="#loc_594_10_594_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_10_594_13&#39;)"><span class="hl_varref"><span class="mpre">xs1</span></span></a><span class="mpre"> </span><a href="#loc_594_29_594_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_29_594_32&#39;)"><span class="hl_varref"><span class="mpre">op0</span></span></a><span class="mpre">
+      where
+        </span><a name="loc_597_9_597_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_597_9_597_11&#39;)"><span class="hl_fundecl"><span class="mpre">go</span></span></a><span class="mpre"> []          !</span><a name="loc_597_25_597_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_597_25_597_27&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre">             = </span><a href="#loc_594_14_594_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_14_594_15&#39;)"><span class="hl_varref"><span class="mpre">k</span></span></a><span class="mpre"> (</span><a href="Data.ByteString.Builder.Internal.html#loc_170_20_170_31" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_170_20_170_31&#39;)"><span class="hl_conref"><span class="mpre">BufferRange</span></span></a><span class="mpre"> </span><a href="#loc_597_25_597_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_597_25_597_27&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><a href="#loc_594_33_594_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_33_594_37&#39;)"><span class="hl_varref"><span class="mpre">ope0</span></span></a><span class="mpre">)
+        </span><a href="#loc_597_9_597_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_597_9_597_11&#39;)"><span class="hl_fundecl"><span class="mpre">go</span></span></a><span class="mpre"> </span><a name="loc_598_12_598_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_12_598_14&#39;)"><span class="hl_specname"><span class="mpre">xs</span></span></a><span class="mpre">@(</span><a name="loc_598_16_598_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_16_598_18&#39;)"><span class="hl_vardecl"><span class="mpre">x&#39;</span></span></a><span class="hl_infix"><span class="mpre">:</span></span><a name="loc_598_19_598_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_19_598_22&#39;)"><span class="hl_vardecl"><span class="mpre">xs&#39;</span></span></a><span class="mpre">) !</span><a name="loc_598_25_598_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_25_598_27&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre">
+          | </span><a href="#loc_598_25_598_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_25_598_27&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`plusPtr`</span></span><span class="mpre"> </span><a href="#loc_603_5_603_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_603_5_603_10&#39;)"><span class="hl_varref"><span class="mpre">bound</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;=</span></span><span class="mpre"> </span><a href="#loc_594_33_594_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_33_594_37&#39;)"><span class="hl_varref"><span class="mpre">ope0</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">runB</span></span><span class="mpre"> </span><a href="#loc_591_20_591_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_591_20_591_21&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><a href="#loc_598_16_598_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_16_598_18&#39;)"><span class="hl_varref"><span class="mpre">x&#39;</span></span></a><span class="mpre"> </span><a href="#loc_598_25_598_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_25_598_27&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&gt;&gt;=</span></span><span class="mpre"> </span><a href="#loc_597_9_597_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_597_9_597_11&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre"> </span><a href="#loc_598_19_598_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_19_598_22&#39;)"><span class="hl_varref"><span class="mpre">xs&#39;</span></span></a><span class="mpre">
+          | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre">                  =
+             </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Data.ByteString.Builder.Internal.html#loc_298_1_298_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_298_1_298_11&#39;)"><span class="hl_varref"><span class="mpre">bufferFull</span></span></a><span class="mpre"> </span><a href="#loc_603_5_603_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_603_5_603_10&#39;)"><span class="hl_varref"><span class="mpre">bound</span></span></a><span class="mpre"> </span><a href="#loc_598_25_598_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_25_598_27&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> (</span><a href="#loc_594_5_594_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_5_594_9&#39;)"><span class="hl_varref"><span class="mpre">step</span></span></a><span class="mpre"> </span><a href="#loc_598_12_598_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_12_598_14&#39;)"><span class="hl_varref"><span class="mpre">xs</span></span></a><span class="mpre"> </span><a href="#loc_594_14_594_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_14_594_15&#39;)"><span class="hl_varref"><span class="mpre">k</span></span></a><span class="mpre">)
+
+    </span><a name="loc_603_5_603_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_603_5_603_10&#39;)"><span class="hl_vardecl"><span class="mpre">bound</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">I.sizeBound</span></span><span class="mpre"> </span><a href="#loc_591_20_591_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_591_20_591_21&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- TODO: Add &#39;foldMap/encodeWith&#39; its variants</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- TODO: Ensure rewriting &#39;primBounded w . f = primBounded (w #. f)&#39;</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Create a &#39;Builder&#39; that encodes a sequence generated from a seed value</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- using a &#39;BoundedPrim&#39; for each sequence element.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_612_1_612_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_1_612_19&#39;)"><span class="mpre">primUnfoldrBounded</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_612_1_612_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_1_612_19&#39;)"><span class="mpre">primUnfoldrBounded</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">BoundedPrim</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">, </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)) -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_612_1_612_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_1_612_19&#39;)"><span class="hl_fundecl"><span class="mpre">primUnfoldrBounded</span></span></a><span class="mpre"> </span><a name="loc_612_20_612_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_20_612_21&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre"> </span><a name="loc_612_22_612_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_22_612_23&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> </span><a name="loc_612_24_612_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_24_612_26&#39;)"><span class="hl_vardecl"><span class="mpre">x0</span></span></a><span class="mpre"> =
+    </span><a href="Data.ByteString.Builder.Internal.html#loc_364_1_364_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_364_1_364_8&#39;)"><span class="hl_varref"><span class="mpre">builder</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_615_5_615_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_5_615_13&#39;)"><span class="hl_varref"><span class="mpre">fillWith</span></span></a><span class="mpre"> </span><a href="#loc_612_24_612_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_24_612_26&#39;)"><span class="hl_varref"><span class="mpre">x0</span></span></a><span class="mpre">
+  where
+    </span><a name="loc_615_5_615_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_5_615_13&#39;)"><span class="hl_fundecl"><span class="mpre">fillWith</span></span></a><span class="mpre"> </span><a name="loc_615_14_615_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_14_615_15&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> </span><a name="loc_615_16_615_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_16_615_17&#39;)"><span class="hl_vardecl"><span class="mpre">k</span></span></a><span class="mpre"> !(</span><a href="Data.ByteString.Builder.Internal.html#loc_170_20_170_31" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_170_20_170_31&#39;)"><span class="hl_conref"><span class="mpre">BufferRange</span></span></a><span class="mpre"> </span><a name="loc_615_32_615_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_32_615_35&#39;)"><span class="hl_vardecl"><span class="mpre">op0</span></span></a><span class="mpre"> </span><a name="loc_615_36_615_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_36_615_40&#39;)"><span class="hl_vardecl"><span class="mpre">ope0</span></span></a><span class="mpre">) =
+        </span><a href="#loc_618_9_618_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_618_9_618_11&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre"> (</span><a href="#loc_612_22_612_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_22_612_23&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_615_14_615_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_14_615_15&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">) </span><a href="#loc_615_32_615_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_32_615_35&#39;)"><span class="hl_varref"><span class="mpre">op0</span></span></a><span class="mpre">
+      where
+        </span><a name="loc_618_9_618_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_618_9_618_11&#39;)"><span class="hl_fundecl"><span class="mpre">go</span></span></a><span class="mpre"> !</span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre">        !</span><a name="loc_618_29_618_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_618_29_618_31&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre">         = do let !</span><a name="loc_618_50_618_53" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_618_50_618_53&#39;)"><span class="hl_vardecl"><span class="mpre">br&#39;</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Internal.html#loc_170_20_170_31" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_170_20_170_31&#39;)"><span class="hl_conref"><span class="mpre">BufferRange</span></span></a><span class="mpre"> </span><a href="#loc_618_29_618_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_618_29_618_31&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><a href="#loc_615_36_615_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_36_615_40&#39;)"><span class="hl_varref"><span class="mpre">ope0</span></span></a><span class="mpre">
+                                            </span><a href="#loc_615_16_615_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_16_615_17&#39;)"><span class="hl_varref"><span class="mpre">k</span></span></a><span class="mpre"> </span><a href="#loc_618_50_618_53" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_618_50_618_53&#39;)"><span class="hl_varref"><span class="mpre">br&#39;</span></span></a><span class="mpre">
+        </span><a href="#loc_618_9_618_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_618_9_618_11&#39;)"><span class="hl_fundecl"><span class="mpre">go</span></span></a><span class="mpre"> !(</span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> (</span><a name="loc_620_20_620_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_620_20_620_21&#39;)"><span class="hl_vardecl"><span class="mpre">y</span></span></a><span class="mpre">, </span><a name="loc_620_23_620_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_620_23_620_25&#39;)"><span class="hl_vardecl"><span class="mpre">x&#39;</span></span></a><span class="mpre">)) !</span><a name="loc_620_29_620_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_620_29_620_31&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre">
+          | </span><a href="#loc_620_29_620_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_620_29_620_31&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`plusPtr`</span></span><span class="mpre"> </span><a href="#loc_626_5_626_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_626_5_626_10&#39;)"><span class="hl_varref"><span class="mpre">bound</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;=</span></span><span class="mpre"> </span><a href="#loc_615_36_615_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_36_615_40&#39;)"><span class="hl_varref"><span class="mpre">ope0</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">runB</span></span><span class="mpre"> </span><a href="#loc_612_20_612_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_20_612_21&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><a href="#loc_620_20_620_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_620_20_620_21&#39;)"><span class="hl_varref"><span class="mpre">y</span></span></a><span class="mpre"> </span><a href="#loc_620_29_620_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_620_29_620_31&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&gt;&gt;=</span></span><span class="mpre"> </span><a href="#loc_618_9_618_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_618_9_618_11&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre"> (</span><a href="#loc_612_22_612_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_22_612_23&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_620_23_620_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_620_23_620_25&#39;)"><span class="hl_varref"><span class="mpre">x&#39;</span></span></a><span class="mpre">)
+          | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre">                  = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Data.ByteString.Builder.Internal.html#loc_298_1_298_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_298_1_298_11&#39;)"><span class="hl_varref"><span class="mpre">bufferFull</span></span></a><span class="mpre"> </span><a href="#loc_626_5_626_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_626_5_626_10&#39;)"><span class="hl_varref"><span class="mpre">bound</span></span></a><span class="mpre"> </span><a href="#loc_620_29_620_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_620_29_620_31&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre">
+              \(</span><a href="Data.ByteString.Builder.Internal.html#loc_170_20_170_31" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_170_20_170_31&#39;)"><span class="hl_conref"><span class="mpre">BufferRange</span></span></a><span class="mpre"> </span><a name="loc_623_29_623_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_623_29_623_34&#39;)"><span class="hl_vardecl"><span class="mpre">opNew</span></span></a><span class="mpre"> </span><a name="loc_623_35_623_41" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_623_35_623_41&#39;)"><span class="hl_vardecl"><span class="mpre">opeNew</span></span></a><span class="mpre">) -&gt; do
+                  !</span><a name="loc_624_20_624_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_624_20_624_26&#39;)"><span class="hl_vardecl"><span class="mpre">opNew&#39;</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">runB</span></span><span class="mpre"> </span><a href="#loc_612_20_612_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_20_612_21&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><a href="#loc_620_20_620_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_620_20_620_21&#39;)"><span class="hl_varref"><span class="mpre">y</span></span></a><span class="mpre"> </span><a href="#loc_623_29_623_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_623_29_623_34&#39;)"><span class="hl_varref"><span class="mpre">opNew</span></span></a><span class="mpre">
+                  </span><a href="#loc_615_5_615_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_5_615_13&#39;)"><span class="hl_varref"><span class="mpre">fillWith</span></span></a><span class="mpre"> </span><a href="#loc_620_23_620_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_620_23_620_25&#39;)"><span class="hl_varref"><span class="mpre">x&#39;</span></span></a><span class="mpre"> </span><a href="#loc_615_16_615_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_615_16_615_17&#39;)"><span class="hl_varref"><span class="mpre">k</span></span></a><span class="mpre"> (</span><a href="Data.ByteString.Builder.Internal.html#loc_170_20_170_31" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_170_20_170_31&#39;)"><span class="hl_conref"><span class="mpre">BufferRange</span></span></a><span class="mpre"> </span><a href="#loc_624_20_624_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_624_20_624_26&#39;)"><span class="hl_varref"><span class="mpre">opNew&#39;</span></span></a><span class="mpre"> </span><a href="#loc_623_35_623_41" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_623_35_623_41&#39;)"><span class="hl_varref"><span class="mpre">opeNew</span></span></a><span class="mpre">)
+    </span><a name="loc_626_5_626_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_626_5_626_10&#39;)"><span class="hl_vardecl"><span class="mpre">bound</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">I.sizeBound</span></span><span class="mpre"> </span><a href="#loc_612_20_612_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_612_20_612_21&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Create a &#39;Builder&#39; that encodes each &#39;Word8&#39; of a strict &#39;S.ByteString&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- using a &#39;BoundedPrim&#39;. For example, we can write a &#39;Builder&#39; that filters</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a strict &#39;S.ByteString&#39; as follows.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import Data.ByteString.Builder.Primas P (word8, condB, emptyB)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; filterBS p = P.condB p P.word8 P.emptyB</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_638_1_638_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_638_1_638_25&#39;)"><span class="mpre">primMapByteStringBounded</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_638_1_638_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_638_1_638_25&#39;)"><span class="mpre">primMapByteStringBounded</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">BoundedPrim</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Internal.html#loc_193_6_193_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Internal.html#loc_193_6_193_16&#39;)"><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span></a><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_638_1_638_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_638_1_638_25&#39;)"><span class="hl_fundecl"><span class="mpre">primMapByteStringBounded</span></span></a><span class="mpre"> </span><a name="loc_638_26_638_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_638_26_638_27&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre"> =
+    \</span><a name="loc_639_6_639_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_6_639_8&#39;)"><span class="hl_vardecl"><span class="mpre">bs</span></span></a><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_364_1_364_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_364_1_364_8&#39;)"><span class="hl_varref"><span class="mpre">builder</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_642_5_642_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_5_642_9&#39;)"><span class="hl_varref"><span class="mpre">step</span></span></a><span class="mpre"> </span><a href="#loc_639_6_639_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_6_639_8&#39;)"><span class="hl_varref"><span class="mpre">bs</span></span></a><span class="mpre">
+  where
+    </span><a name="loc_641_5_641_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_641_5_641_10&#39;)"><span class="hl_vardecl"><span class="mpre">bound</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">I.sizeBound</span></span><span class="mpre"> </span><a href="#loc_638_26_638_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_638_26_638_27&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre">
+    </span><a name="loc_642_5_642_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_5_642_9&#39;)"><span class="hl_fundecl"><span class="mpre">step</span></span></a><span class="mpre"> (</span><a href="Data.ByteString.Internal.html#loc_193_19_193_21" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Internal.html#loc_193_19_193_21&#39;)"><span class="hl_conref"><span class="mpre">S.PS</span></span></a><span class="mpre"> </span><a name="loc_642_16_642_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_16_642_19&#39;)"><span class="hl_vardecl"><span class="mpre">ifp</span></span></a><span class="mpre"> </span><a name="loc_642_20_642_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_20_642_24&#39;)"><span class="hl_vardecl"><span class="mpre">ioff</span></span></a><span class="mpre"> </span><a name="loc_642_25_642_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_25_642_30&#39;)"><span class="hl_vardecl"><span class="mpre">isize</span></span></a><span class="mpre">) !</span><a name="loc_642_33_642_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_33_642_34&#39;)"><span class="hl_vardecl"><span class="mpre">k</span></span></a><span class="mpre"> =
+        </span><a href="#loc_646_9_646_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_9_646_13&#39;)"><span class="hl_varref"><span class="mpre">goBS</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">unsafeForeignPtrToPtr</span></span><span class="mpre"> </span><a href="#loc_642_16_642_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_16_642_19&#39;)"><span class="hl_varref"><span class="mpre">ifp</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`plusPtr`</span></span><span class="mpre"> </span><a href="#loc_642_20_642_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_20_642_24&#39;)"><span class="hl_varref"><span class="mpre">ioff</span></span></a><span class="mpre">)
+      where
+        !</span><a name="loc_645_10_645_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_645_10_645_13&#39;)"><span class="hl_vardecl"><span class="mpre">ipe</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">unsafeForeignPtrToPtr</span></span><span class="mpre"> </span><a href="#loc_642_16_642_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_16_642_19&#39;)"><span class="hl_varref"><span class="mpre">ifp</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`plusPtr`</span></span><span class="mpre"> (</span><a href="#loc_642_20_642_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_20_642_24&#39;)"><span class="hl_varref"><span class="mpre">ioff</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">+</span></span><span class="mpre"> </span><a href="#loc_642_25_642_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_25_642_30&#39;)"><span class="hl_varref"><span class="mpre">isize</span></span></a><span class="mpre">)
+        </span><a name="loc_646_9_646_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_9_646_13&#39;)"><span class="hl_fundecl"><span class="mpre">goBS</span></span></a><span class="mpre"> !</span><a name="loc_646_15_646_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_15_646_18&#39;)"><span class="hl_vardecl"><span class="mpre">ip0</span></span></a><span class="mpre"> !</span><a name="loc_646_20_646_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_20_646_22&#39;)"><span class="hl_specname"><span class="mpre">br</span></span></a><span class="mpre">@(</span><a href="Data.ByteString.Builder.Internal.html#loc_170_20_170_31" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_170_20_170_31&#39;)"><span class="hl_conref"><span class="mpre">BufferRange</span></span></a><span class="mpre"> </span><a name="loc_646_36_646_39" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_36_646_39&#39;)"><span class="hl_vardecl"><span class="mpre">op0</span></span></a><span class="mpre"> </span><a name="loc_646_40_646_43" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_40_646_43&#39;)"><span class="hl_vardecl"><span class="mpre">ope</span></span></a><span class="mpre">)
+          | </span><a href="#loc_646_15_646_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_15_646_18&#39;)"><span class="hl_varref"><span class="mpre">ip0</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&gt;=</span></span><span class="mpre"> </span><a href="#loc_645_10_645_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_645_10_645_13&#39;)"><span class="hl_varref"><span class="mpre">ipe</span></span></a><span class="mpre"> = do
+              </span><a href="Foreign.ForeignPtr.html#loc_74_1_74_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Foreign.ForeignPtr.html#loc_74_1_74_16&#39;)"><span class="hl_varref"><span class="mpre">touchForeignPtr</span></span></a><span class="mpre"> </span><a href="#loc_642_16_642_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_16_642_19&#39;)"><span class="hl_varref"><span class="mpre">ifp</span></span></a><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- input buffer consumed</span></span><span class="mpre">
+              </span><a href="#loc_642_33_642_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_642_33_642_34&#39;)"><span class="hl_varref"><span class="mpre">k</span></span></a><span class="mpre"> </span><a href="#loc_646_20_646_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_20_646_22&#39;)"><span class="hl_varref"><span class="mpre">br</span></span></a><span class="mpre">
+
+          | </span><a href="#loc_646_36_646_39" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_36_646_39&#39;)"><span class="hl_varref"><span class="mpre">op0</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`plusPtr`</span></span><span class="mpre"> </span><a href="#loc_641_5_641_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_641_5_641_10&#39;)"><span class="hl_varref"><span class="mpre">bound</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;</span></span><span class="mpre"> </span><a href="#loc_646_40_646_43" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_40_646_43&#39;)"><span class="hl_varref"><span class="mpre">ope</span></span></a><span class="mpre"> =
+              </span><a href="#loc_659_13_659_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_659_13_659_22&#39;)"><span class="hl_varref"><span class="mpre">goPartial</span></span></a><span class="mpre"> (</span><a href="#loc_646_15_646_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_15_646_18&#39;)"><span class="hl_varref"><span class="mpre">ip0</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`plusPtr`</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">min</span></span><span class="mpre"> </span><a href="#loc_656_13_656_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_656_13_656_25&#39;)"><span class="hl_varref"><span class="mpre">outRemaining</span></span></a><span class="mpre"> </span><a href="#loc_657_13_657_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_657_13_657_25&#39;)"><span class="hl_varref"><span class="mpre">inpRemaining</span></span></a><span class="mpre">)
+
+          | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre">  = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Data.ByteString.Builder.Internal.html#loc_298_1_298_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_298_1_298_11&#39;)"><span class="hl_varref"><span class="mpre">bufferFull</span></span></a><span class="mpre"> </span><a href="#loc_641_5_641_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_641_5_641_10&#39;)"><span class="hl_varref"><span class="mpre">bound</span></span></a><span class="mpre"> </span><a href="#loc_646_36_646_39" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_36_646_39&#39;)"><span class="hl_varref"><span class="mpre">op0</span></span></a><span class="mpre"> (</span><a href="#loc_646_9_646_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_9_646_13&#39;)"><span class="hl_varref"><span class="mpre">goBS</span></span></a><span class="mpre"> </span><a href="#loc_646_15_646_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_15_646_18&#39;)"><span class="hl_varref"><span class="mpre">ip0</span></span></a><span class="mpre">)
+          where
+            </span><a name="loc_656_13_656_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_656_13_656_25&#39;)"><span class="hl_vardecl"><span class="mpre">outRemaining</span></span></a><span class="mpre"> = (</span><a href="#loc_646_40_646_43" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_40_646_43&#39;)"><span class="hl_varref"><span class="mpre">ope</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`minusPtr`</span></span><span class="mpre"> </span><a href="#loc_646_36_646_39" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_36_646_39&#39;)"><span class="hl_varref"><span class="mpre">op0</span></span></a><span class="mpre">) </span><span class="hl_infix"><span class="mpre">`div`</span></span><span class="mpre"> </span><a href="#loc_641_5_641_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_641_5_641_10&#39;)"><span class="hl_varref"><span class="mpre">bound</span></span></a><span class="mpre">
+            </span><a name="loc_657_13_657_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_657_13_657_25&#39;)"><span class="hl_vardecl"><span class="mpre">inpRemaining</span></span></a><span class="mpre"> = </span><a href="#loc_645_10_645_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_645_10_645_13&#39;)"><span class="hl_varref"><span class="mpre">ipe</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`minusPtr`</span></span><span class="mpre"> </span><a href="#loc_646_15_646_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_15_646_18&#39;)"><span class="hl_varref"><span class="mpre">ip0</span></span></a><span class="mpre">
+
+            </span><a name="loc_659_13_659_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_659_13_659_22&#39;)"><span class="hl_fundecl"><span class="mpre">goPartial</span></span></a><span class="mpre"> !</span><a name="loc_659_24_659_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_659_24_659_30&#39;)"><span class="hl_vardecl"><span class="mpre">ipeTmp</span></span></a><span class="mpre"> = </span><a href="#loc_661_17_661_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_17_661_19&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre"> </span><a href="#loc_646_15_646_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_15_646_18&#39;)"><span class="hl_varref"><span class="mpre">ip0</span></span></a><span class="mpre"> </span><a href="#loc_646_36_646_39" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_36_646_39&#39;)"><span class="hl_varref"><span class="mpre">op0</span></span></a><span class="mpre">
+              where
+                </span><a name="loc_661_17_661_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_17_661_19&#39;)"><span class="hl_fundecl"><span class="mpre">go</span></span></a><span class="mpre"> !</span><a name="loc_661_21_661_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_21_661_23&#39;)"><span class="hl_vardecl"><span class="mpre">ip</span></span></a><span class="mpre"> !</span><a name="loc_661_25_661_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_25_661_27&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre">
+                  | </span><a href="#loc_661_21_661_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_21_661_23&#39;)"><span class="hl_varref"><span class="mpre">ip</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;</span></span><span class="mpre"> </span><a href="#loc_659_24_659_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_659_24_659_30&#39;)"><span class="hl_varref"><span class="mpre">ipeTmp</span></span></a><span class="mpre"> = do
+                      </span><a name="loc_663_23_663_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_663_23_663_24&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">   &lt;- </span><span class="hl_varref"><span class="mpre">peek</span></span><span class="mpre"> </span><a href="#loc_661_21_661_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_21_661_23&#39;)"><span class="hl_varref"><span class="mpre">ip</span></span></a><span class="mpre">
+                      </span><a name="loc_664_23_664_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_664_23_664_26&#39;)"><span class="hl_vardecl"><span class="mpre">op&#39;</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">runB</span></span><span class="mpre"> </span><a href="#loc_638_26_638_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_638_26_638_27&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><a href="#loc_663_23_663_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_663_23_663_24&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="#loc_661_25_661_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_25_661_27&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre">
+                      </span><a href="#loc_661_17_661_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_17_661_19&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre"> (</span><a href="#loc_661_21_661_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_21_661_23&#39;)"><span class="hl_varref"><span class="mpre">ip</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`plusPtr`</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">1</span></span><span class="mpre">) </span><a href="#loc_664_23_664_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_664_23_664_26&#39;)"><span class="hl_varref"><span class="mpre">op&#39;</span></span></a><span class="mpre">
+                  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> =
+                      </span><a href="#loc_646_9_646_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_9_646_13&#39;)"><span class="hl_varref"><span class="mpre">goBS</span></span></a><span class="mpre"> </span><a href="#loc_661_21_661_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_21_661_23&#39;)"><span class="hl_varref"><span class="mpre">ip</span></span></a><span class="mpre"> (</span><a href="Data.ByteString.Builder.Internal.html#loc_170_20_170_31" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_170_20_170_31&#39;)"><span class="hl_conref"><span class="mpre">BufferRange</span></span></a><span class="mpre"> </span><a href="#loc_661_25_661_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_661_25_661_27&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><a href="#loc_646_40_646_43" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_40_646_43&#39;)"><span class="hl_varref"><span class="mpre">ope</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | Chunk-wise application of &#39;primMapByteStringBounded&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_672_1_672_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_672_1_672_29&#39;)"><span class="mpre">primMapLazyByteStringBounded</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_672_1_672_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_672_1_672_29&#39;)"><span class="mpre">primMapLazyByteStringBounded</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">BoundedPrim</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Lazy.Internal.html#loc_82_6_82_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Lazy.Internal.html#loc_82_6_82_16&#39;)"><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span></a><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_672_1_672_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_672_1_672_29&#39;)"><span class="hl_fundecl"><span class="mpre">primMapLazyByteStringBounded</span></span></a><span class="mpre"> </span><a name="loc_672_30_672_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_672_30_672_31&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre"> =
+    </span><a href="Data.ByteString.Lazy.Internal.html#loc_179_1_179_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Lazy.Internal.html#loc_179_1_179_12&#39;)"><span class="hl_varref"><span class="mpre">L.foldrChunks</span></span></a><span class="mpre"> (\</span><a name="loc_673_21_673_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_673_21_673_22&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> </span><a name="loc_673_23_673_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_673_23_673_24&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_638_1_638_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_638_1_638_25&#39;)"><span class="hl_varref"><span class="mpre">primMapByteStringBounded</span></span></a><span class="mpre"> </span><a href="#loc_672_30_672_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_672_30_672_31&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><a href="#loc_673_21_673_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_673_21_673_22&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="Data.Monoid.html#loc_82_9_82_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_82_9_82_16&#39;)"><span class="hl_infix"><span class="mpre">`mappend`</span></span></a><span class="mpre"> </span><a href="#loc_673_23_673_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_673_23_673_24&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">) </span><a href="Data.Monoid.html#loc_80_9_80_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_80_9_80_15&#39;)"><span class="hl_varref"><span class="mpre">mempty</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Char8 encoding</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Char8 encode a &#39;Char&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_683_1_683_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_683_1_683_6&#39;)"><span class="mpre">char8</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_683_1_683_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_683_1_683_6&#39;)"><span class="mpre">char8</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FixedPrim</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre">
+</span><a name="loc_683_1_683_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_683_1_683_6&#39;)"><span class="hl_vardecl"><span class="mpre">char8</span></span></a><span class="mpre"> = (</span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">ord</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">&gt;$&lt;</span></span><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_73_1_73_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_73_1_73_6&#39;)"><span class="hl_varref"><span class="mpre">word8</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- UTF-8 encoding</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | UTF-8 encode a &#39;Char&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_693_1_693_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_693_1_693_9&#39;)"><span class="mpre">charUtf8</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_693_1_693_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_693_1_693_9&#39;)"><span class="mpre">charUtf8</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">BoundedPrim</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre">
+</span><a name="loc_693_1_693_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_693_1_693_9&#39;)"><span class="hl_vardecl"><span class="mpre">charUtf8</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">boudedPrim</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">4</span></span><span class="mpre"> (</span><a href="#loc_723_1_723_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_1_723_15&#39;)"><span class="hl_varref"><span class="mpre">encodeCharUtf8</span></span></a><span class="mpre"> </span><a href="#loc_697_5_697_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_697_5_697_7&#39;)"><span class="hl_varref"><span class="mpre">f1</span></span></a><span class="mpre"> </span><a href="#loc_699_5_699_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_699_5_699_7&#39;)"><span class="hl_varref"><span class="mpre">f2</span></span></a><span class="mpre"> </span><a href="#loc_702_5_702_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_5_702_7&#39;)"><span class="hl_varref"><span class="mpre">f3</span></span></a><span class="mpre"> </span><a href="#loc_706_5_706_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_5_706_7&#39;)"><span class="hl_varref"><span class="mpre">f4</span></span></a><span class="mpre">)
+  where
+    </span><a name="loc_695_5_695_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_5_695_10&#39;)"><span class="hl_fundecl"><span class="mpre">pokeN</span></span></a><span class="mpre"> </span><a name="loc_695_11_695_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_11_695_12&#39;)"><span class="hl_vardecl"><span class="mpre">n</span></span></a><span class="mpre"> </span><a name="loc_695_13_695_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_13_695_15&#39;)"><span class="hl_vardecl"><span class="mpre">io</span></span></a><span class="mpre"> </span><a name="loc_695_16_695_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_16_695_18&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre">  = </span><a href="#loc_695_13_695_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_13_695_15&#39;)"><span class="hl_varref"><span class="mpre">io</span></span></a><span class="mpre"> </span><a href="#loc_695_16_695_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_16_695_18&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&gt;&gt;</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><a href="#loc_695_16_695_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_16_695_18&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`plusPtr`</span></span><span class="mpre"> </span><a href="#loc_695_11_695_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_11_695_12&#39;)"><span class="hl_varref"><span class="mpre">n</span></span></a><span class="mpre">)
+
+    </span><a name="loc_697_5_697_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_697_5_697_7&#39;)"><span class="hl_fundecl"><span class="mpre">f1</span></span></a><span class="mpre"> </span><a name="loc_697_8_697_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_697_8_697_10&#39;)"><span class="hl_vardecl"><span class="mpre">x1</span></span></a><span class="mpre">          = </span><a href="#loc_695_5_695_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_5_695_10&#39;)"><span class="hl_varref"><span class="mpre">pokeN</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">1</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_697_33_697_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_697_33_697_35&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre"> -&gt; do </span><span class="hl_varref"><span class="mpre">pokeByteOff</span></span><span class="mpre"> </span><a href="#loc_697_33_697_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_697_33_697_35&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre"> </span><a href="#loc_697_8_697_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_697_8_697_10&#39;)"><span class="hl_varref"><span class="mpre">x1</span></span></a><span class="mpre">
+
+    </span><a name="loc_699_5_699_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_699_5_699_7&#39;)"><span class="hl_fundecl"><span class="mpre">f2</span></span></a><span class="mpre"> </span><a name="loc_699_8_699_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_699_8_699_10&#39;)"><span class="hl_vardecl"><span class="mpre">x1</span></span></a><span class="mpre"> </span><a name="loc_699_11_699_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_699_11_699_13&#39;)"><span class="hl_vardecl"><span class="mpre">x2</span></span></a><span class="mpre">       = </span><a href="#loc_695_5_695_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_5_695_10&#39;)"><span class="hl_varref"><span class="mpre">pokeN</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">2</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_699_33_699_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_699_33_699_35&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre"> -&gt; do </span><span class="hl_varref"><span class="mpre">pokeByteOff</span></span><span class="mpre"> </span><a href="#loc_699_33_699_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_699_33_699_35&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre"> </span><a href="#loc_699_8_699_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_699_8_699_10&#39;)"><span class="hl_varref"><span class="mpre">x1</span></span></a><span class="mpre">
+                                         </span><span class="hl_varref"><span class="mpre">pokeByteOff</span></span><span class="mpre"> </span><a href="#loc_699_33_699_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_699_33_699_35&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">1</span></span><span class="mpre"> </span><a href="#loc_699_11_699_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_699_11_699_13&#39;)"><span class="hl_varref"><span class="mpre">x2</span></span></a><span class="mpre">
+
+    </span><a name="loc_702_5_702_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_5_702_7&#39;)"><span class="hl_fundecl"><span class="mpre">f3</span></span></a><span class="mpre"> </span><a name="loc_702_8_702_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_8_702_10&#39;)"><span class="hl_vardecl"><span class="mpre">x1</span></span></a><span class="mpre"> </span><a name="loc_702_11_702_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_11_702_13&#39;)"><span class="hl_vardecl"><span class="mpre">x2</span></span></a><span class="mpre"> </span><a name="loc_702_14_702_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_14_702_16&#39;)"><span class="hl_vardecl"><span class="mpre">x3</span></span></a><span class="mpre">    = </span><a href="#loc_695_5_695_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_5_695_10&#39;)"><span class="hl_varref"><span class="mpre">pokeN</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">3</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_702_33_702_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_33_702_35&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre"> -&gt; do </span><span class="hl_varref"><span class="mpre">pokeByteOff</span></span><span class="mpre"> </span><a href="#loc_702_33_702_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_33_702_35&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre"> </span><a href="#loc_702_8_702_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_8_702_10&#39;)"><span class="hl_varref"><span class="mpre">x1</span></span></a><span class="mpre">
+                                         </span><span class="hl_varref"><span class="mpre">pokeByteOff</span></span><span class="mpre"> </span><a href="#loc_702_33_702_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_33_702_35&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">1</span></span><span class="mpre"> </span><a href="#loc_702_11_702_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_11_702_13&#39;)"><span class="hl_varref"><span class="mpre">x2</span></span></a><span class="mpre">
+                                         </span><span class="hl_varref"><span class="mpre">pokeByteOff</span></span><span class="mpre"> </span><a href="#loc_702_33_702_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_33_702_35&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">2</span></span><span class="mpre"> </span><a href="#loc_702_14_702_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_14_702_16&#39;)"><span class="hl_varref"><span class="mpre">x3</span></span></a><span class="mpre">
+
+    </span><a name="loc_706_5_706_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_5_706_7&#39;)"><span class="hl_fundecl"><span class="mpre">f4</span></span></a><span class="mpre"> </span><a name="loc_706_8_706_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_8_706_10&#39;)"><span class="hl_vardecl"><span class="mpre">x1</span></span></a><span class="mpre"> </span><a name="loc_706_11_706_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_11_706_13&#39;)"><span class="hl_vardecl"><span class="mpre">x2</span></span></a><span class="mpre"> </span><a name="loc_706_14_706_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_14_706_16&#39;)"><span class="hl_vardecl"><span class="mpre">x3</span></span></a><span class="mpre"> </span><a name="loc_706_17_706_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_17_706_19&#39;)"><span class="hl_vardecl"><span class="mpre">x4</span></span></a><span class="mpre"> = </span><a href="#loc_695_5_695_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_5_695_10&#39;)"><span class="hl_varref"><span class="mpre">pokeN</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">4</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_706_33_706_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_33_706_35&#39;)"><span class="hl_vardecl"><span class="mpre">op</span></span></a><span class="mpre"> -&gt; do </span><span class="hl_varref"><span class="mpre">pokeByteOff</span></span><span class="mpre"> </span><a href="#loc_706_33_706_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_33_706_35&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre"> </span><a href="#loc_706_8_706_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_8_706_10&#39;)"><span class="hl_varref"><span class="mpre">x1</span></span></a><span class="mpre">
+                                         </span><span class="hl_varref"><span class="mpre">pokeByteOff</span></span><span class="mpre"> </span><a href="#loc_706_33_706_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_33_706_35&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">1</span></span><span class="mpre"> </span><a href="#loc_706_11_706_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_11_706_13&#39;)"><span class="hl_varref"><span class="mpre">x2</span></span></a><span class="mpre">
+                                         </span><span class="hl_varref"><span class="mpre">pokeByteOff</span></span><span class="mpre"> </span><a href="#loc_706_33_706_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_33_706_35&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">2</span></span><span class="mpre"> </span><a href="#loc_706_14_706_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_14_706_16&#39;)"><span class="hl_varref"><span class="mpre">x3</span></span></a><span class="mpre">
+                                         </span><span class="hl_varref"><span class="mpre">pokeByteOff</span></span><span class="mpre"> </span><a href="#loc_706_33_706_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_33_706_35&#39;)"><span class="hl_varref"><span class="mpre">op</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">3</span></span><span class="mpre"> </span><a href="#loc_706_17_706_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_17_706_19&#39;)"><span class="hl_varref"><span class="mpre">x4</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a Unicode character to another datatype, using UTF-8. This function</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- acts as an abstract way of encoding characters, as it is unaware of what</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- needs to happen with the resulting bytes: you have to specify functions to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- deal with those.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_723_1_723_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_1_723_15&#39;)"><span class="mpre">encodeCharUtf8</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_723_1_723_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_1_723_15&#39;)"><span class="mpre">encodeCharUtf8</span></a><span class="mpre"> :: (</span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)                             </span><span class="hl_comment"><span class="mpre">-- ^ 1-byte UTF-8</span></span><span class="mpre">
+               -&gt; (</span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)                    </span><span class="hl_comment"><span class="mpre">-- ^ 2-byte UTF-8</span></span><span class="mpre">
+               -&gt; (</span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)           </span><span class="hl_comment"><span class="mpre">-- ^ 3-byte UTF-8</span></span><span class="mpre">
+               -&gt; (</span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)  </span><span class="hl_comment"><span class="mpre">-- ^ 4-byte UTF-8</span></span><span class="mpre">
+               -&gt; </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre">                                     </span><span class="hl_comment"><span class="mpre">-- ^ Input &#39;Char&#39;</span></span><span class="mpre">
+               -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">                                        </span><span class="hl_comment"><span class="mpre">-- ^ Result</span></span><span class="mpre">
+</span><a name="loc_723_1_723_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_1_723_15&#39;)"><span class="hl_fundecl"><span class="mpre">encodeCharUtf8</span></span></a><span class="mpre"> </span><a name="loc_723_16_723_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_16_723_18&#39;)"><span class="hl_vardecl"><span class="mpre">f1</span></span></a><span class="mpre"> </span><a name="loc_723_19_723_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_19_723_21&#39;)"><span class="hl_vardecl"><span class="mpre">f2</span></span></a><span class="mpre"> </span><a name="loc_723_22_723_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_22_723_24&#39;)"><span class="hl_vardecl"><span class="mpre">f3</span></span></a><span class="mpre"> </span><a name="loc_723_25_723_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_25_723_27&#39;)"><span class="hl_vardecl"><span class="mpre">f4</span></span></a><span class="mpre"> </span><a name="loc_723_28_723_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_28_723_29&#39;)"><span class="hl_vardecl"><span class="mpre">c</span></span></a><span class="mpre"> = case </span><span class="hl_varref"><span class="mpre">ord</span></span><span class="mpre"> </span><a href="#loc_723_28_723_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_28_723_29&#39;)"><span class="hl_varref"><span class="mpre">c</span></span></a><span class="mpre"> of
+    </span><a name="loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> | </span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;=</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x7F</span></span><span class="mpre"> -&gt; </span><a href="#loc_723_16_723_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_16_723_18&#39;)"><span class="hl_varref"><span class="mpre">f1</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+      | </span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;=</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x07FF</span></span><span class="mpre"> -&gt;
+           let </span><a name="loc_726_16_726_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_726_16_726_18&#39;)"><span class="hl_vardecl"><span class="mpre">x1</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> (</span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="Data.Bits.html#loc_226_5_226_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Bits.html#loc_226_5_226_11&#39;)"><span class="hl_infix"><span class="mpre">`shiftR`</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">6</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">+</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0xC0</span></span><span class="mpre">
+               </span><a name="loc_727_16_727_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_727_16_727_18&#39;)"><span class="hl_vardecl"><span class="mpre">x2</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> (</span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x3F</span></span><span class="mpre">)   </span><span class="hl_infix"><span class="mpre">+</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x80</span></span><span class="mpre">
+           in </span><a href="#loc_723_19_723_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_19_723_21&#39;)"><span class="hl_varref"><span class="mpre">f2</span></span></a><span class="mpre"> </span><a href="#loc_726_16_726_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_726_16_726_18&#39;)"><span class="hl_varref"><span class="mpre">x1</span></span></a><span class="mpre"> </span><a href="#loc_727_16_727_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_727_16_727_18&#39;)"><span class="hl_varref"><span class="mpre">x2</span></span></a><span class="mpre">
+      | </span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;=</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0xFFFF</span></span><span class="mpre"> -&gt;
+           let </span><a name="loc_730_16_730_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_730_16_730_18&#39;)"><span class="hl_vardecl"><span class="mpre">x1</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> (</span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="Data.Bits.html#loc_226_5_226_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Bits.html#loc_226_5_226_11&#39;)"><span class="hl_infix"><span class="mpre">`shiftR`</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">12</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">+</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0xE0</span></span><span class="mpre">
+               </span><a name="loc_731_16_731_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_731_16_731_18&#39;)"><span class="hl_vardecl"><span class="mpre">x2</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> ((</span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="Data.Bits.html#loc_226_5_226_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Bits.html#loc_226_5_226_11&#39;)"><span class="hl_infix"><span class="mpre">`shiftR`</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">6</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x3F</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">+</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x80</span></span><span class="mpre">
+               </span><a name="loc_732_16_732_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_732_16_732_18&#39;)"><span class="hl_vardecl"><span class="mpre">x3</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> (</span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x3F</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">+</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x80</span></span><span class="mpre">
+           in </span><a href="#loc_723_22_723_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_22_723_24&#39;)"><span class="hl_varref"><span class="mpre">f3</span></span></a><span class="mpre"> </span><a href="#loc_730_16_730_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_730_16_730_18&#39;)"><span class="hl_varref"><span class="mpre">x1</span></span></a><span class="mpre"> </span><a href="#loc_731_16_731_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_731_16_731_18&#39;)"><span class="hl_varref"><span class="mpre">x2</span></span></a><span class="mpre"> </span><a href="#loc_732_16_732_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_732_16_732_18&#39;)"><span class="hl_varref"><span class="mpre">x3</span></span></a><span class="mpre">
+      | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> -&gt;
+           let </span><a name="loc_735_16_735_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_735_16_735_18&#39;)"><span class="hl_vardecl"><span class="mpre">x1</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> (</span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="Data.Bits.html#loc_226_5_226_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Bits.html#loc_226_5_226_11&#39;)"><span class="hl_infix"><span class="mpre">`shiftR`</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">18</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">+</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0xF0</span></span><span class="mpre">
+               </span><a name="loc_736_16_736_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_736_16_736_18&#39;)"><span class="hl_vardecl"><span class="mpre">x2</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> ((</span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="Data.Bits.html#loc_226_5_226_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Bits.html#loc_226_5_226_11&#39;)"><span class="hl_infix"><span class="mpre">`shiftR`</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">12</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x3F</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">+</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x80</span></span><span class="mpre">
+               </span><a name="loc_737_16_737_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_737_16_737_18&#39;)"><span class="hl_vardecl"><span class="mpre">x3</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> ((</span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="Data.Bits.html#loc_226_5_226_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Bits.html#loc_226_5_226_11&#39;)"><span class="hl_infix"><span class="mpre">`shiftR`</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">6</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x3F</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">+</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x80</span></span><span class="mpre">
+               </span><a name="loc_738_16_738_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_738_16_738_18&#39;)"><span class="hl_vardecl"><span class="mpre">x4</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> (</span><a href="#loc_724_5_724_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_724_5_724_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x3F</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">+</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x80</span></span><span class="mpre">
+           in </span><a href="#loc_723_25_723_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_723_25_723_27&#39;)"><span class="hl_varref"><span class="mpre">f4</span></span></a><span class="mpre"> </span><a href="#loc_735_16_735_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_735_16_735_18&#39;)"><span class="hl_varref"><span class="mpre">x1</span></span></a><span class="mpre"> </span><a href="#loc_736_16_736_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_736_16_736_18&#39;)"><span class="hl_varref"><span class="mpre">x2</span></span></a><span class="mpre"> </span><a href="#loc_737_16_737_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_737_16_737_18&#39;)"><span class="hl_varref"><span class="mpre">x3</span></span></a><span class="mpre"> </span><a href="#loc_738_16_738_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_738_16_738_18&#39;)"><span class="hl_varref"><span class="mpre">x4</span></span></a><span class="mpre">
+
+
+</span></div></body></html>

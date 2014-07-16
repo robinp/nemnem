@@ -1,0 +1,223 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{-|
+    This module describes the attributes that can be specified on flags and modes.
+
+    Many attributes have examples specified on the following data type:
+
+    &gt; data Sample = Sample {hello :: String}
+-}</span></span><span class="mpre">
+module System.Console.CmdArgs.Implicit.UI where
+
+import System.Console.CmdArgs.Implicit.Ann
+import Data.Typeable
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag: \&quot;I want users to be able to omit the value associated with this flag.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Make the value of a flag optional. If @--flag@ is given, it will</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   be treated as @--flag=/this_argument/@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = def &amp;= opt &quot;foo&quot;}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;   -h --hello[=VALUE]    (default=foo)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Note that all flags in CmdArgs are optional, and if omitted will use their default value.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Those annotated with @opt@ also allow the flag to be present without an associated value.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   As an example:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = &quot;DEFAULT&quot; &amp;= opt &quot;OPTIONAL&quot;}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; $ main</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = &quot;DEFAULT&quot;}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; $ main --hello</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = &quot;OPTIONAL&quot;}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; $ main --hello=VALUE</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = &quot;VALUE&quot;}</span></span><span class="mpre">
+</span><a href="#loc_35_1_35_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_1_35_4&#39;)"><span class="mpre">opt</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxTuple (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/cmdargs-0.10.7/System/Console/CmdArgs/Implicit/UI.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 8, srcSpanEndLine = 34, srcSpanEndColumn = 31}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/cmdargs-0.10.7/System/Console/CmdArgs/Implicit/UI.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 8, srcSpanEndLine = 34, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/cmdargs-0.10.7/System/C"><span class="mpre">(Show a, Typeable a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_35_1_35_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_1_35_4&#39;)"><span class="hl_fundecl"><span class="mpre">opt</span></span></a><span class="mpre"> </span><a name="loc_35_5_35_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_5_35_6&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_15_7_15_19" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_15_7_15_19&#39;)"><span class="hl_conref"><span class="mpre">FlagOptional</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> case </span><a href="Data.Typeable.html#loc_112_1_112_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Typeable.html#loc_112_1_112_5&#39;)"><span class="hl_varref"><span class="mpre">cast</span></span></a><span class="mpre"> </span><a href="#loc_35_5_35_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_5_35_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> of
+    </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> </span><a name="loc_36_10_36_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_10_36_11&#39;)"><span class="hl_vardecl"><span class="mpre">y</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_36_10_36_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_10_36_11&#39;)"><span class="hl_varref"><span class="mpre">y</span></span></a><span class="mpre">
+    _ -&gt; </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_35_5_35_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_5_35_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag: \&quot;For this flag, users need to give something of type ...\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   The the type of a flag&#39;s value, usually upper case. Only used</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   for the help message. Commonly the type will be @FILE@ (&#39;typFile&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   or @DIR@ (&#39;typDir&#39;).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = def &amp;= typ &quot;MESSAGE&quot;}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;   -h --hello=MESSAGE</span></span><span class="mpre">
+</span><a href="#loc_48_1_48_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_1_48_4&#39;)"><span class="mpre">typ</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_48_1_48_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_1_48_4&#39;)"><span class="hl_vardecl"><span class="mpre">typ</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_18_7_18_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_18_7_18_15&#39;)"><span class="hl_conref"><span class="mpre">FlagType</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag: \&quot;Users must give a file for this flag&#39;s value.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Alias for @&#39;typ&#39; &quot;FILE&quot;@.</span></span><span class="mpre">
+</span><a href="#loc_54_1_54_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_1_54_8&#39;)"><span class="mpre">typFile</span></a><span class="mpre"> :: </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_54_1_54_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_1_54_8&#39;)"><span class="hl_vardecl"><span class="mpre">typFile</span></span></a><span class="mpre"> = </span><a href="#loc_48_1_48_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_1_48_4&#39;)"><span class="hl_varref"><span class="mpre">typ</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;FILE&quot;</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag: \&quot;Users must give a directory for this flag&#39;s value.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Alias for @&#39;typ&#39; &quot;DIR&quot;@.</span></span><span class="mpre">
+</span><a href="#loc_60_1_60_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_7&#39;)"><span class="mpre">typDir</span></a><span class="mpre"> :: </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_60_1_60_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_7&#39;)"><span class="hl_vardecl"><span class="mpre">typDir</span></span></a><span class="mpre"> = </span><a href="#loc_48_1_48_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_1_48_4&#39;)"><span class="hl_varref"><span class="mpre">typ</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;DIR&quot;</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag/Mode: \&quot;The help message is ...\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Descriptive text used in the help output.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = def &amp;= help &quot;Help message&quot;}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;   -h --hello=VALUE      Help message</span></span><span class="mpre">
+</span><a href="#loc_70_1_70_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_1_70_5&#39;)"><span class="mpre">help</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_70_1_70_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_1_70_5&#39;)"><span class="hl_vardecl"><span class="mpre">help</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_9_7_9_11" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_9_7_9_11&#39;)"><span class="hl_conref"><span class="mpre">Help</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-
+-- | Flag: Specify group membership for this flag
+--
+-- &gt; {str = def &amp;= group &quot;Repository Management&quot;
+-- &gt;   ---- Repository Management ----
+-- &gt;   -s --str=VALUE
+group :: String -&gt; Ann
+group = FldGroup
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag: \&quot;Use this flag name for this field.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Add flags which trigger this option.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = def &amp;= name &quot;foo&quot;}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;   -h --hello --foo=VALUE</span></span><span class="mpre">
+</span><a href="#loc_89_1_89_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_5&#39;)"><span class="mpre">name</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_89_1_89_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_5&#39;)"><span class="hl_vardecl"><span class="mpre">name</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_10_7_10_11" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_10_7_10_11&#39;)"><span class="hl_conref"><span class="mpre">Name</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag: \&quot;Put non-flag arguments here.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   All argument flags not captured by &#39;argPos&#39; are returned by &#39;args&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = def &amp;= args}</span></span><span class="mpre">
+</span><a href="#loc_97_1_97_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_1_97_5&#39;)"><span class="mpre">args</span></a><span class="mpre"> :: </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_97_1_97_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_1_97_5&#39;)"><span class="hl_vardecl"><span class="mpre">args</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_16_7_16_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_16_7_16_15&#39;)"><span class="hl_conref"><span class="mpre">FlagArgs</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag: \&quot;Put the nth non-flag argument here.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   This field should be used to store a particular argument position</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   (0-based).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = def &amp;= argPos 0}</span></span><span class="mpre">
+</span><a href="#loc_106_1_106_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_1_106_7&#39;)"><span class="mpre">argPos</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_106_1_106_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_1_106_7&#39;)"><span class="hl_vardecl"><span class="mpre">argPos</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_17_7_17_17" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_17_7_17_17&#39;)"><span class="hl_conref"><span class="mpre">FlagArgPos</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag\/Mode: \&quot;Give these flags/modes a group name in the help output.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   This mode will be used for all following modes/flags, until the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   next @groupname@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = def &amp;= groupname &quot;Welcomes&quot;}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Welcomes</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;   -h --hello=VALUE</span></span><span class="mpre">
+</span><a href="#loc_118_1_118_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_1_118_10&#39;)"><span class="mpre">groupname</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_118_1_118_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_1_118_10&#39;)"><span class="hl_vardecl"><span class="mpre">groupname</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_13_7_13_16" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_13_7_13_16&#39;)"><span class="hl_conref"><span class="mpre">GroupName</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Mode: \&quot;A longer description of this mode is ...\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Suffix to be added to the help message.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Sample{..} &amp;= details [&quot;More details on the website www.example.org&quot;]</span></span><span class="mpre">
+</span><a href="#loc_127_1_127_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_1_127_8&#39;)"><span class="mpre">details</span></a><span class="mpre"> :: [</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">] -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_127_1_127_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_1_127_8&#39;)"><span class="hl_vardecl"><span class="mpre">details</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_21_7_21_21" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_21_7_21_21&#39;)"><span class="hl_conref"><span class="mpre">ModeHelpSuffix</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Modes: \&quot;My program name\/version\/copyright is ...\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   One line summary of the entire program, the first line of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   @--help@ and the only line of @--version@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Sample{..} &amp;= summary &quot;CmdArgs v0.0, (C) Neil Mitchell 1981&quot;</span></span><span class="mpre">
+</span><a href="#loc_136_1_136_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_136_1_136_8&#39;)"><span class="mpre">summary</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_136_1_136_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_136_1_136_8&#39;)"><span class="hl_vardecl"><span class="mpre">summary</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_23_7_23_18" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_23_7_23_18&#39;)"><span class="hl_conref"><span class="mpre">ProgSummary</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Mode: \&quot;If the user doesn&#39;t give a mode, use this one.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   This mode is the default. If no mode is specified and a mode has this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   attribute then that mode is selected, otherwise an error is raised.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; modes [Mode1{..}, Mode2{..} &amp;= auto, Mode3{..}]</span></span><span class="mpre">
+</span><a href="#loc_146_1_146_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_146_1_146_5&#39;)"><span class="mpre">auto</span></a><span class="mpre"> :: </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_146_1_146_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_146_1_146_5&#39;)"><span class="hl_vardecl"><span class="mpre">auto</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_20_7_20_18" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_20_7_20_18&#39;)"><span class="hl_conref"><span class="mpre">ModeDefault</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Modes: \&quot;My program executable is named ...\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   This is the name of the program executable. Only used in the help message.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Defaults to the type of the mode.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Sample{..} &amp;= program &quot;sample&quot;</span></span><span class="mpre">
+</span><a href="#loc_156_1_156_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_156_1_156_8&#39;)"><span class="mpre">program</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_156_1_156_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_156_1_156_8&#39;)"><span class="hl_vardecl"><span class="mpre">program</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_24_7_24_18" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_24_7_24_18&#39;)"><span class="hl_conref"><span class="mpre">ProgProgram</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag: \&quot;Don&#39;t guess any names for this field.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   A field should not have any flag names guessed for it.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   All flag names must be specified by &#39;flag&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = def &amp;= explicit &amp;= name &quot;foo&quot;}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;   --foo=VALUE</span></span><span class="mpre">
+</span><a href="#loc_167_1_167_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_1_167_9&#39;)"><span class="mpre">explicit</span></a><span class="mpre"> :: </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_167_1_167_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_1_167_9&#39;)"><span class="hl_vardecl"><span class="mpre">explicit</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_11_7_11_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_11_7_11_15&#39;)"><span class="hl_conref"><span class="mpre">Explicit</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Flag/Mode: \&quot;Ignore this field, don&#39;t let the user set it.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   A mode or field is not dealt with by CmdArgs.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {hello = def, extra = def &amp;= ignore}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;   --hello=VALUE</span></span><span class="mpre">
+</span><a href="#loc_177_1_177_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_177_1_177_7&#39;)"><span class="mpre">ignore</span></a><span class="mpre"> :: </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_177_1_177_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_177_1_177_7&#39;)"><span class="hl_vardecl"><span class="mpre">ignore</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_12_7_12_13" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_12_7_12_13&#39;)"><span class="hl_conref"><span class="mpre">Ignore</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Modes: \&quot;My program needs verbosity flags.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Add @--verbose@ and @--quiet@ flags.</span></span><span class="mpre">
+</span><a href="#loc_184_1_184_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_184_1_184_10&#39;)"><span class="mpre">verbosity</span></a><span class="mpre"> :: </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_184_1_184_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_184_1_184_10&#39;)"><span class="hl_vardecl"><span class="mpre">verbosity</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_25_7_25_20" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_25_7_25_20&#39;)"><span class="hl_conref"><span class="mpre">ProgVerbosity</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Modes: \&quot;Customise the help argument.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Add extra options to a help argument, such as &#39;help&#39;, &#39;name&#39;, &#39;ignore&#39; or &#39;explicit&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Sample{..} &amp;= helpArg [explicit, name &quot;h&quot;]</span></span><span class="mpre">
+</span><a href="#loc_193_1_193_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_193_1_193_8&#39;)"><span class="mpre">helpArg</span></a><span class="mpre"> :: [</span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">] -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_193_1_193_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_193_1_193_8&#39;)"><span class="hl_vardecl"><span class="mpre">helpArg</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_26_7_26_18" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_26_7_26_18&#39;)"><span class="hl_conref"><span class="mpre">ProgHelpArg</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Modes: \&quot;Customise the version argument.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Add extra options to a version argument, such as &#39;help&#39;, &#39;name&#39;, &#39;ignore&#39;, &#39;summary&#39; or &#39;explicit&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Sample{..} &amp;= versionArg [ignore]</span></span><span class="mpre">
+</span><a href="#loc_202_1_202_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_1_202_11&#39;)"><span class="mpre">versionArg</span></a><span class="mpre"> :: [</span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">] -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_202_1_202_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_1_202_11&#39;)"><span class="hl_vardecl"><span class="mpre">versionArg</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_27_7_27_21" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_27_7_27_21&#39;)"><span class="hl_conref"><span class="mpre">ProgVersionArg</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Modes: \&quot;Customise the verbosity arguments.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Add extra options to a verbosity arguments (@--verbose@ and @--quiet@),</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   such as &#39;help&#39;, &#39;name&#39;, &#39;ignore&#39; or &#39;explicit&#39;. The verbose options come</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   first, followed by the quiet options.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Sample{..} &amp;= verbosityArgs [ignore] [name &quot;silent&quot;, explicit]</span></span><span class="mpre">
+</span><a href="#loc_212_1_212_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_212_1_212_14&#39;)"><span class="mpre">verbosityArgs</span></a><span class="mpre"> :: [</span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">] -&gt; [</span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">] -&gt; </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_212_1_212_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_212_1_212_14&#39;)"><span class="hl_vardecl"><span class="mpre">verbosityArgs</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_28_7_28_24" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_28_7_28_24&#39;)"><span class="hl_conref"><span class="mpre">ProgVerbosityArgs</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Program: \&quot;Turn off \@ expansion.\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Usually arguments starting with \@ are treated as a file containing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   a set of arguments. This annotation turns off that behaviour.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; Sample{..} &amp;= noAtExpand</span></span><span class="mpre">
+</span><a href="#loc_222_1_222_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_1_222_11&#39;)"><span class="mpre">noAtExpand</span></a><span class="mpre"> :: </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_8_6_8_9&#39;)"><span class="hl_tyconref"><span class="mpre">Ann</span></span></a><span class="mpre">
+</span><a name="loc_222_1_222_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_1_222_11&#39;)"><span class="hl_vardecl"><span class="mpre">noAtExpand</span></span></a><span class="mpre"> = </span><a href="System.Console.CmdArgs.Implicit.Ann.html#loc_29_7_29_21" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Console.CmdArgs.Implicit.Ann.html#loc_29_7_29_21&#39;)"><span class="hl_conref"><span class="mpre">ProgNoAtExpand</span></span></a><span class="mpre">
+</span></div></body></html>

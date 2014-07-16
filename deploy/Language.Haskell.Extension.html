@@ -1,0 +1,784 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE DeriveDataTypeable #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Language.Haskell.Extension</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  Isaac Jones 2003-2004</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Haskell language dialects and extensions</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Isaac Jones nor the names of other
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+&quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -}</span></span><span class="mpre">
+
+module Language.Haskell.Extension (
+        Language(..),
+        knownLanguages,
+
+        Extension(..),
+        KnownExtension(..),
+        knownExtensions,
+        deprecatedExtensions
+  ) where
+
+import Distribution.Text (</span><a href="Distribution.Text.html#loc_26_7_26_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_26_7_26_11&#39;)"><span class="mpre">Text</span></a><span class="mpre">(..))
+import qualified Distribution.Compat.ReadP as Parse
+import qualified Text.PrettyPrint as Disp
+import qualified Data.Char as Char (</span><a href="GHC.Unicode.html#loc_136_1_136_11" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Unicode.html#loc_136_1_136_11&#39;)"><span class="mpre">isAlphaNum</span></a><span class="mpre">)
+import Data.Array (Array, accumArray, bounds, Ix(inRange), (!))
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 57, srcSpanStartColumn = 8, srcSpanEndLine = 57, srcSpanEndColumn = 17}, srcInfoPoints = []}) &quot;Data.Data&quot;"><span class="mpre">Data.Data</span></span><span class="mpre"> (Data)
+import Data.Typeable (</span><a href="Data.Typeable.Internal.html#loc_196_7_196_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Typeable.Internal.html#loc_196_7_196_15&#39;)"><span class="mpre">Typeable</span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- ------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * Language</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | This represents a Haskell language dialect.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Language &#39;Extension&#39;s are interpreted relative to one of these base</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- languages.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+data </span><a name="loc_69_6_69_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_6_69_14&#39;)"><span class="hl_tycondecl"><span class="mpre">Language</span></span></a><span class="mpre"> =
+
+  </span><span class="hl_comment"><span class="mpre">-- | The Haskell 98 language as defined by the Haskell 98 report.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &lt;http://haskell.org/onlinereport/&gt;</span></span><span class="mpre">
+     </span><a name="loc_73_6_73_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_6_73_15&#39;)"><span class="hl_condecl"><span class="mpre">Haskell98</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | The Haskell 2010 language as defined by the Haskell 2010 report.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &lt;http://www.haskell.org/onlinereport/haskell2010&gt;</span></span><span class="mpre">
+  | </span><a name="loc_77_5_77_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_5_77_16&#39;)"><span class="hl_condecl"><span class="mpre">Haskell2010</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | An unknown language, identified by its name.</span></span><span class="mpre">
+  | </span><a name="loc_80_5_80_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_5_80_20&#39;)"><span class="hl_condecl"><span class="mpre">UnknownLanguage</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 81, srcSpanStartColumn = 3, srcSpanEndLine = 81, srcSpanEndColumn = 44}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 81, srcSpanStartColumn = 3, srcSpanEndLine = 81, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Exten"><span class="mpre">deriving (Show, Read, Eq, Typeable, Data)</span></span><span class="mpre">
+
+</span><a href="#loc_84_1_84_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_15&#39;)"><span class="mpre">knownLanguages</span></a><span class="mpre"> :: [</span><a href="#loc_69_6_69_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_6_69_14&#39;)"><span class="hl_tyconref"><span class="mpre">Language</span></span></a><span class="mpre">]
+</span><a name="loc_84_1_84_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_15&#39;)"><span class="hl_vardecl"><span class="mpre">knownLanguages</span></span></a><span class="mpre"> = [</span><a href="#loc_73_6_73_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_6_73_15&#39;)"><span class="hl_conref"><span class="mpre">Haskell98</span></span></a><span class="mpre">, </span><a href="#loc_77_5_77_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_5_77_16&#39;)"><span class="hl_conref"><span class="mpre">Haskell2010</span></span></a><span class="mpre">]
+
+instance </span><a href="Distribution.Text.html#loc_26_7_26_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_26_7_26_11&#39;)"><span class="hl_classref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><a href="#loc_69_6_69_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_6_69_14&#39;)"><span class="hl_tyconref"><span class="mpre">Language</span></span></a><span class="mpre"> where
+  </span><a href="Distribution.Text.html#loc_27_3_27_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_27_3_27_7&#39;)"><span class="hl_fundecl"><span class="mpre">disp</span></span></a><span class="mpre"> (</span><a href="#loc_80_5_80_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_5_80_20&#39;)"><span class="hl_conref"><span class="mpre">UnknownLanguage</span></span></a><span class="mpre"> </span><a name="loc_87_25_87_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_25_87_30&#39;)"><span class="hl_vardecl"><span class="mpre">other</span></span></a><span class="mpre">) = </span><a href="Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5&#39;)"><span class="hl_varref"><span class="mpre">Disp.text</span></span></a><span class="mpre"> </span><a href="#loc_87_25_87_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_25_87_30&#39;)"><span class="hl_varref"><span class="mpre">other</span></span></a><span class="mpre">
+  </span><a href="Distribution.Text.html#loc_27_3_27_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_27_3_27_7&#39;)"><span class="hl_fundecl"><span class="mpre">disp</span></span></a><span class="mpre"> </span><a name="loc_88_8_88_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_88_8_88_13&#39;)"><span class="hl_vardecl"><span class="mpre">other</span></span></a><span class="mpre">                   = </span><a href="Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5&#39;)"><span class="hl_varref"><span class="mpre">Disp.text</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_88_8_88_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_88_8_88_13&#39;)"><span class="hl_varref"><span class="mpre">other</span></span></a><span class="mpre">)
+
+  </span><a href="Distribution.Text.html#loc_28_3_28_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_28_3_28_8&#39;)"><span class="hl_vardecl"><span class="mpre">parse</span></span></a><span class="mpre"> = do
+    </span><a name="loc_91_5_91_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_5_91_9&#39;)"><span class="hl_vardecl"><span class="mpre">lang</span></span></a><span class="mpre"> &lt;- </span><a href="Distribution.Compat.ReadP.html#loc_264_1_264_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Compat.ReadP.html#loc_264_1_264_7&#39;)"><span class="hl_varref"><span class="mpre">Parse.munch1</span></span></a><span class="mpre"> </span><a href="GHC.Unicode.html#loc_136_1_136_11" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Unicode.html#loc_136_1_136_11&#39;)"><span class="hl_varref"><span class="mpre">Char.isAlphaNum</span></span></a><span class="mpre">
+    </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><a href="#loc_95_1_95_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_17&#39;)"><span class="hl_varref"><span class="mpre">classifyLanguage</span></span></a><span class="mpre"> </span><a href="#loc_91_5_91_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_5_91_9&#39;)"><span class="hl_varref"><span class="mpre">lang</span></span></a><span class="mpre">)
+
+</span><a href="#loc_95_1_95_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_17&#39;)"><span class="mpre">classifyLanguage</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="#loc_69_6_69_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_6_69_14&#39;)"><span class="hl_tyconref"><span class="mpre">Language</span></span></a><span class="mpre">
+</span><a name="loc_95_1_95_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_17&#39;)"><span class="hl_vardecl"><span class="mpre">classifyLanguage</span></span></a><span class="mpre"> = \</span><a name="loc_95_21_95_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_21_95_24&#39;)"><span class="hl_vardecl"><span class="mpre">str</span></span></a><span class="mpre"> -&gt; case </span><span class="hl_varref"><span class="mpre">lookup</span></span><span class="mpre"> </span><a href="#loc_95_21_95_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_21_95_24&#39;)"><span class="hl_varref"><span class="mpre">str</span></span></a><span class="mpre"> </span><a href="#loc_99_5_99_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_99_5_99_14&#39;)"><span class="hl_varref"><span class="mpre">langTable</span></span></a><span class="mpre"> of
+    </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> </span><a name="loc_96_10_96_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_10_96_14&#39;)"><span class="hl_vardecl"><span class="mpre">lang</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_96_10_96_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_10_96_14&#39;)"><span class="hl_varref"><span class="mpre">lang</span></span></a><span class="mpre">
+    </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre">   -&gt; </span><a href="#loc_80_5_80_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_5_80_20&#39;)"><span class="hl_conref"><span class="mpre">UnknownLanguage</span></span></a><span class="mpre"> </span><a href="#loc_95_21_95_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_21_95_24&#39;)"><span class="hl_varref"><span class="mpre">str</span></span></a><span class="mpre">
+  where
+    </span><a name="loc_99_5_99_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_99_5_99_14&#39;)"><span class="hl_vardecl"><span class="mpre">langTable</span></span></a><span class="mpre"> = [ (</span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_100_19_100_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_19_100_23&#39;)"><span class="hl_varref"><span class="mpre">lang</span></span></a><span class="mpre">, </span><a href="#loc_100_19_100_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_19_100_23&#39;)"><span class="hl_varref"><span class="mpre">lang</span></span></a><span class="mpre">)
+                | </span><a name="loc_100_19_100_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_19_100_23&#39;)"><span class="hl_vardecl"><span class="mpre">lang</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_84_1_84_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_15&#39;)"><span class="hl_varref"><span class="mpre">knownLanguages</span></span></a><span class="mpre"> ]
+
+</span><span class="hl_comment"><span class="mpre">-- ------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * Extension</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- Note: if you add a new &#39;KnownExtension&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * also add it to the Distribution.Simple.X.languageExtensions lists</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   (where X is each compiler: GHC, JHC, Hugs, NHC)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | This represents language extensions beyond a base &#39;Language&#39; definition</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (such as &#39;Haskell98&#39;) that are supported by some implementations, usually</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in some special mode.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Where applicable, references are given to an implementation&#39;s</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- official documentation.</span></span><span class="mpre">
+
+data </span><a name="loc_118_6_118_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_6_118_15&#39;)"><span class="hl_tycondecl"><span class="mpre">Extension</span></span></a><span class="mpre"> =
+  </span><span class="hl_comment"><span class="mpre">-- | Enable a known extension</span></span><span class="mpre">
+    </span><a name="loc_120_5_120_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_5_120_20&#39;)"><span class="hl_condecl"><span class="mpre">EnableExtension</span></span></a><span class="mpre"> </span><a href="#loc_131_6_131_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_6_131_20&#39;)"><span class="hl_tyconref"><span class="mpre">KnownExtension</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Disable a known extension</span></span><span class="mpre">
+  | </span><a name="loc_123_5_123_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_123_5_123_21&#39;)"><span class="hl_condecl"><span class="mpre">DisableExtension</span></span></a><span class="mpre"> </span><a href="#loc_131_6_131_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_6_131_20&#39;)"><span class="hl_tyconref"><span class="mpre">KnownExtension</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | An unknown extension, identified by the name of its @LANGUAGE@</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- pragma.</span></span><span class="mpre">
+  | </span><a name="loc_127_5_127_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_5_127_21&#39;)"><span class="hl_condecl"><span class="mpre">UnknownExtension</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 129, srcSpanStartColumn = 3, srcSpanEndLine = 129, srcSpanEndColumn = 44}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 129, srcSpanStartColumn = 3, srcSpanEndLine = 129, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/E"><span class="mpre">deriving (Show, Read, Eq, Typeable, Data)</span></span><span class="mpre">
+
+data </span><a name="loc_131_6_131_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_6_131_20&#39;)"><span class="hl_tycondecl"><span class="mpre">KnownExtension</span></span></a><span class="mpre"> =
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow overlapping class instances, provided there is a unique</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- most specific instance for each use.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#instance-overlap&gt;</span></span><span class="mpre">
+    </span><a name="loc_137_5_137_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_5_137_25&#39;)"><span class="hl_condecl"><span class="mpre">OverlappingInstances</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Ignore structural rules guaranteeing the termination of class</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- instance resolution.  Termination is guaranteed by a fixed-depth</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- recursion stack, and compilation may fail if this depth is</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- exceeded.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#undecidable-instances&gt;</span></span><span class="mpre">
+  | </span><a name="loc_145_5_145_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_145_5_145_25&#39;)"><span class="hl_condecl"><span class="mpre">UndecidableInstances</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Implies &#39;OverlappingInstances&#39;.  Allow the implementation to</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- choose an instance even when it is possible that further</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- instantiation of types will lead to a more specific instance</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- being applicable.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#instance-overlap&gt;</span></span><span class="mpre">
+  | </span><a name="loc_153_5_153_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_5_153_24&#39;)"><span class="hl_condecl"><span class="mpre">IncoherentInstances</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | /(deprecated)/ Allows recursive bindings in @do@ blocks, using the @rec@</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- keyword. See also &#39;RecursiveDo&#39;.</span></span><span class="mpre">
+  | </span><a name="loc_157_5_157_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_5_157_10&#39;)"><span class="hl_condecl"><span class="mpre">DoRec</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allows recursive bindings using @mdo@, a variant of @do@.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- @DoRec@ provides a different, preferred syntax.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#recursive-do-notation&gt;</span></span><span class="mpre">
+  | </span><a name="loc_163_5_163_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_5_163_16&#39;)"><span class="hl_condecl"><span class="mpre">RecursiveDo</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Provide syntax for writing list comprehensions which iterate</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- over several lists together, like the &#39;zipWith&#39; family of</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- functions.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#parallel-list-comprehensions&gt;</span></span><span class="mpre">
+  | </span><a name="loc_170_5_170_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_170_5_170_21&#39;)"><span class="hl_condecl"><span class="mpre">ParallelListComp</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow multiple parameters in a type class.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#multi-param-type-classes&gt;</span></span><span class="mpre">
+  | </span><a name="loc_175_5_175_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_175_5_175_26&#39;)"><span class="hl_condecl"><span class="mpre">MultiParamTypeClasses</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable the dreaded monomorphism restriction.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/monomorphism.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_180_5_180_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_5_180_28&#39;)"><span class="hl_condecl"><span class="mpre">MonomorphismRestriction</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow a specification attached to a multi-parameter type class</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- which indicates that some parameters are entirely determined by</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- others. The implementation will check that this property holds</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- for the declared instances, and will use this property to reduce</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- ambiguity in instance resolution.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#functional-dependencies&gt;</span></span><span class="mpre">
+  | </span><a name="loc_189_5_189_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_189_5_189_27&#39;)"><span class="hl_condecl"><span class="mpre">FunctionalDependencies</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Like &#39;RankNTypes&#39; but does not allow a higher-rank type to</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- itself appear on the left of a function arrow.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#universal-quantification&gt;</span></span><span class="mpre">
+  | </span><a name="loc_195_5_195_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_195_5_195_15&#39;)"><span class="hl_condecl"><span class="mpre">Rank2Types</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow a universally-quantified type to occur on the left of a</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- function arrow.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#universal-quantification&gt;</span></span><span class="mpre">
+  | </span><a name="loc_201_5_201_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_201_5_201_15&#39;)"><span class="hl_condecl"><span class="mpre">RankNTypes</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow data constructors to have polymorphic arguments.  Unlike</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &#39;RankNTypes&#39;, does not allow this for ordinary functions.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#universal-quantification&gt;</span></span><span class="mpre">
+  | </span><a name="loc_207_5_207_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_5_207_26&#39;)"><span class="hl_condecl"><span class="mpre">PolymorphicComponents</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow existentially-quantified data constructors.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/data-type-extensions.html#existential-quantification&gt;</span></span><span class="mpre">
+  | </span><a name="loc_212_5_212_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_212_5_212_30&#39;)"><span class="hl_condecl"><span class="mpre">ExistentialQuantification</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Cause a type variable in a signature, which has an explicit</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- @forall@ quantifier, to scope over the definition of the</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- accompanying value declaration.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#scoped-type-variables&gt;</span></span><span class="mpre">
+  | </span><a name="loc_219_5_219_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_219_5_219_24&#39;)"><span class="hl_condecl"><span class="mpre">ScopedTypeVariables</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Deprecated, use &#39;ScopedTypeVariables&#39; instead.</span></span><span class="mpre">
+  | </span><a name="loc_222_5_222_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_5_222_22&#39;)"><span class="hl_condecl"><span class="mpre">PatternSignatures</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable implicit function parameters with dynamic scope.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#implicit-parameters&gt;</span></span><span class="mpre">
+  | </span><a name="loc_227_5_227_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_227_5_227_19&#39;)"><span class="hl_condecl"><span class="mpre">ImplicitParams</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Relax some restrictions on the form of the context of a type</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- signature.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#flexible-contexts&gt;</span></span><span class="mpre">
+  | </span><a name="loc_233_5_233_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_233_5_233_21&#39;)"><span class="hl_condecl"><span class="mpre">FlexibleContexts</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Relax some restrictions on the form of the context of an</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- instance declaration.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#instance-rules&gt;</span></span><span class="mpre">
+  | </span><a name="loc_239_5_239_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_239_5_239_22&#39;)"><span class="hl_condecl"><span class="mpre">FlexibleInstances</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow data type declarations with no constructors.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/data-type-extensions.html#nullary-types&gt;</span></span><span class="mpre">
+  | </span><a name="loc_244_5_244_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_244_5_244_19&#39;)"><span class="hl_condecl"><span class="mpre">EmptyDataDecls</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Run the C preprocessor on Haskell source code.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/options-phases.html#c-pre-processor&gt;</span></span><span class="mpre">
+  | </span><a name="loc_249_5_249_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_249_5_249_8&#39;)"><span class="hl_condecl"><span class="mpre">CPP</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow an explicit kind signature giving the kind of types over</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- which a type variable ranges.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#kinding&gt;</span></span><span class="mpre">
+  | </span><a name="loc_255_5_255_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_255_5_255_19&#39;)"><span class="hl_condecl"><span class="mpre">KindSignatures</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable a form of pattern which forces evaluation before an</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- attempted match, and a form of strict @let@/@where@ binding.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/bang-patterns.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_261_5_261_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_261_5_261_17&#39;)"><span class="hl_condecl"><span class="mpre">BangPatterns</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow type synonyms in instance heads.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#flexible-instance-head&gt;</span></span><span class="mpre">
+  | </span><a name="loc_266_5_266_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_266_5_266_25&#39;)"><span class="hl_condecl"><span class="mpre">TypeSynonymInstances</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable Template Haskell, a system for compile-time</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- metaprogramming.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/template-haskell.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_272_5_272_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_272_5_272_20&#39;)"><span class="hl_condecl"><span class="mpre">TemplateHaskell</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable the Foreign Function Interface.  In GHC, implements the</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- standard Haskell 98 Foreign Function Interface Addendum, plus</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- some GHC-specific extensions.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/ffi.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_279_5_279_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_279_5_279_29&#39;)"><span class="hl_condecl"><span class="mpre">ForeignFunctionInterface</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable arrow notation.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/arrow-notation.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_284_5_284_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_284_5_284_11&#39;)"><span class="hl_condecl"><span class="mpre">Arrows</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | /(deprecated)/ Enable generic type classes, with default instances defined in</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- terms of the algebraic structure of a type.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/generic-classes.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_290_5_290_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_290_5_290_13&#39;)"><span class="hl_condecl"><span class="mpre">Generics</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable the implicit importing of the module &quot;Prelude&quot;.  When</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- disabled, when desugaring certain built-in syntax into ordinary</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- identifiers, use whatever is in scope rather than the &quot;Prelude&quot;</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- -- version.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#rebindable-syntax&gt;</span></span><span class="mpre">
+  | </span><a name="loc_298_5_298_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_298_5_298_20&#39;)"><span class="hl_condecl"><span class="mpre">ImplicitPrelude</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable syntax for implicitly binding local names corresponding</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- to the field names of a record.  Puns bind specific names, unlike</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &#39;RecordWildCards&#39;.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#record-puns&gt;</span></span><span class="mpre">
+  | </span><a name="loc_305_5_305_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_305_5_305_19&#39;)"><span class="hl_condecl"><span class="mpre">NamedFieldPuns</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable a form of guard which matches a pattern and binds</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- variables.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#pattern-guards&gt;</span></span><span class="mpre">
+  | </span><a name="loc_311_5_311_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_311_5_311_18&#39;)"><span class="hl_condecl"><span class="mpre">PatternGuards</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow a type declared with @newtype@ to use @deriving@ for any</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- class with an instance for the underlying type.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/deriving.html#newtype-deriving&gt;</span></span><span class="mpre">
+  | </span><a name="loc_317_5_317_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_317_5_317_31&#39;)"><span class="hl_condecl"><span class="mpre">GeneralizedNewtypeDeriving</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable the \&quot;Trex\&quot; extensible records system.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://cvs.haskell.org/Hugs/pages/users_guide/hugs-only.html#TREX&gt;</span></span><span class="mpre">
+  | </span><a name="loc_322_5_322_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_322_5_322_22&#39;)"><span class="hl_condecl"><span class="mpre">ExtensibleRecords</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable type synonyms which are transparent in some definitions</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- and opaque elsewhere, as a way of implementing abstract</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- datatypes.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://cvs.haskell.org/Hugs/pages/users_guide/restricted-synonyms.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_329_5_329_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_329_5_329_27&#39;)"><span class="hl_condecl"><span class="mpre">RestrictedTypeSynonyms</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable an alternate syntax for string literals,</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- with string templating.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://cvs.haskell.org/Hugs/pages/users_guide/here-documents.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_335_5_335_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_335_5_335_18&#39;)"><span class="hl_condecl"><span class="mpre">HereDocuments</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow the character @#@ as a postfix modifier on identifiers.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Also enables literal syntax for unboxed values.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#magic-hash&gt;</span></span><span class="mpre">
+  | </span><a name="loc_341_5_341_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_341_5_341_14&#39;)"><span class="hl_condecl"><span class="mpre">MagicHash</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow data types and type synonyms which are indexed by types,</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- i.e. ad-hoc polymorphism for types.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-families.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_347_5_347_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_347_5_347_17&#39;)"><span class="hl_condecl"><span class="mpre">TypeFamilies</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow a standalone declaration which invokes the type class</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- @deriving@ mechanism.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/deriving.html#stand-alone-deriving&gt;</span></span><span class="mpre">
+  | </span><a name="loc_353_5_353_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_353_5_353_23&#39;)"><span class="hl_condecl"><span class="mpre">StandaloneDeriving</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow certain Unicode characters to stand for certain ASCII</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- character sequences, e.g. keywords and punctuation.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#unicode-syntax&gt;</span></span><span class="mpre">
+  | </span><a name="loc_359_5_359_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_359_5_359_18&#39;)"><span class="hl_condecl"><span class="mpre">UnicodeSyntax</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow the use of unboxed types as foreign types, e.g. in</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- @foreign import@ and @foreign export@.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/ffi.html#id681687&gt;</span></span><span class="mpre">
+  | </span><a name="loc_365_5_365_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_365_5_365_21&#39;)"><span class="hl_condecl"><span class="mpre">UnliftedFFITypes</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable interruptible FFI.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/ffi.html#ffi-interruptible&gt;</span></span><span class="mpre">
+  | </span><a name="loc_370_5_370_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_370_5_370_21&#39;)"><span class="hl_condecl"><span class="mpre">InterruptibleFFI</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow use of CAPI FFI calling convention (@foreign import capi@).</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/ffi.html#ffi-capi&gt;</span></span><span class="mpre">
+  | </span><a name="loc_375_5_375_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_375_5_375_12&#39;)"><span class="hl_condecl"><span class="mpre">CApiFFI</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Defer validity checking of types until after expanding type</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- synonyms, relaxing the constraints on how synonyms may be used.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/data-type-extensions.html#type-synonyms&gt;</span></span><span class="mpre">
+  | </span><a name="loc_381_5_381_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_381_5_381_24&#39;)"><span class="hl_condecl"><span class="mpre">LiberalTypeSynonyms</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow the name of a type constructor, type class, or type</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- variable to be an infix operator.</span></span><span class="mpre">
+  | </span><a name="loc_385_5_385_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_385_5_385_18&#39;)"><span class="hl_condecl"><span class="mpre">TypeOperators</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable syntax for implicitly binding local names corresponding</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- to the field names of a record.  A wildcard binds all unmentioned</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- names, unlike &#39;NamedFieldPuns&#39;.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#record-wildcards&gt;</span></span><span class="mpre">
+  | </span><a name="loc_392_5_392_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_392_5_392_20&#39;)"><span class="hl_condecl"><span class="mpre">RecordWildCards</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Deprecated, use &#39;NamedFieldPuns&#39; instead.</span></span><span class="mpre">
+  | </span><a name="loc_395_5_395_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_395_5_395_15&#39;)"><span class="hl_condecl"><span class="mpre">RecordPuns</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow a record field name to be disambiguated by the type of</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- the record it&#39;s in.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#disambiguate-fields&gt;</span></span><span class="mpre">
+  | </span><a name="loc_401_5_401_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_401_5_401_29&#39;)"><span class="hl_condecl"><span class="mpre">DisambiguateRecordFields</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable traditional record syntax (as supported by Haskell 98)</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#traditional-record-syntax&gt;</span></span><span class="mpre">
+  | </span><a name="loc_406_5_406_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_406_5_406_28&#39;)"><span class="hl_condecl"><span class="mpre">TraditionalRecordSyntax</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable overloading of string literals using a type class, much</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- like integer literals.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#overloaded-strings&gt;</span></span><span class="mpre">
+  | </span><a name="loc_412_5_412_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_412_5_412_22&#39;)"><span class="hl_condecl"><span class="mpre">OverloadedStrings</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable generalized algebraic data types, in which type</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- variables may be instantiated on a per-constructor basis. Implies</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &#39;GADTSyntax&#39;.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/data-type-extensions.html#gadt&gt;</span></span><span class="mpre">
+  | </span><a name="loc_419_5_419_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_419_5_419_10&#39;)"><span class="hl_condecl"><span class="mpre">GADTs</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable GADT syntax for declaring ordinary algebraic datatypes.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/data-type-extensions.html#gadt-style&gt;</span></span><span class="mpre">
+  | </span><a name="loc_424_5_424_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_424_5_424_15&#39;)"><span class="hl_condecl"><span class="mpre">GADTSyntax</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Make pattern bindings monomorphic.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/monomorphism.html#id630981&gt;</span></span><span class="mpre">
+  | </span><a name="loc_429_5_429_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_429_5_429_17&#39;)"><span class="hl_condecl"><span class="mpre">MonoPatBinds</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Relax the requirements on mutually-recursive polymorphic</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- functions.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#typing-binds&gt;</span></span><span class="mpre">
+  | </span><a name="loc_435_5_435_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_435_5_435_19&#39;)"><span class="hl_condecl"><span class="mpre">RelaxedPolyRec</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow default instantiation of polymorphic types in more</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- situations.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/interactive-evaluation.html#extended-default-rules&gt;</span></span><span class="mpre">
+  | </span><a name="loc_441_5_441_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_441_5_441_25&#39;)"><span class="hl_condecl"><span class="mpre">ExtendedDefaultRules</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable unboxed tuples.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/primitives.html#unboxed-tuples&gt;</span></span><span class="mpre">
+  | </span><a name="loc_446_5_446_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_446_5_446_18&#39;)"><span class="hl_condecl"><span class="mpre">UnboxedTuples</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable @deriving@ for classes &#39;Data.Typeable.Typeable&#39; and</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &#39;Data.Generics.Data&#39;.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/deriving.html#deriving-typeable&gt;</span></span><span class="mpre">
+  | </span><a name="loc_452_5_452_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_452_5_452_23&#39;)"><span class="hl_condecl"><span class="mpre">DeriveDataTypeable</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable @deriving@ for &#39;GHC.Generics.Generic&#39; and &#39;GHC.Generics.Generic1&#39;.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/deriving.html#deriving-typeable&gt;</span></span><span class="mpre">
+  | </span><a name="loc_457_5_457_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_457_5_457_18&#39;)"><span class="hl_condecl"><span class="mpre">DeriveGeneric</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable support for default signatures.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#class-default-signatures&gt;</span></span><span class="mpre">
+  | </span><a name="loc_462_5_462_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_462_5_462_22&#39;)"><span class="hl_condecl"><span class="mpre">DefaultSignatures</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow type signatures to be specified in instance declarations.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#instance-sigs&gt;</span></span><span class="mpre">
+  | </span><a name="loc_467_5_467_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_467_5_467_17&#39;)"><span class="hl_condecl"><span class="mpre">InstanceSigs</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow a class method&#39;s type to place additional constraints on</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- a class type variable.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#class-method-types&gt;</span></span><span class="mpre">
+  | </span><a name="loc_473_5_473_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_473_5_473_28&#39;)"><span class="hl_condecl"><span class="mpre">ConstrainedClassMethods</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow imports to be qualified by the package name the module is</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- intended to be imported from, e.g.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &gt; import &quot;network&quot; Network.Socket</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#package-imports&gt;</span></span><span class="mpre">
+  | </span><a name="loc_481_5_481_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_481_5_481_19&#39;)"><span class="hl_condecl"><span class="mpre">PackageImports</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | /(deprecated)/ Allow a type variable to be instantiated at a</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- polymorphic type.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/6.12.3/html/users_guide/other-type-extensions.html#impredicative-polymorphism&gt;</span></span><span class="mpre">
+  | </span><a name="loc_487_5_487_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_487_5_487_23&#39;)"><span class="hl_condecl"><span class="mpre">ImpredicativeTypes</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | /(deprecated)/ Change the syntax for qualified infix operators.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/6.12.3/html/users_guide/syntax-extns.html#new-qualified-operators&gt;</span></span><span class="mpre">
+  | </span><a name="loc_492_5_492_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_492_5_492_26&#39;)"><span class="hl_condecl"><span class="mpre">NewQualifiedOperators</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Relax the interpretation of left operator sections to allow</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- unary postfix operators.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#postfix-operators&gt;</span></span><span class="mpre">
+  | </span><a name="loc_498_5_498_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_498_5_498_21&#39;)"><span class="hl_condecl"><span class="mpre">PostfixOperators</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable quasi-quotation, a mechanism for defining new concrete</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- syntax for expressions and patterns.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/template-haskell.html#th-quasiquotation&gt;</span></span><span class="mpre">
+  | </span><a name="loc_504_5_504_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_504_5_504_16&#39;)"><span class="hl_condecl"><span class="mpre">QuasiQuotes</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable generalized list comprehensions, supporting operations</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- such as sorting and grouping.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#generalised-list-comprehensions&gt;</span></span><span class="mpre">
+  | </span><a name="loc_510_5_510_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_5_510_22&#39;)"><span class="hl_condecl"><span class="mpre">TransformListComp</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable monad comprehensions, which generalise the list</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- comprehension syntax to work for any monad.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#monad-comprehensions&gt;</span></span><span class="mpre">
+  | </span><a name="loc_516_5_516_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_516_5_516_24&#39;)"><span class="hl_condecl"><span class="mpre">MonadComprehensions</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable view patterns, which match a value by applying a</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- function and matching on the result.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#view-patterns&gt;</span></span><span class="mpre">
+  | </span><a name="loc_522_5_522_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_522_5_522_17&#39;)"><span class="hl_condecl"><span class="mpre">ViewPatterns</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow concrete XML syntax to be used in expressions and patterns,</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- as per the Haskell Server Pages extension language:</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &lt;http://www.haskell.org/haskellwiki/HSP&gt;. The ideas behind it are</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- discussed in the paper \&quot;Haskell Server Pages through Dynamic Loading\&quot;</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- by Niklas Broberg, from Haskell Workshop &#39;05.</span></span><span class="mpre">
+  | </span><a name="loc_529_5_529_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_529_5_529_14&#39;)"><span class="hl_condecl"><span class="mpre">XmlSyntax</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow regular pattern matching over lists, as discussed in the</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- paper \&quot;Regular Expression Patterns\&quot; by Niklas Broberg, Andreas Farre</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- and Josef Svenningsson, from ICFP &#39;04.</span></span><span class="mpre">
+  | </span><a name="loc_534_5_534_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_534_5_534_20&#39;)"><span class="hl_condecl"><span class="mpre">RegularPatterns</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enables the use of tuple sections, e.g. @(, True)@ desugars into</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- @\x -&gt; (x, True)@.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#tuple-sections&gt;</span></span><span class="mpre">
+  | </span><a name="loc_540_5_540_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_540_5_540_18&#39;)"><span class="hl_condecl"><span class="mpre">TupleSections</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allows GHC primops, written in C--, to be imported into a Haskell</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- file.</span></span><span class="mpre">
+  | </span><a name="loc_544_5_544_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_544_5_544_25&#39;)"><span class="hl_condecl"><span class="mpre">GHCForeignImportPrim</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Support for patterns of the form @n + k@, where @k@ is an</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- integer literal.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#n-k-patterns&gt;</span></span><span class="mpre">
+  | </span><a name="loc_550_5_550_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_550_5_550_19&#39;)"><span class="hl_condecl"><span class="mpre">NPlusKPatterns</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Improve the layout rule when @if@ expressions are used in a @do@</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- block.</span></span><span class="mpre">
+  | </span><a name="loc_554_5_554_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_554_5_554_20&#39;)"><span class="hl_condecl"><span class="mpre">DoAndIfThenElse</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable support for multi-way @if@-expressions.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#multi-way-if&gt;</span></span><span class="mpre">
+  | </span><a name="loc_559_5_559_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_559_5_559_15&#39;)"><span class="hl_condecl"><span class="mpre">MultiWayIf</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable support lambda-@case@ expressions.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#lambda-case&gt;</span></span><span class="mpre">
+  | </span><a name="loc_564_5_564_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_564_5_564_15&#39;)"><span class="hl_condecl"><span class="mpre">LambdaCase</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Makes much of the Haskell sugar be desugared into calls to the</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- function with a particular name that is in scope.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#rebindable-syntax&gt;</span></span><span class="mpre">
+  | </span><a name="loc_570_5_570_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_570_5_570_21&#39;)"><span class="hl_condecl"><span class="mpre">RebindableSyntax</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Make @forall@ a keyword in types, which can be used to give the</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- generalisation explicitly.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#explicit-foralls&gt;</span></span><span class="mpre">
+  | </span><a name="loc_576_5_576_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_576_5_576_19&#39;)"><span class="hl_condecl"><span class="mpre">ExplicitForAll</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow contexts to be put on datatypes, e.g. the @Eq a@ in</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- @data Eq a =&gt; Set a = NilSet | ConsSet a (Set a)@.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/data-type-extensions.html#datatype-contexts&gt;</span></span><span class="mpre">
+  | </span><a name="loc_582_5_582_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_582_5_582_21&#39;)"><span class="hl_condecl"><span class="mpre">DatatypeContexts</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Local (@let@ and @where@) bindings are monomorphic.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#mono-local-binds&gt;</span></span><span class="mpre">
+  | </span><a name="loc_587_5_587_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_587_5_587_19&#39;)"><span class="hl_condecl"><span class="mpre">MonoLocalBinds</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable @deriving@ for the &#39;Data.Functor.Functor&#39; class.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/deriving.html#deriving-typeable&gt;</span></span><span class="mpre">
+  | </span><a name="loc_592_5_592_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_592_5_592_18&#39;)"><span class="hl_condecl"><span class="mpre">DeriveFunctor</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable @deriving@ for the &#39;Data.Traversable.Traversable&#39; class.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/deriving.html#deriving-typeable&gt;</span></span><span class="mpre">
+  | </span><a name="loc_597_5_597_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_597_5_597_22&#39;)"><span class="hl_condecl"><span class="mpre">DeriveTraversable</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable @deriving@ for the &#39;Data.Foldable.Foldable&#39; class.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/deriving.html#deriving-typeable&gt;</span></span><span class="mpre">
+  | </span><a name="loc_602_5_602_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_602_5_602_19&#39;)"><span class="hl_condecl"><span class="mpre">DeriveFoldable</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable non-decreasing indentation for @do@ blocks.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/bugs-and-infelicities.html#infelicities-syntax&gt;</span></span><span class="mpre">
+  | </span><a name="loc_607_5_607_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_607_5_607_29&#39;)"><span class="hl_condecl"><span class="mpre">NondecreasingIndentation</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow imports to be qualified with a safe keyword that requires</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- the imported module be trusted as according to the Safe Haskell</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- definition of trust.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &gt; import safe Network.Socket</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/safe-haskell.html#safe-imports&gt;</span></span><span class="mpre">
+  | </span><a name="loc_616_5_616_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_616_5_616_16&#39;)"><span class="hl_condecl"><span class="mpre">SafeImports</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Compile a module in the Safe, Safe Haskell mode -- a restricted</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- form of the Haskell language to ensure type safety.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/safe-haskell.html#safe-trust&gt;</span></span><span class="mpre">
+  | </span><a name="loc_622_5_622_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_622_5_622_9&#39;)"><span class="hl_condecl"><span class="mpre">Safe</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Compile a module in the Trustworthy, Safe Haskell mode -- no</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- restrictions apply but the module is marked as trusted as long as</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- the package the module resides in is trusted.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/safe-haskell.html#safe-trust&gt;</span></span><span class="mpre">
+  | </span><a name="loc_629_5_629_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_629_5_629_16&#39;)"><span class="hl_condecl"><span class="mpre">Trustworthy</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Compile a module in the Unsafe, Safe Haskell mode so that</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- modules compiled using Safe, Safe Haskell mode can&#39;t import it.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/safe-haskell.html#safe-trust&gt;</span></span><span class="mpre">
+  | </span><a name="loc_635_5_635_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_635_5_635_11&#39;)"><span class="hl_condecl"><span class="mpre">Unsafe</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow type class/implicit parameter/equality constraints to be</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- used as types with the special kind constraint.  Also generalise</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- the @(ctxt =&gt; ty)@ syntax so that any type of kind constraint can</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- occur before the arrow.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/constraint-kind.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_643_5_643_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_643_5_643_20&#39;)"><span class="hl_condecl"><span class="mpre">ConstraintKinds</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable kind polymorphism.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/kind-polymorphism.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_648_5_648_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_648_5_648_14&#39;)"><span class="hl_condecl"><span class="mpre">PolyKinds</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable datatype promotion.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/promotion.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_653_5_653_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_653_5_653_14&#39;)"><span class="hl_condecl"><span class="mpre">DataKinds</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable parallel arrays syntax (@[:@, @:]@) for /Data Parallel Haskell/.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/haskellwiki/GHC/Data_Parallel_Haskell&gt;</span></span><span class="mpre">
+  | </span><a name="loc_658_5_658_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_658_5_658_19&#39;)"><span class="hl_condecl"><span class="mpre">ParallelArrays</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable explicit role annotations, like in (@data T a\@R@).</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/roles.html&gt;</span></span><span class="mpre">
+  | </span><a name="loc_663_5_663_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_663_5_663_20&#39;)"><span class="hl_condecl"><span class="mpre">RoleAnnotations</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable overloading of list literals, arithmetic sequences and</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- list patterns using the &#39;IsList&#39; type class.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#overloaded-lists&gt;</span></span><span class="mpre">
+  | </span><a name="loc_669_5_669_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_669_5_669_20&#39;)"><span class="hl_condecl"><span class="mpre">OverloadedLists</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enables case expressions that have no alternatives. Also applies to lambda-case expressions if they are enabled.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#empty-case&gt;</span></span><span class="mpre">
+  | </span><a name="loc_674_5_674_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_674_5_674_14&#39;)"><span class="hl_condecl"><span class="mpre">EmptyCase</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Triggers the generation of derived &#39;Typeable&#39; instances for every</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- datatype and type class declaration.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/deriving.html#auto-derive-typeable&gt;</span></span><span class="mpre">
+  | </span><a name="loc_680_5_680_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_680_5_680_23&#39;)"><span class="hl_condecl"><span class="mpre">AutoDeriveTypeable</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Desugars negative literals directly (without using negate).</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#negative-literals&gt;</span></span><span class="mpre">
+  | </span><a name="loc_685_5_685_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_685_5_685_21&#39;)"><span class="hl_condecl"><span class="mpre">NegativeLiterals</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allows the use of floating literal syntax for all instances of &#39;Num&#39;, including &#39;Int&#39; and &#39;Integer&#39;.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#num-decimals&gt;</span></span><span class="mpre">
+  | </span><a name="loc_690_5_690_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_690_5_690_16&#39;)"><span class="hl_condecl"><span class="mpre">NumDecimals</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enables support for type classes with no type parameter.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/type-class-extensions.html#nullary-type-classes&gt;</span></span><span class="mpre">
+  | </span><a name="loc_695_5_695_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_5_695_23&#39;)"><span class="hl_condecl"><span class="mpre">NullaryTypeClasses</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Enable explicit namespaces in module import/export lists.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/syntax-extns.html#explicit-namespaces&gt;</span></span><span class="mpre">
+  | </span><a name="loc_700_5_700_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_700_5_700_23&#39;)"><span class="hl_condecl"><span class="mpre">ExplicitNamespaces</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Allow the user to write ambiguous types, and the type inference engine to infer them.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- * &lt;http://www.haskell.org/ghc/docs/latest/html/users_guide/other-type-extensions.html#ambiguity&gt;</span></span><span class="mpre">
+  | </span><a name="loc_705_5_705_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_705_5_705_24&#39;)"><span class="hl_condecl"><span class="mpre">AllowAmbiguousTypes</span></span></a><span class="mpre">
+
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 707, srcSpanStartColumn = 3, srcSpanEndLine = 707, srcSpanEndColumn = 59}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 707, srcSpanStartColumn = 3, srcSpanEndLine = 707, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/E"><span class="mpre">deriving (Show, Read, Eq, Enum, Bounded, Typeable, Data)</span></span><span class="mpre">
+
+</span><span class="warning" data-warning="DeclDeprPragmaDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 709, srcSpanStartColumn = 1, srcSpanEndLine = 710, srcSpanEndColumn = 79}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 709, srcSpanStartColumn = 1, srcSpanEndLine = 709, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Has"><span class="mpre">{-# DEPRECATED knownExtensions
+   &quot;KnownExtension is an instance of Enum and Bounded, use those instead.&quot; #-}</span></span><span class="mpre">
+</span><a href="#loc_712_1_712_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_712_1_712_16&#39;)"><span class="mpre">knownExtensions</span></a><span class="mpre"> :: [</span><a href="#loc_131_6_131_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_6_131_20&#39;)"><span class="hl_tyconref"><span class="mpre">KnownExtension</span></span></a><span class="mpre">]
+</span><a name="loc_712_1_712_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_712_1_712_16&#39;)"><span class="hl_vardecl"><span class="mpre">knownExtensions</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpEnumFromTo (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 712, srcSpanStartColumn = 19, srcSpanEndLine = 712, srcSpanEndColumn = 39}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 712, srcSpanStartColumn = 19, srcSpanEndLine = 712, srcSpanEndColumn = 20},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haske"><span class="mpre">[minBound..maxBound]</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Extensions that have been deprecated, possibly paired with another</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- extension that replaces it.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_718_1_718_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_718_1_718_21&#39;)"><span class="mpre">deprecatedExtensions</span></a><span class="mpre"> :: [(</span><a href="#loc_118_6_118_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_6_118_15&#39;)"><span class="hl_tyconref"><span class="mpre">Extension</span></span></a><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><a href="#loc_118_6_118_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_6_118_15&#39;)"><span class="hl_tyconref"><span class="mpre">Extension</span></span></a><span class="mpre">)]
+</span><a name="loc_718_1_718_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_718_1_718_21&#39;)"><span class="hl_vardecl"><span class="mpre">deprecatedExtensions</span></span></a><span class="mpre"> =
+  [ (</span><a href="#loc_120_5_120_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_5_120_20&#39;)"><span class="hl_conref"><span class="mpre">EnableExtension</span></span></a><span class="mpre"> </span><a href="#loc_395_5_395_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_395_5_395_15&#39;)"><span class="hl_conref"><span class="mpre">RecordPuns</span></span></a><span class="mpre">, </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> (</span><a href="#loc_120_5_120_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_5_120_20&#39;)"><span class="hl_conref"><span class="mpre">EnableExtension</span></span></a><span class="mpre"> </span><a href="#loc_305_5_305_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_305_5_305_19&#39;)"><span class="hl_conref"><span class="mpre">NamedFieldPuns</span></span></a><span class="mpre">))
+  , (</span><a href="#loc_120_5_120_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_5_120_20&#39;)"><span class="hl_conref"><span class="mpre">EnableExtension</span></span></a><span class="mpre"> </span><a href="#loc_222_5_222_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_5_222_22&#39;)"><span class="hl_conref"><span class="mpre">PatternSignatures</span></span></a><span class="mpre">, </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> (</span><a href="#loc_120_5_120_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_5_120_20&#39;)"><span class="hl_conref"><span class="mpre">EnableExtension</span></span></a><span class="mpre"> </span><a href="#loc_219_5_219_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_219_5_219_24&#39;)"><span class="hl_conref"><span class="mpre">ScopedTypeVariables</span></span></a><span class="mpre">))
+  ]
+</span><span class="hl_comment"><span class="mpre">-- NOTE: when adding deprecated extensions that have new alternatives</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- we must be careful to make sure that the deprecation messages are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- valid. We must not recomend aliases that cannot be used with older</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- compilers, perhaps by adding support in Cabal to translate the new</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- name to the old one for older compilers. Otherwise we are in danger</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of the scenario in ticket #689.</span></span><span class="mpre">
+
+instance </span><a href="Distribution.Text.html#loc_26_7_26_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_26_7_26_11&#39;)"><span class="hl_classref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><a href="#loc_118_6_118_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_6_118_15&#39;)"><span class="hl_tyconref"><span class="mpre">Extension</span></span></a><span class="mpre"> where
+  </span><a href="Distribution.Text.html#loc_27_3_27_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_27_3_27_7&#39;)"><span class="hl_fundecl"><span class="mpre">disp</span></span></a><span class="mpre"> (</span><a href="#loc_127_5_127_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_5_127_21&#39;)"><span class="hl_conref"><span class="mpre">UnknownExtension</span></span></a><span class="mpre"> </span><a name="loc_730_26_730_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_730_26_730_31&#39;)"><span class="hl_vardecl"><span class="mpre">other</span></span></a><span class="mpre">) = </span><a href="Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5&#39;)"><span class="hl_varref"><span class="mpre">Disp.text</span></span></a><span class="mpre"> </span><a href="#loc_730_26_730_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_730_26_730_31&#39;)"><span class="hl_varref"><span class="mpre">other</span></span></a><span class="mpre">
+  </span><a href="Distribution.Text.html#loc_27_3_27_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_27_3_27_7&#39;)"><span class="hl_fundecl"><span class="mpre">disp</span></span></a><span class="mpre"> (</span><a href="#loc_120_5_120_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_5_120_20&#39;)"><span class="hl_conref"><span class="mpre">EnableExtension</span></span></a><span class="mpre"> </span><a name="loc_731_25_731_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_731_25_731_27&#39;)"><span class="hl_vardecl"><span class="mpre">ke</span></span></a><span class="mpre">)     = </span><a href="Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5&#39;)"><span class="hl_varref"><span class="mpre">Disp.text</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_731_25_731_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_731_25_731_27&#39;)"><span class="hl_varref"><span class="mpre">ke</span></span></a><span class="mpre">)
+  </span><a href="Distribution.Text.html#loc_27_3_27_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_27_3_27_7&#39;)"><span class="hl_fundecl"><span class="mpre">disp</span></span></a><span class="mpre"> (</span><a href="#loc_123_5_123_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_123_5_123_21&#39;)"><span class="hl_conref"><span class="mpre">DisableExtension</span></span></a><span class="mpre"> </span><a name="loc_732_26_732_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_732_26_732_28&#39;)"><span class="hl_vardecl"><span class="mpre">ke</span></span></a><span class="mpre">)    = </span><a href="Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5&#39;)"><span class="hl_varref"><span class="mpre">Disp.text</span></span></a><span class="mpre"> (</span><span class="hl_string"><span class="mpre">&quot;No&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_732_26_732_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_732_26_732_28&#39;)"><span class="hl_varref"><span class="mpre">ke</span></span></a><span class="mpre">)
+
+  </span><a href="Distribution.Text.html#loc_28_3_28_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_28_3_28_8&#39;)"><span class="hl_vardecl"><span class="mpre">parse</span></span></a><span class="mpre"> = do
+    </span><a name="loc_735_5_735_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_735_5_735_14&#39;)"><span class="hl_vardecl"><span class="mpre">extension</span></span></a><span class="mpre"> &lt;- </span><a href="Distribution.Compat.ReadP.html#loc_264_1_264_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Compat.ReadP.html#loc_264_1_264_7&#39;)"><span class="hl_varref"><span class="mpre">Parse.munch1</span></span></a><span class="mpre"> </span><a href="GHC.Unicode.html#loc_136_1_136_11" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Unicode.html#loc_136_1_136_11&#39;)"><span class="hl_varref"><span class="mpre">Char.isAlphaNum</span></span></a><span class="mpre">
+    </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><a href="#loc_750_1_750_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_1_750_18&#39;)"><span class="hl_varref"><span class="mpre">classifyExtension</span></span></a><span class="mpre"> </span><a href="#loc_735_5_735_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_735_5_735_14&#39;)"><span class="hl_varref"><span class="mpre">extension</span></span></a><span class="mpre">)
+
+instance </span><a href="Distribution.Text.html#loc_26_7_26_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_26_7_26_11&#39;)"><span class="hl_classref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><a href="#loc_131_6_131_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_6_131_20&#39;)"><span class="hl_tyconref"><span class="mpre">KnownExtension</span></span></a><span class="mpre"> where
+  </span><a href="Distribution.Text.html#loc_27_3_27_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_27_3_27_7&#39;)"><span class="hl_fundecl"><span class="mpre">disp</span></span></a><span class="mpre"> </span><a name="loc_739_8_739_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_739_8_739_10&#39;)"><span class="hl_vardecl"><span class="mpre">ke</span></span></a><span class="mpre"> = </span><a href="Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.PrettyPrint.HughesPJ.html#loc_256_1_256_5&#39;)"><span class="hl_varref"><span class="mpre">Disp.text</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_739_8_739_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_739_8_739_10&#39;)"><span class="hl_varref"><span class="mpre">ke</span></span></a><span class="mpre">)
+
+  </span><a href="Distribution.Text.html#loc_28_3_28_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Text.html#loc_28_3_28_8&#39;)"><span class="hl_vardecl"><span class="mpre">parse</span></span></a><span class="mpre"> = do
+    </span><a name="loc_742_5_742_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_742_5_742_14&#39;)"><span class="hl_vardecl"><span class="mpre">extension</span></span></a><span class="mpre"> &lt;- </span><a href="Distribution.Compat.ReadP.html#loc_264_1_264_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Compat.ReadP.html#loc_264_1_264_7&#39;)"><span class="hl_varref"><span class="mpre">Parse.munch1</span></span></a><span class="mpre"> </span><a href="GHC.Unicode.html#loc_136_1_136_11" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Unicode.html#loc_136_1_136_11&#39;)"><span class="hl_varref"><span class="mpre">Char.isAlphaNum</span></span></a><span class="mpre">
+    case </span><a href="#loc_772_1_772_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_772_1_772_23&#39;)"><span class="hl_varref"><span class="mpre">classifyKnownExtension</span></span></a><span class="mpre"> </span><a href="#loc_742_5_742_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_742_5_742_14&#39;)"><span class="hl_varref"><span class="mpre">extension</span></span></a><span class="mpre"> of
+        </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> </span><a name="loc_744_14_744_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_744_14_744_16&#39;)"><span class="hl_vardecl"><span class="mpre">ke</span></span></a><span class="mpre"> -&gt;
+            </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_744_14_744_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_744_14_744_16&#39;)"><span class="hl_varref"><span class="mpre">ke</span></span></a><span class="mpre">
+        </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre"> -&gt;
+            </span><span class="hl_varref"><span class="mpre">fail</span></span><span class="mpre"> (</span><span class="hl_string"><span class="mpre">&quot;Can&#39;t parse &quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_742_5_742_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_742_5_742_14&#39;)"><span class="hl_varref"><span class="mpre">extension</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot; as KnownExtension&quot;</span></span><span class="mpre">)
+
+</span><a href="#loc_750_1_750_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_1_750_18&#39;)"><span class="mpre">classifyExtension</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="#loc_118_6_118_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_6_118_15&#39;)"><span class="hl_tyconref"><span class="mpre">Extension</span></span></a><span class="mpre">
+</span><a name="loc_750_1_750_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_1_750_18&#39;)"><span class="hl_fundecl"><span class="mpre">classifyExtension</span></span></a><span class="mpre"> </span><a name="loc_750_19_750_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_19_750_25&#39;)"><span class="hl_vardecl"><span class="mpre">string</span></span></a><span class="mpre">
+  = case </span><a href="#loc_772_1_772_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_772_1_772_23&#39;)"><span class="hl_varref"><span class="mpre">classifyKnownExtension</span></span></a><span class="mpre"> </span><a href="#loc_750_19_750_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_19_750_25&#39;)"><span class="hl_varref"><span class="mpre">string</span></span></a><span class="mpre"> of
+    </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> </span><a name="loc_752_10_752_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_752_10_752_13&#39;)"><span class="hl_vardecl"><span class="mpre">ext</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_120_5_120_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_5_120_20&#39;)"><span class="hl_conref"><span class="mpre">EnableExtension</span></span></a><span class="mpre"> </span><a href="#loc_752_10_752_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_752_10_752_13&#39;)"><span class="hl_varref"><span class="mpre">ext</span></span></a><span class="mpre">
+    </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre"> -&gt;
+        case </span><a href="#loc_750_19_750_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_19_750_25&#39;)"><span class="hl_varref"><span class="mpre">string</span></span></a><span class="mpre"> of
+        </span><span class="hl_char"><span class="mpre">&#39;N&#39;</span></span><span class="hl_infix"><span class="mpre">:</span></span><span class="hl_char"><span class="mpre">&#39;o&#39;</span></span><span class="hl_infix"><span class="mpre">:</span></span><a name="loc_755_17_755_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_755_17_755_24&#39;)"><span class="hl_vardecl"><span class="mpre">string&#39;</span></span></a><span class="mpre"> -&gt;
+            case </span><a href="#loc_772_1_772_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_772_1_772_23&#39;)"><span class="hl_varref"><span class="mpre">classifyKnownExtension</span></span></a><span class="mpre"> </span><a href="#loc_755_17_755_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_755_17_755_24&#39;)"><span class="hl_varref"><span class="mpre">string&#39;</span></span></a><span class="mpre"> of
+            </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> </span><a name="loc_757_18_757_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_757_18_757_21&#39;)"><span class="hl_vardecl"><span class="mpre">ext</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_123_5_123_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_123_5_123_21&#39;)"><span class="hl_conref"><span class="mpre">DisableExtension</span></span></a><span class="mpre"> </span><a href="#loc_757_18_757_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_757_18_757_21&#39;)"><span class="hl_varref"><span class="mpre">ext</span></span></a><span class="mpre">
+            </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre"> -&gt; </span><a href="#loc_127_5_127_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_5_127_21&#39;)"><span class="hl_conref"><span class="mpre">UnknownExtension</span></span></a><span class="mpre"> </span><a href="#loc_750_19_750_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_19_750_25&#39;)"><span class="hl_varref"><span class="mpre">string</span></span></a><span class="mpre">
+        _ -&gt; </span><a href="#loc_127_5_127_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_5_127_21&#39;)"><span class="hl_conref"><span class="mpre">UnknownExtension</span></span></a><span class="mpre"> </span><a href="#loc_750_19_750_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_19_750_25&#39;)"><span class="hl_varref"><span class="mpre">string</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | &#39;read&#39; for &#39;KnownExtension&#39;s is really really slow so for the Text</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- what we do is make a simple table indexed off the first letter in the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- extension name. The extension names actually cover the range @&#39;A&#39;-&#39;Z&#39;@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- pretty densely and the biggest bucket is 7 so it&#39;s not too bad. We just do</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a linear search within each bucket.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This gives an order of magnitude improvement in parsing speed, and it&#39;ll</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- also allow us to do case insensitive matches in future if we prefer.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_772_1_772_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_772_1_772_23&#39;)"><span class="mpre">classifyKnownExtension</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><a href="#loc_131_6_131_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_6_131_20&#39;)"><span class="hl_tyconref"><span class="mpre">KnownExtension</span></span></a><span class="mpre">
+</span><a name="loc_772_1_772_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_772_1_772_23&#39;)"><span class="hl_fundecl"><span class="mpre">classifyKnownExtension</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre">
+</span><a href="#loc_772_1_772_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_772_1_772_23&#39;)"><span class="hl_fundecl"><span class="mpre">classifyKnownExtension</span></span></a><span class="mpre"> </span><a name="loc_773_24_773_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_773_24_773_30&#39;)"><span class="hl_specname"><span class="mpre">string</span></span></a><span class="mpre">@(</span><a name="loc_773_32_773_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_773_32_773_33&#39;)"><span class="hl_vardecl"><span class="mpre">c</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">:</span></span><span class="mpre"> _)
+  | </span><span class="hl_varref"><span class="mpre">inRange</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">bounds</span></span><span class="mpre"> </span><a href="#loc_779_1_779_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_779_1_779_20&#39;)"><span class="hl_varref"><span class="mpre">knownExtensionTable</span></span></a><span class="mpre">) </span><a href="#loc_773_32_773_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_773_32_773_33&#39;)"><span class="hl_varref"><span class="mpre">c</span></span></a><span class="mpre">
+  = </span><span class="hl_varref"><span class="mpre">lookup</span></span><span class="mpre"> </span><a href="#loc_773_24_773_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_773_24_773_30&#39;)"><span class="hl_varref"><span class="mpre">string</span></span></a><span class="mpre"> (</span><a href="#loc_779_1_779_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_779_1_779_20&#39;)"><span class="hl_varref"><span class="mpre">knownExtensionTable</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">!</span></span><span class="mpre"> </span><a href="#loc_773_32_773_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_773_32_773_33&#39;)"><span class="hl_varref"><span class="mpre">c</span></span></a><span class="mpre">)
+  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre">
+
+</span><a href="#loc_779_1_779_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_779_1_779_20&#39;)"><span class="mpre">knownExtensionTable</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Array</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre"> [(</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">, </span><a href="#loc_131_6_131_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_6_131_20&#39;)"><span class="hl_tyconref"><span class="mpre">KnownExtension</span></span></a><span class="mpre">)]
+</span><a name="loc_779_1_779_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_779_1_779_20&#39;)"><span class="hl_vardecl"><span class="mpre">knownExtensionTable</span></span></a><span class="mpre"> =
+  </span><span class="hl_varref"><span class="mpre">accumArray</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">flip</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">(:)</span></span><span class="mpre">) [] (</span><span class="hl_char"><span class="mpre">&#39;A&#39;</span></span><span class="mpre">, </span><span class="hl_char"><span class="mpre">&#39;Z&#39;</span></span><span class="mpre">)
+    [ (</span><span class="hl_varref"><span class="mpre">head</span></span><span class="mpre"> </span><a href="#loc_783_11_783_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_783_11_783_14&#39;)"><span class="hl_varref"><span class="mpre">str</span></span></a><span class="mpre">, (</span><a href="#loc_783_11_783_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_783_11_783_14&#39;)"><span class="hl_varref"><span class="mpre">str</span></span></a><span class="mpre">, </span><a href="#loc_782_7_782_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_782_7_782_16&#39;)"><span class="hl_varref"><span class="mpre">extension</span></span></a><span class="mpre">))
+    | </span><a name="loc_782_7_782_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_782_7_782_16&#39;)"><span class="hl_vardecl"><span class="mpre">extension</span></span></a><span class="mpre"> &lt;- </span><span class="warning" data-warning="ExpEnumFrom (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 782, srcSpanStartColumn = 20, srcSpanEndLine = 782, srcSpanEndColumn = 33}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell/Extension.hs&quot;, srcSpanStartLine = 782, srcSpanStartColumn = 20, srcSpanEndLine = 782, srcSpanEndColumn = 21},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Language/Haskell"><span class="mpre">[toEnum 0 ..]</span></span><span class="mpre">
+    , let </span><a name="loc_783_11_783_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_783_11_783_14&#39;)"><span class="hl_vardecl"><span class="mpre">str</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_782_7_782_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_782_7_782_16&#39;)"><span class="hl_varref"><span class="mpre">extension</span></span></a><span class="mpre"> ]
+</span></div></body></html>

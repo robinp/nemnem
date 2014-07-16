@@ -1,0 +1,74 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Array</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Basic non-strict arrays.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Note:/ The &quot;Data.Array.IArray&quot; module provides a more general interface</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to immutable arrays: it defines operations with the same names as</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- those defined below, but with more general types, and also defines</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Array&#39; instances of the relevant classes.  To use that more general</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- interface, import &quot;Data.Array.IArray&quot; but not &quot;Data.Array&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Array (
+    </span><span class="hl_comment"><span class="mpre">-- * Immutable non-strict arrays</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $intro</span></span><span class="mpre">
+    module Data.Ix, </span><span class="hl_comment"><span class="mpre">-- export all of Ix</span></span><span class="mpre">
+    Array,          </span><span class="hl_comment"><span class="mpre">-- Array type is abstract</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Array construction</span></span><span class="mpre">
+    array,          </span><span class="hl_comment"><span class="mpre">-- :: (Ix a) =&gt; (a,a) -&gt; [(a,b)] -&gt; Array a b</span></span><span class="mpre">
+    listArray,      </span><span class="hl_comment"><span class="mpre">-- :: (Ix a) =&gt; (a,a) -&gt; [b] -&gt; Array a b</span></span><span class="mpre">
+    accumArray,     </span><span class="hl_comment"><span class="mpre">-- :: (Ix a) =&gt; (b -&gt; c -&gt; b) -&gt; b -&gt; (a,a) -&gt; [(a,c)] -&gt; Array a b</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- * Accessing arrays</span></span><span class="mpre">
+    (!),            </span><span class="hl_comment"><span class="mpre">-- :: (Ix a) =&gt; Array a b -&gt; a -&gt; b</span></span><span class="mpre">
+    bounds,         </span><span class="hl_comment"><span class="mpre">-- :: (Ix a) =&gt; Array a b -&gt; (a,a)</span></span><span class="mpre">
+    indices,        </span><span class="hl_comment"><span class="mpre">-- :: (Ix a) =&gt; Array a b -&gt; [a]</span></span><span class="mpre">
+    elems,          </span><span class="hl_comment"><span class="mpre">-- :: (Ix a) =&gt; Array a b -&gt; [b]</span></span><span class="mpre">
+    assocs,         </span><span class="hl_comment"><span class="mpre">-- :: (Ix a) =&gt; Array a b -&gt; [(a,b)]</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- * Incremental array updates</span></span><span class="mpre">
+    (//),           </span><span class="hl_comment"><span class="mpre">-- :: (Ix a) =&gt; Array a b -&gt; [(a,b)] -&gt; Array a b</span></span><span class="mpre">
+    accum,          </span><span class="hl_comment"><span class="mpre">-- :: (Ix a) =&gt; (b -&gt; c -&gt; b) -&gt; Array a b -&gt; [(a,c)] -&gt; Array a b</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- * Derived arrays</span></span><span class="mpre">
+    ixmap,          </span><span class="hl_comment"><span class="mpre">-- :: (Ix a, Ix b) =&gt; (a,a) -&gt; (a -&gt; b) -&gt; Array b c -&gt; Array a b</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- Array instances:</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--   Ix a =&gt; Functor (Array a)</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--   (Ix a, Eq b)  =&gt; Eq   (Array a b)</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--   (Ix a, Ord b) =&gt; Ord  (Array a b)</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--   (Ix a, Show a, Show b) =&gt; Show (Array a b)</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--   (Ix a, Read a, Read b) =&gt; Read (Array a b)</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- Implementation checked wrt. Haskell 98 lib report, 1/99.</span></span><span class="mpre">
+  ) where
+
+import Data.Ix
+import Data.Typeable ()
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/array-0.5.0.0/Data/Array.hs&quot;, srcSpanStartLine = 59, srcSpanStartColumn = 8, srcSpanEndLine = 59, srcSpanEndColumn = 15}, srcInfoPoints = []}) &quot;GHC.Arr&quot;"><span class="mpre">GHC.Arr</span></span><span class="mpre">  </span><span class="hl_comment"><span class="mpre">-- Most of the hard work is done here</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $intro
+Haskell provides indexable /arrays/, which may be thought of as functions
+whose domains are isomorphic to contiguous subsets of the integers.
+Functions restricted in this way can be implemented efficiently;
+in particular, a programmer may reasonably expect rapid access to
+the components.  To ensure the possibility of such an implementation,
+arrays are treated as data, not as general functions.
+
+Since most array functions involve the class &#39;Ix&#39;, this module is exported
+from &quot;Data.Array&quot; so that modules need not import both &quot;Data.Array&quot; and
+&quot;Data.Ix&quot;.
+-}</span></span><span class="mpre">
+
+</span></div></body></html>

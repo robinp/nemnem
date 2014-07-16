@@ -1,0 +1,35 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Rank2Types #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Array.Lens</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2012-14 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  MPTCs, Rank2Types, LiberalTypeSynonyms</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Data.Array.Lens
+  (
+  </span><span class="hl_comment"><span class="mpre">-- * Setters</span></span><span class="mpre">
+    ixmapped
+  ) where
+
+import Control.Lens
+import Data.Array.IArray hiding (index)
+
+</span><span class="hl_comment"><span class="mpre">-- | This &#39;setter&#39; can be used to derive a new &#39;IArray&#39; from an old &#39;IAarray&#39; by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- applying a function to each of the indices to look it up in the old &#39;IArray&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This is a /contravariant/ &#39;Setter&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;ixmap&#39; ≡ &#39;over&#39; &#39;.&#39; &#39;ixmapped&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;ixmapped&#39; ≡ &#39;setting&#39; &#39;.&#39; &#39;ixmap&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;over&#39; (&#39;ixmapped&#39; b) f arr &#39;!&#39; i ≡ arr &#39;!&#39; f i</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;bounds&#39; (&#39;over&#39; (&#39;ixmapped&#39; b) f arr) ≡ b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><a href="#loc_33_1_33_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_33_1_33_9&#39;)"><span class="mpre">ixmapped</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxTuple (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Data/Array/Lens.hs&quot;, srcSpanStartLine = 32, srcSpanStartColumn = 13, srcSpanEndLine = 32, srcSpanEndColumn = 40}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Data/Array/Lens.hs&quot;, srcSpanStartLine = 32, srcSpanStartColumn = 13, srcSpanEndLine = 32, srcSpanEndColumn = 14},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Data/Array/Lens.hs&quot;, srcSpanStartLine = 32, srcSp"><span class="mpre">(IArray a e, Ix i, Ix j) =&gt;</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">i</span></span><span class="mpre">,</span><span class="hl_tyvar"><span class="mpre">i</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">IndexPreservingSetter</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">j</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">e</span></span><span class="mpre">) (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">i</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">e</span></span><span class="mpre">) </span><span class="hl_tyvar"><span class="mpre">i</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">j</span></span><span class="mpre">
+</span><a name="loc_33_1_33_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_33_1_33_9&#39;)"><span class="hl_vardecl"><span class="mpre">ixmapped</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Setter.html#loc_280_1_280_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_280_1_280_8&#39;)"><span class="hl_varref"><span class="mpre">setting</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">ixmap</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_33_1_33_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_33_1_33_9&#39;)"><span class="mpre">ixmapped</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span></div></body></html>

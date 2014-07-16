@@ -1,0 +1,143 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  System.Mem.Weak</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In general terms, a weak pointer is a reference to an object that is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- not followed by the garbage collector - that is, the existence of a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- weak pointer to an object has no effect on the lifetime of that</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- object.  A weak pointer can be de-referenced to find out</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- whether the object it refers to is still alive or not, and if so</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to return the object itself.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Weak pointers are particularly useful for caches and memo tables.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To build a memo table, you build a data structure </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- mapping from the function argument (the key) to its result (the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- value).  When you apply the function to a new argument you first</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- check whether the key\/value pair is already in the memo table.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The key point is that the memo table itself should not keep the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- key and value alive.  So the table should contain a weak pointer</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to the key, not an ordinary pointer.  The pointer to the value must</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- not be weak, because the only reference to the value might indeed be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- from the memo table.   </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- So it looks as if the memo table will keep all its values</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- alive for ever.  One way to solve this is to purge the table</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- occasionally, by deleting entries whose keys have died.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The weak pointers in this library</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- support another approach, called /finalization/.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- When the key referred to by a weak pointer dies, the storage manager</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- arranges to run a programmer-specified finalizer.  In the case of memo</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- tables, for example, the finalizer could remove the key\/value pair</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- from the memo table.  </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Another difficulty with the memo table is that the value of a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- key\/value pair might itself contain a pointer to the key.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- So the memo table keeps the value alive, which keeps the key alive,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- even though there may be no other references to the key so both should</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- die.  The weak pointers in this library provide a slight </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- generalisation of the basic weak-pointer idea, in which each</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- weak pointer actually contains both a key and a value.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module System.Mem.Weak (
+        </span><span class="hl_comment"><span class="mpre">-- * The @Weak@ type</span></span><span class="mpre">
+        Weak,                            </span><span class="hl_comment"><span class="mpre">-- abstract</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- * The general interface</span></span><span class="mpre">
+        mkWeak,
+        deRefWeak,
+        finalize,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Specialised versions</span></span><span class="mpre">
+        mkWeakPtr,
+        addFinalizer,
+        mkWeakPair,
+        </span><span class="hl_comment"><span class="mpre">-- replaceFinaliser</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- * A precise semantics</span></span><span class="mpre">
+        
+        </span><span class="hl_comment"><span class="mpre">-- $precise</span></span><span class="mpre">
+   ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Mem/Weak.hs&quot;, srcSpanStartLine = 72, srcSpanStartColumn = 8, srcSpanEndLine = 72, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Weak&quot;"><span class="mpre">GHC.Weak</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A specialised version of &#39;mkWeak&#39;, where the key and the value are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the same object:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; mkWeakPtr key finalizer = mkWeak key key finalizer</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_80_1_80_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_10&#39;)"><span class="mpre">mkWeakPtr</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Weak</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre">)
+</span><a name="loc_80_1_80_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_10&#39;)"><span class="hl_fundecl"><span class="mpre">mkWeakPtr</span></span></a><span class="mpre"> </span><a name="loc_80_11_80_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_11_80_14&#39;)"><span class="hl_vardecl"><span class="mpre">key</span></span></a><span class="mpre"> </span><a name="loc_80_15_80_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_15_80_24&#39;)"><span class="hl_vardecl"><span class="mpre">finalizer</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">mkWeak</span></span><span class="mpre"> </span><a href="#loc_80_11_80_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_11_80_14&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre"> </span><a href="#loc_80_11_80_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_11_80_14&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre"> </span><a href="#loc_80_15_80_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_15_80_24&#39;)"><span class="hl_varref"><span class="mpre">finalizer</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-|
+  A specialised version of &#39;mkWeakPtr&#39;, where the &#39;Weak&#39; object
+  returned is simply thrown away (however the finalizer will be
+  remembered by the garbage collector, and will still be run
+  when the key becomes unreachable).
+
+  Note: adding a finalizer to a &#39;Foreign.ForeignPtr.ForeignPtr&#39; using
+  &#39;addFinalizer&#39; won&#39;t work; use the specialised version
+  &#39;Foreign.ForeignPtr.addForeignPtrFinalizer&#39; instead.  For discussion
+  see the &#39;Weak&#39; type.
+.
+-}</span></span><span class="mpre">
+</span><a href="#loc_95_1_95_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_13&#39;)"><span class="mpre">addFinalizer</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_95_1_95_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_13&#39;)"><span class="hl_fundecl"><span class="mpre">addFinalizer</span></span></a><span class="mpre"> </span><a name="loc_95_14_95_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_14_95_17&#39;)"><span class="hl_vardecl"><span class="mpre">key</span></span></a><span class="mpre"> </span><a name="loc_95_18_95_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_18_95_27&#39;)"><span class="hl_vardecl"><span class="mpre">finalizer</span></span></a><span class="mpre"> = do
+   _ &lt;- </span><a href="#loc_80_1_80_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_10&#39;)"><span class="hl_varref"><span class="mpre">mkWeakPtr</span></span></a><span class="mpre"> </span><a href="#loc_95_14_95_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_14_95_17&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> </span><a href="#loc_95_18_95_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_18_95_27&#39;)"><span class="hl_varref"><span class="mpre">finalizer</span></span></a><span class="mpre">) </span><span class="hl_comment"><span class="mpre">-- throw it away</span></span><span class="mpre">
+   </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A specialised version of &#39;mkWeak&#39; where the value is actually a pair</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of the key and value passed to &#39;mkWeakPair&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; mkWeakPair key val finalizer = mkWeak key (key,val) finalizer</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The advantage of this is that the key can be retrieved by &#39;deRefWeak&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in addition to the value.</span></span><span class="mpre">
+</span><a href="#loc_107_1_107_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_1_107_11&#39;)"><span class="mpre">mkWeakPair</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Weak</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre">,</span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre">))
+</span><a name="loc_107_1_107_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_1_107_11&#39;)"><span class="hl_fundecl"><span class="mpre">mkWeakPair</span></span></a><span class="mpre"> </span><a name="loc_107_12_107_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_12_107_15&#39;)"><span class="hl_vardecl"><span class="mpre">key</span></span></a><span class="mpre"> </span><a name="loc_107_16_107_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_16_107_19&#39;)"><span class="hl_vardecl"><span class="mpre">val</span></span></a><span class="mpre"> </span><a name="loc_107_20_107_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_20_107_29&#39;)"><span class="hl_vardecl"><span class="mpre">finalizer</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">mkWeak</span></span><span class="mpre"> </span><a href="#loc_107_12_107_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_12_107_15&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre"> (</span><a href="#loc_107_12_107_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_12_107_15&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre">,</span><a href="#loc_107_16_107_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_16_107_19&#39;)"><span class="hl_varref"><span class="mpre">val</span></span></a><span class="mpre">) </span><a href="#loc_107_20_107_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_20_107_29&#39;)"><span class="hl_varref"><span class="mpre">finalizer</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">{- $precise
+
+The above informal specification is fine for simple situations, but
+matters can get complicated.  In particular, it needs to be clear
+exactly when a key dies, so that any weak pointers that refer to it
+can be finalized.  Suppose, for example, the value of one weak pointer
+refers to the key of another...does that keep the key alive?
+
+The behaviour is simply this:
+
+ *  If a weak pointer (object) refers to an /unreachable/
+    key, it may be finalized.
+
+ *  Finalization means (a) arrange that subsequent calls
+    to &#39;deRefWeak&#39; return &#39;Nothing&#39;; and (b) run the finalizer.
+
+This behaviour depends on what it means for a key to be reachable.
+Informally, something is reachable if it can be reached by following
+ordinary pointers from the root set, but not following weak pointers.
+We define reachability more precisely as follows.
+
+A heap object is /reachable/ if:
+
+ * It is a member of the /root set/.
+
+ * It is directly pointed to by a reachable object, other than
+   a weak pointer object.
+
+ * It is a weak pointer object whose key is reachable.
+
+ * It is the value or finalizer of a weak pointer object whose key is reachable.
+-}</span></span><span class="mpre">
+
+</span></div></body></html>

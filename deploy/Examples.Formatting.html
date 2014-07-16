@@ -1,0 +1,13 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">module Examples.Formatting where
+
+import Data.Monoid
+import Options.Applicative
+
+</span><a href="#loc_7_1_7_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_7_1_7_5&#39;)"><span class="mpre">opts</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Parser</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+</span><a name="loc_7_1_7_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_7_1_7_5&#39;)"><span class="hl_vardecl"><span class="mpre">opts</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">option</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Data.Monoid.html#loc_84_9_84_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_84_9_84_16&#39;)"><span class="hl_varref"><span class="mpre">mconcat</span></span></a><span class="mpre">
+  [ </span><span class="hl_varref"><span class="mpre">long</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;test&quot;</span></span><span class="mpre">
+  , </span><span class="hl_varref"><span class="mpre">short</span></span><span class="mpre"> </span><span class="hl_char"><span class="mpre">&#39;t&#39;</span></span><span class="mpre">
+  , </span><span class="hl_varref"><span class="mpre">value</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">
+  , </span><span class="hl_varref"><span class="mpre">metavar</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;FOO_BAR_BAZ_LONG_METAVARIABLE&quot;</span></span><span class="mpre">
+  , </span><span class="hl_varref"><span class="mpre">help</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;This is an options with a very very long description.  Hopefully, this will be nicely formatted by the help text generator.&quot;</span></span><span class="mpre"> ]
+</span></div></body></html>

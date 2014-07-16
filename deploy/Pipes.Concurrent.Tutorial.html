@@ -1,0 +1,846 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{-| This module provides a tutorial for the @pipes-concurrency@ library.
+
+    This tutorial assumes that you have read the @pipes@ tutorial in
+    @Pipes.Tutorial@.
+
+    I&#39;ve condensed all the code examples into self-contained code listings in
+    the Appendix section that you can use to follow along.
+-}</span></span><span class="mpre">
+
+module Pipes.Concurrent.Tutorial (
+    </span><span class="hl_comment"><span class="mpre">-- * Introduction</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $intro</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Work Stealing</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $steal</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Termination</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $termination</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Mailbox Sizes</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $mailbox</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Broadcasts</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $broadcast</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Updates</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $updates</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Callbacks</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $callback</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Safety</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $safety</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Conclusion</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $conclusion</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Appendix</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $appendix</span></span><span class="mpre">
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-concurrency-2.0.2/src/Pipes/Concurrent/Tutorial.hs&quot;, srcSpanStartLine = 42, srcSpanStartColumn = 8, srcSpanEndLine = 42, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;Control.Concurrent&quot;"><span class="mpre">Control.Concurrent</span></span><span class="mpre">
+import Control.Monad
+import Pipes
+import Pipes.Concurrent
+import qualified Pipes.Prelude as P
+import Data.Monoid
+
+</span><span class="hl_comment"><span class="mpre">{- $intro
+    The @pipes-concurrency@ library provides a simple interface for
+    communicating between concurrent pipelines.  Use this library if you want
+    to:
+
+    * merge multiple streams into a single stream,
+
+    * stream data from a callback \/ continuation,
+
+    * broadcast data,
+
+    * build a work-stealing setup, or
+
+    * implement basic functional reactive programming (FRP).
+
+    For example, let&#39;s say that we want to design a simple game with two
+    concurrent sources of game @Event@s.
+
+    One source translates user input to game events:
+
+&gt; -- The game events
+&gt; data Event = Harm Integer | Heal Integer | Quit deriving (Show)
+&gt;
+&gt; user :: IO Event
+&gt; user = do
+&gt;     command &lt;- getLine
+&gt;     case command of
+&gt;         &quot;potion&quot; -&gt; return (Heal 10)
+&gt;         &quot;quit&quot;   -&gt; return  Quit
+&gt;         _        -&gt; do
+&gt;             putStrLn &quot;Invalid command&quot;
+&gt;             user  -- Try again
+
+    ... while the other creates inclement weather:
+
+&gt; import Control.Concurrent (threadDelay)
+&gt; import Control.Monad (forever)
+&gt; import Pipes
+&gt;
+&gt; acidRain :: Producer Event IO r
+&gt; acidRain = forever $ do
+&gt;     lift $ threadDelay 2000000  -- Wait 2 seconds
+&gt;     yield (Harm 1)
+
+    We can asynchronously merge these two separate sources of @Event@s into a
+    single stream by &#39;spawn&#39;ing a first-in-first-out (FIFO) mailbox:
+
+@
+ &#39;spawn&#39; :: &#39;Buffer&#39; a -&gt; &#39;IO&#39; (&#39;Output&#39; a, &#39;Input&#39; a)
+@
+
+    &#39;spawn&#39; takes a &#39;Buffer&#39; as an argument which specifies how many messages to
+    store.  In this case we want our mailbox to store an &#39;Unbounded&#39; number of
+    messages:
+
+&gt; import Pipes.Concurrent
+&gt; 
+&gt; main = do
+&gt;     (output, input) &lt;- spawn Unbounded
+&gt;     ...
+
+   &#39;spawn&#39; creates this mailbox in the background and then returns two values:
+
+    * an @(Output a)@ that we use to add messages of type @a@ to the mailbox
+
+    * an @(Input a)@ that we use to consume messages of type @a@ from the
+      mailbox
+
+    We will be streaming @Event@s through our mailbox, so our @output@ has type
+    @(Output Event)@ and our @input@ has type @(Input Event)@.
+
+    To stream @Event@s into the mailbox , we use &#39;toOutput&#39;, which writes values
+    to the mailbox&#39;s &#39;Output&#39; end:
+
+@
+ &#39;toOutput&#39; :: (&#39;MonadIO&#39; m) =&gt; &#39;Output&#39; a -&gt; &#39;Consumer&#39; a m ()
+@
+
+    We can concurrently forward multiple streams to the same &#39;Output&#39;, which
+    asynchronously merges their messages into the same mailbox:
+
+&gt;     ...
+&gt;     forkIO $ do runEffect $ lift user &gt;~  toOutput output
+&gt;                 performGC  -- I&#39;ll explain &#39;performGC&#39; below
+&gt; 
+&gt;     forkIO $ do runEffect $ acidRain  &gt;-&gt; toOutput output
+&gt;                 performGC
+&gt;     ...
+
+    To stream @Event@s out of the mailbox, we use &#39;fromInput&#39;, which streams
+    values from the mailbox&#39;s &#39;Input&#39; end using a &#39;Producer&#39;:
+
+@
+ &#39;fromInput&#39; :: (&#39;MonadIO&#39; m) =&gt; &#39;Input&#39; a -&gt; &#39;Producer&#39; a m ()
+@
+
+    For this example we&#39;ll build a &#39;Consumer&#39; to handle this stream of @Event@s,
+    that either harms or heals our intrepid adventurer depending on which
+    @Event@ we receive:
+
+&gt; handler :: Consumer Event IO ()
+&gt; handler = loop 100
+&gt;   where
+&gt;     loop health = do
+&gt;         lift $ putStrLn $ &quot;Health = &quot; ++ show health
+&gt;         event &lt;- await
+&gt;         case event of
+&gt;             Harm n -&gt; loop (health - n)
+&gt;             Heal n -&gt; loop (health + n)
+&gt;             Quit   -&gt; return ()
+
+    Now we can just connect our @Event@ &#39;Producer&#39; to our @Event@ &#39;Consumer&#39;
+    using (&#39;&gt;-&gt;&#39;):
+
+&gt;     ...
+&gt;     runEffect $ fromInput input &gt;-&gt; handler
+
+    Our final @main@ looks like this:
+
+&gt; main = do
+&gt;     (output, input) &lt;- spawn Unbounded
+&gt;
+&gt;     forkIO $ do runEffect $ lift user &gt;~  toOutput output
+&gt;                 performGC  
+&gt;
+&gt;     forkIO $ do runEffect $ acidRain  &gt;-&gt; toOutput output
+&gt;                 performGC
+&gt;
+&gt;     runEffect $ fromInput input &gt;-&gt; handler
+
+    ... and when we run it we get the desired concurrent behavior:
+
+&gt; $ ./game
+&gt; Health = 100
+&gt; Health = 99
+&gt; Health = 98
+&gt; potion&lt;Enter&gt;
+&gt; Health = 108
+&gt; Health = 107
+&gt; Health = 106
+&gt; potion&lt;Enter&gt;
+&gt; Health = 116
+&gt; Health = 115
+&gt; quit&lt;Enter&gt;
+&gt; $
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $steal
+    You can also have multiple pipes reading from the same mailbox.  Messages
+    get split between listening pipes on a first-come first-serve basis.
+
+    For example, we&#39;ll define a \&quot;worker\&quot; that takes a one-second break each
+    time it receives a new job:
+
+&gt; import Control.Concurrent (threadDelay)
+&gt; import Control.Monad
+&gt; import Pipes
+&gt; 
+&gt; worker :: (Show a) =&gt; Int -&gt; Consumer a IO r
+&gt; worker i = forever $ do
+&gt;     a &lt;- await
+&gt;     lift $ threadDelay 1000000  -- 1 second
+&gt;     lift $ putStrLn $ &quot;Worker #&quot; ++ show i ++ &quot;: Processed &quot; ++ show a
+
+    Fortunately, these workers are cheap, so we can assign several of them to
+    the same job:
+
+&gt; import Control.Concurrent.Async
+&gt; import qualified Pipes.Prelude as P
+&gt; import Pipes.Concurrent
+&gt; 
+&gt; main = do
+&gt;     (output, input) &lt;- spawn Unbounded
+&gt;     as &lt;- forM [1..3] $ \i -&gt;
+&gt;           async $ do runEffect $ fromInput input  &gt;-&gt; worker i
+&gt;                      performGC
+&gt;     a  &lt;- async $ do runEffect $ each [1..10] &gt;-&gt; toOutput output
+&gt;                      performGC
+&gt;     mapM_ wait (a:as)
+
+    The above example uses @Control.Concurrent.Async@ from the @async@ package
+    to fork each thread and wait for all of them to terminate:
+
+&gt; $ ./work
+&gt; Worker #2: Processed 3
+&gt; Worker #1: Processed 2
+&gt; Worker #3: Processed 1
+&gt; Worker #3: Processed 6
+&gt; Worker #1: Processed 5
+&gt; Worker #2: Processed 4
+&gt; Worker #2: Processed 9
+&gt; Worker #1: Processed 8
+&gt; Worker #3: Processed 7
+&gt; Worker #2: Processed 10
+&gt; $
+
+    What if we replace &#39;each&#39; with a different source that reads lines from user
+    input until the user types \&quot;quit\&quot;:
+
+&gt; user :: Producer String IO ()
+&gt; user = P.stdinLn &gt;-&gt; P.takeWhile (/= &quot;quit&quot;)
+&gt; 
+&gt; main = do
+&gt;     (output, input) &lt;- spawn Unbounded
+&gt;     as &lt;- forM [1..3] $ \i -&gt;
+&gt;           async $ do runEffect $ fromInput input &gt;-&gt; worker i
+&gt;                      performGC
+&gt;     a  &lt;- async $ do runEffect $ user &gt;-&gt; toOutput output
+&gt;                      performGC
+&gt;     mapM_ wait (a:as)
+
+    This still produces the correct behavior:
+
+&gt; $ ./work
+&gt; Test&lt;Enter&gt;
+&gt; Worker #1: Processed &quot;Test&quot;
+&gt; Apple&lt;Enter&gt;
+&gt; Worker #2: Processed &quot;Apple&quot;
+&gt; 42&lt;Enter&gt;
+&gt; Worker #3: Processed &quot;42&quot;
+&gt; A&lt;Enter&gt;
+&gt; B&lt;Enter&gt;
+&gt; C&lt;Enter&gt;
+&gt; Worker #1: Processed &quot;A&quot;
+&gt; Worker #2: Processed &quot;B&quot;
+&gt; Worker #3: Processed &quot;C&quot;
+&gt; quit&lt;Enter&gt;
+&gt; $
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $termination
+
+    Wait...  How do the workers know when to stop listening for data?  After
+    all, anything that has a reference to &#39;Output&#39; could potentially add more
+    data to the mailbox.
+
+    It turns out that &#39;spawn&#39; is smart and instruments the &#39;Input&#39; to
+    terminate when the &#39;Output&#39; is garbage collected.  &#39;fromInput&#39; builds on top
+    of the more primitive &#39;recv&#39; command, which returns a &#39;Nothing&#39; when the
+    &#39;Input&#39; terminates:
+
+@
+ &#39;recv&#39; :: &#39;Input&#39; a -&gt; &#39;STM&#39; (&#39;Maybe&#39; a)
+@
+
+    Otherwise, &#39;recv&#39; will block if the mailbox is empty since if the &#39;Output&#39;
+    has not been garbage collected then somebody might still produce more data.
+
+    Does it work the other way around?  What happens if the workers go on strike
+    before processing the entire data set?
+
+&gt;     ...
+&gt;     as &lt;- forM [1..3] $ \i -&gt;
+&gt;           -- Each worker refuses to process more than two values
+&gt;           async $ do runEffect $ fromInput input &gt;-&gt; P.take 2 &gt;-&gt; worker i
+&gt;                      performGC
+&gt;     ...
+
+    Let&#39;s find out:
+
+&gt; $ ./work
+&gt; How&lt;Enter&gt;
+&gt; Worker #1: Processed &quot;How&quot;
+&gt; many&lt;Enter&gt;
+&gt; roads&lt;Enter&gt;
+&gt; Worker #2: Processed &quot;many&quot;
+&gt; Worker #3: Processed &quot;roads&quot;
+&gt; must&lt;Enter&gt;
+&gt; a&lt;Enter&gt;
+&gt; man&lt;Enter&gt;
+&gt; Worker #1: Processed &quot;must&quot;
+&gt; Worker #2: Processed &quot;a&quot;
+&gt; Worker #3: Processed &quot;man&quot;
+&gt; walk&lt;Enter&gt;
+&gt; $
+
+    &#39;spawn&#39; tells the &#39;Output&#39; to similarly terminate when the &#39;Input&#39; is
+    garbage collected, preventing the user from submitting new values.
+    &#39;toOutput&#39; builds on top of the more primitive &#39;send&#39; command, which returns
+    a &#39;False&#39; when the &#39;Output&#39; terminates:
+
+@
+ &#39;send&#39; :: &#39;Output&#39; a -&gt; a -&gt; &#39;STM&#39; &#39;Bool&#39;
+@
+
+    Otherwise, &#39;send&#39; will blocks if the mailbox is full, since if the &#39;Input&#39;
+    has not been garbage collected then somebody could still consume a value
+    from the mailbox, making room for a new value.
+
+    This is why we have to insert &#39;performGC&#39; calls whenever we release a
+    reference to either the &#39;Output&#39; or &#39;Input&#39;.  Without these calls we cannot
+    guarantee that the garbage collector will trigger and notify the opposing
+    end if the last reference was released.
+
+    There are two ways to avoid using &#39;performGC&#39;.  First, you can omit the
+    &#39;performGC&#39; call, which is safe and preferable for long-running programs.
+    This simply delays garbage collecting mailboxes until the next garbage
+    collection cycle.
+
+    Second, you can use the &#39;spawn&#39;&#39; command, which returns a third @seal@
+    action:
+
+&gt; (output, input, seal) &lt;- spawn&#39; buffer
+&gt; ...
+
+    Use this to @seal@ the mailbox so that it cannot receive new messages.  This
+    allows both readers and writers to shut down early without relying on
+    garbage collection:
+
+    * writers will shut down immediately because they can no longer write to the
+      mailbox
+
+    * readers will shut down when the mailbox goes empty because they know that
+      no new data will arrive
+
+    For simplicity, this tutorial will continue to use `performGC` since all
+    the examples are short-lived programs that do not build up a large heap.
+    However, when the heap grows large you want to avoid `performGC` and
+    consider using one of the above two alternatives instead.
+
+    Note only &#39;Input&#39;s and &#39;Output&#39;s specifically built using &#39;spawn&#39; or
+    &#39;spawn&#39;&#39; make use of the garbage collector.  If you build your own custom
+    &#39;Input&#39;s and &#39;Output&#39;s then you do not need to use &#39;performGC&#39; at all.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $mailbox
+    So far we haven&#39;t observed &#39;send&#39; blocking because we only &#39;spawn&#39;ed
+    &#39;Unbounded&#39; mailboxes.  However, we can control the size of the mailbox to
+    tune the coupling between the &#39;Output&#39; and the &#39;Input&#39; ends.
+
+    If we set the mailbox &#39;Buffer&#39; to &#39;Single&#39;, then the mailbox holds exactly
+    one message, forcing synchronization between &#39;send&#39;s and &#39;recv&#39;s.  Let&#39;s
+    observe this by sending an infinite stream of values, logging all values to
+    the console:
+
+&gt; main = do
+&gt;     (output, input) &lt;- spawn Single
+&gt;     as &lt;- forM [1..3] $ \i -&gt;
+&gt;           async $ do runEffect $ fromInput input &gt;-&gt; P.take 2 &gt;-&gt; worker i
+&gt;                      performGC
+&gt;     a  &lt;- async $ do runEffect $ each [1..] &gt;-&gt; P.chain print &gt;-&gt; toOutput output
+&gt;                      performGC
+&gt;     mapM_ wait (a:as)
+
+    The 7th value gets stuck in the mailbox, and the 8th value blocks because
+    the mailbox never clears the 7th value:
+
+&gt; $ ./work
+&gt; 1
+&gt; 2
+&gt; 3
+&gt; 4
+&gt; 5
+&gt; Worker #3: Processed 3
+&gt; Worker #2: Processed 2
+&gt; Worker #1: Processed 1
+&gt; 6
+&gt; 7
+&gt; 8
+&gt; Worker #1: Processed 6
+&gt; Worker #2: Processed 5
+&gt; Worker #3: Processed 4
+&gt; $
+
+    Contrast this with an &#39;Unbounded&#39; mailbox for the same program, which keeps
+    accepting values until downstream finishes processing the first six values:
+
+&gt; $ ./work
+&gt; 1
+&gt; 2
+&gt; 3
+&gt; 4
+&gt; 5
+&gt; 6
+&gt; 7
+&gt; 8
+&gt; 9
+&gt; ...
+&gt; 487887
+&gt; 487888
+&gt; Worker #3: Processed 3
+&gt; Worker #2: Processed 2
+&gt; Worker #1: Processed 1
+&gt; 487889
+&gt; 487890
+&gt; ...
+&gt; 969188
+&gt; 969189
+&gt; Worker #1: Processed 6
+&gt; Worker #2: Processed 5
+&gt; Worker #3: Processed 4
+&gt; 969190
+&gt; 969191
+&gt; $
+
+    You can also choose something in between by using a &#39;Bounded&#39; mailbox which
+    caps the mailbox size to a fixed value.  Use &#39;Bounded&#39; when you want mostly
+    loose coupling but still want to guarantee bounded memory usage:
+
+&gt; main = do
+&gt;     (output, input) &lt;- spawn (Bounded 100)
+&gt;     ...
+
+&gt; $ ./work
+&gt; ...
+&gt; 103
+&gt; 104
+&gt; Worker #3: Processed 3
+&gt; Worker #2: Processed 2
+&gt; Worker #1: Processed 1
+&gt; 105
+&gt; 106
+&gt; 107
+&gt; Worker #1: Processed 6
+&gt; Worker #2: Processed 5
+&gt; Worker #3: Processed 4
+&gt; $
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $broadcast
+    You can also broadcast data to multiple listeners instead of dividing up the
+    data.  Just use the &#39;Monoid&#39; instance for &#39;Output&#39; to combine multiple
+    &#39;Output&#39; ends together into a single broadcast &#39;Output&#39;:
+
+&gt; -- broadcast.hs
+&gt;
+&gt; import Control.Monad
+&gt; import Control.Concurrent.Async
+&gt; import Pipes
+&gt; import Pipes.Concurrent
+&gt; import qualified Pipes.Prelude as P
+&gt; import Data.Monoid
+&gt; 
+&gt; main = do
+&gt;     (output1, input1) &lt;- spawn Unbounded
+&gt;     (output2, input2) &lt;- spawn Unbounded
+&gt;     a1 &lt;- async $ do
+&gt;         runEffect $ P.stdinLn &gt;-&gt; toOutput (output1 &lt;&gt; output2)
+&gt;         performGC
+&gt;     as &lt;- forM [input1, input2] $ \input -&gt; async $ do
+&gt;         runEffect $ fromInput input &gt;-&gt; P.take 2 &gt;-&gt; P.stdoutLn
+&gt;         performGC
+&gt;     mapM_ wait (a1:as)
+
+    In the above example, &#39;P.stdinLn&#39; will broadcast user input to both
+    mailboxes, and each mailbox forwards its values to &#39;P.stdoutLn&#39;, echoing the
+    message to standard output:
+
+&gt; $ ./broadcast
+&gt; ABC&lt;Enter&gt;
+&gt; ABC
+&gt; ABC
+&gt; DEF&lt;Enter&gt;
+&gt; DEF
+&gt; DEF
+&gt; GHI&lt;Enter&gt;
+&gt; $ 
+
+    The combined &#39;Output&#39; stays alive as long as any of the original &#39;Output&#39;s
+    remains alive.  In the above example, &#39;toOutput&#39; terminates on the third
+    &#39;send&#39; attempt because it detects that both listeners died after receiving
+    two messages.
+
+    Use &#39;mconcat&#39; to broadcast to a list of &#39;Output&#39;s, but keep in mind that you
+    will incur a performance price if you combine thousands of &#39;Output&#39;s or more
+    because they will create a very large &#39;STM&#39; transaction.  You can improve
+    performance for very large broadcasts if you sacrifice atomicity and
+    manually combine multiple &#39;send&#39; actions in &#39;IO&#39; instead of &#39;STM&#39;.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $updates
+    Sometimes you don&#39;t want to handle every single event.  For example, you
+    might have an input and output device (like a mouse and a monitor) where the
+    input device updates at a different pace than the output device
+
+&gt; import Control.Concurrent (threadDelay)
+&gt; import Control.Monad
+&gt; import Pipes
+&gt; import qualified Pipes.Prelude as P
+&gt; 
+&gt; -- Fast input updates
+&gt; inputDevice :: (Monad m) =&gt; Producer Integer m ()
+&gt; inputDevice = each [1..]
+&gt; 
+&gt; -- Slow output updates
+&gt; outputDevice :: Consumer Integer IO r
+&gt; outputDevice = forever $ do
+&gt;     n &lt;- await
+&gt;     lift $ do
+&gt;         print n
+&gt;         threadDelay 1000000
+
+    In this scenario you don&#39;t want to enforce a one-to-one correspondence
+    between input device updates and output device updates because you don&#39;t
+    want either end to block waiting for the other end.  Instead, you just need
+    the output device to consult the &#39;Latest&#39; value received from the &#39;Input&#39;:
+
+&gt; import Control.Concurrent.Async
+&gt; import Pipes.Concurrent
+&gt; 
+&gt; main = do
+&gt;     (output, input) &lt;- spawn (Latest 0)
+&gt;     a1 &lt;- async $ do runEffect $ inputDevice &gt;-&gt; toOutput output
+&gt;                      performGC
+&gt;     a2 &lt;- async $ do runEffect $ fromInput input &gt;-&gt; P.take 5 &gt;-&gt; outputDevice
+&gt;                      performGC
+&gt;     mapM_ wait [a1, a2]
+
+    &#39;Latest&#39; selects a mailbox that always stores exactly one value.  The
+    &#39;Latest&#39; constructor takes a single argument (@0@, in the above example)
+    specifying the starting value to store in the mailbox.  &#39;send&#39; overrides the
+    currently stored value and &#39;recv&#39; peeks at the latest stored value without
+    consuming it.  In the above example the @outputDevice@ periodically peeks at    the latest value stashed inside the mailbox:
+
+&gt; $ ./peek
+&gt; 7
+&gt; 2626943
+&gt; 5303844
+&gt; 7983519
+&gt; 10604940
+&gt; $
+
+    A &#39;Latest&#39; mailbox is never empty because it begins with a default value and
+    &#39;recv&#39; never removes the value from the mailbox.  A &#39;Latest&#39; mailbox is also
+    never full because &#39;send&#39; always succeeds, overwriting the previously stored
+    value.
+
+    Another alternative is to use the &#39;Newest&#39; mailbox, which is like a
+    &#39;Bounded&#39; mailbox, except &#39;send&#39; never blocks (the mailbox is never full).
+    Instead, if there is no room &#39;send&#39; will remove the oldest message from the
+    mailbox to make room for a new message.
+
+    The &#39;New&#39; mailbox is like the &#39;Newest&#39; mailbox, except optimized for the
+    special case where you want to store a single message.  You can use &#39;New&#39; to
+    read from a source that might potentially update rapidly, but still sleep if
+    the source has no new values:
+
+&gt; inputDevice :: Producer Integer IO ()
+&gt; inputDevice = do
+&gt;     each [1..100]               -- Rapid updates
+&gt;     lift $ threadDelay 4000000  -- Source goes quiet for 4 seconds
+&gt;     each [101..]                -- More rapid updates
+&gt;
+&gt; main = do
+&gt;     (output, input) &lt;- spawn New
+&gt;     ...
+
+    When the source goes quiet, the &#39;Input&#39; will now block and wait, and will
+    never read the same value twice:
+
+&gt; $ ./peek
+&gt; 7
+&gt; 100
+&gt; &lt;Longer pause&gt;
+&gt; 16793
+&gt; 5239440
+&gt; 10474439
+&gt; $
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $callback
+    @pipes-concurrency@ also solves the common problem of getting data out of a
+    callback-based framework into @pipes@.
+
+    For example, suppose that we have the following callback-based function:
+
+&gt; import Control.Monad
+&gt; 
+&gt; onLines :: (String -&gt; IO a) -&gt; IO b
+&gt; onLines callback = forever $ do
+&gt;     str &lt;- getLine
+&gt;     callback str
+
+    We can use &#39;send&#39; to free the data from the callback and then we can
+    retrieve the data on the outside using &#39;fromInput&#39;:
+
+&gt; import Pipes
+&gt; import Pipes.Concurrent
+&gt; import qualified Pipes.Prelude as P
+&gt; 
+&gt; onLines&#39; :: Producer String IO ()
+&gt; onLines&#39; = do
+&gt;     (output, input) &lt;- lift $ spawn Single
+&gt;     lift $ forkIO $ onLines (\str -&gt; atomically $ send output str)
+&gt;     fromInput input
+&gt; 
+&gt; main = runEffect $ onLines&#39; &gt;-&gt; P.takeWhile (/= &quot;quit&quot;) &gt;-&gt; P.stdoutLn
+
+    Now we can stream from the callback as if it were an ordinary &#39;Producer&#39;:
+
+&gt; $ ./callback
+&gt; Test&lt;Enter&gt;
+&gt; Test
+&gt; Apple&lt;Enter&gt;
+&gt; Apple
+&gt; quit&lt;Enter&gt;
+&gt; $
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $safety
+    @pipes-concurrency@ avoids deadlocks because &#39;send&#39; and &#39;recv&#39; always
+    cleanly return before triggering a deadlock.  This behavior works even in
+    complicated scenarios like:
+
+    * cyclic graphs of connected mailboxes,
+
+    * multiple readers and multiple writers to the same mailbox, and
+
+    * dynamically adding or garbage collecting mailboxes.
+
+    The following example shows how @pipes-concurrency@ will do the right thing
+    even in the case of cycles:
+
+&gt; -- cycle.hs
+&gt;
+&gt; import Control.Concurrent.Async
+&gt; import Pipes
+&gt; import Pipes.Concurrent
+&gt; import qualified Pipes.Prelude as P
+&gt; 
+&gt; main = do
+&gt;     (out1, in1) &lt;- spawn Unbounded
+&gt;     (out2, in2) &lt;- spawn Unbounded
+&gt;     a1 &lt;- async $ do
+&gt;         runEffect $ (each [1,2] &gt;&gt; fromInput in1) &gt;-&gt; toOutput out2
+&gt;         performGC
+&gt;     a2 &lt;- async $ do
+&gt;         runEffect $ fromInput in2 &gt;-&gt; P.chain print &gt;-&gt; P.take 6 &gt;-&gt; toOutput out1
+&gt;         performGC
+&gt;     mapM_ wait [a1, a2]
+
+    The above program jump-starts a cyclic chain with two input values and
+    terminates one branch of the cycle after six values flow through.  Both
+    branches correctly terminate and get garbage collected without triggering
+    deadlocks when &#39;takeB_&#39; finishes:
+
+&gt; $ ./cycle
+&gt; 1
+&gt; 2
+&gt; 1
+&gt; 2
+&gt; 1
+&gt; 2
+&gt; $
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $conclusion
+    @pipes-concurrency@ adds an asynchronous dimension to @pipes@.  This
+    promotes a natural division of labor for concurrent programs:
+
+    * Fork one pipeline per deterministic behavior
+
+    * Communicate between concurrent pipelines using @pipes-concurrency@
+
+    This promotes an actor-style approach to concurrent programming where
+    pipelines behave like processes and mailboxes behave like ... mailboxes.
+
+    You can ask questions about @pipes-concurrency@ and other @pipes@ libraries
+    on the official @pipes@ mailing list at
+    &lt;mailto:haskell-pipes@googlegroups.com&gt;.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $appendix
+    I&#39;ve provided the full code for the above examples here so you can easily
+    try them out:
+
+&gt;-- game.hs
+&gt;
+&gt;import Control.Concurrent (threadDelay)
+&gt;import Control.Monad (forever)
+&gt;import Pipes
+&gt;import Pipes.Concurrent
+&gt;
+&gt;data Event = Harm Integer | Heal Integer | Quit deriving (Show)
+&gt;
+&gt;user :: IO Event
+&gt;user = do
+&gt;    command &lt;- getLine
+&gt;    case command of
+&gt;        &quot;potion&quot; -&gt; return (Heal 10)
+&gt;        &quot;quit&quot;   -&gt; return  Quit
+&gt;        _        -&gt; do
+&gt;            putStrLn &quot;Invalid command&quot;
+&gt;            user
+&gt;
+&gt;acidRain :: Producer Event IO r
+&gt;acidRain = forever $ do
+&gt;    lift $ threadDelay 2000000  -- Wait 2 seconds
+&gt;    yield (Harm 1)
+&gt;
+&gt;handler :: Consumer Event IO ()
+&gt;handler = loop 100
+&gt;  where
+&gt;    loop health = do
+&gt;        lift $ putStrLn $ &quot;Health = &quot; ++ show health
+&gt;        event &lt;- await
+&gt;        case event of
+&gt;            Harm n -&gt; loop (health - n)
+&gt;            Heal n -&gt; loop (health + n)
+&gt;            Quit   -&gt; return ()
+&gt;
+&gt;main = do
+&gt;    (output, input) &lt;- spawn Unbounded
+&gt;
+&gt;    forkIO $ do runEffect $ lift user &gt;~  toOutput output
+&gt;                performGC
+&gt;
+&gt;    forkIO $ do runEffect $ acidRain  &gt;-&gt; toOutput output
+&gt;                performGC
+&gt;
+&gt;    runEffect $ fromInput input &gt;-&gt; handler
+
+&gt;-- work.hs
+&gt;
+&gt;import Control.Concurrent (threadDelay)
+&gt;import Control.Concurrent.Async
+&gt;import Control.Monad
+&gt;import Pipes
+&gt;import Pipes.Concurrent
+&gt;import qualified Pipes.Prelude as P
+&gt;
+&gt;worker :: (Show a) =&gt; Int -&gt; Consumer a IO r
+&gt;worker i = forever $ do
+&gt;    a &lt;- await
+&gt;    lift $ threadDelay 1000000  -- 1 second
+&gt;    lift $ putStrLn $ &quot;Worker #&quot; ++ show i ++ &quot;: Processed &quot; ++ show a
+&gt;
+&gt;user :: Producer String IO ()
+&gt;user = P.stdinLn &gt;-&gt; P.takeWhile (/= &quot;quit&quot;)
+&gt;
+&gt;main = do
+&gt;--  (output, input) &lt;- spawn Unbounded
+&gt;--  (output, input) &lt;- spawn Single
+&gt;    (output, input) &lt;- spawn (Bounded 100)
+&gt;
+&gt;    as &lt;- forM [1..3] $ \i -&gt;
+&gt;--        async $ do runEffect $ fromInput input  &gt;-&gt; worker i
+&gt;          async $ do runEffect $ fromInput input  &gt;-&gt; P.take 2 &gt;-&gt; worker i
+&gt;                     performGC
+&gt;
+&gt;--  a  &lt;- async $ do runEffect $ each [1..10]                 &gt;-&gt; toOutput output
+&gt;--  a  &lt;- async $ do runEffect $ user                         &gt;-&gt; toOutput output
+&gt;    a  &lt;- async $ do runEffect $ each [1..] &gt;-&gt; P.chain print &gt;-&gt; toOutput output
+&gt;                     performGC
+&gt;
+&gt;    mapM_ wait (a:as)
+
+&gt;-- peek.hs
+&gt;
+&gt;import Control.Concurrent (threadDelay)
+&gt;import Control.Concurrent.Async
+&gt;import Control.Monad
+&gt;import Pipes
+&gt;import Pipes.Concurrent
+&gt;import qualified Pipes.Prelude as P
+&gt;
+&gt;inputDevice :: (Monad m) =&gt; Producer Integer m ()
+&gt;inputDevice = each [1..]
+&gt;
+&gt;outputDevice :: Consumer Integer IO r
+&gt;outputDevice = forever $ do
+&gt;    n &lt;- await
+&gt;    lift $ do
+&gt;        print n
+&gt;        threadDelay 1000000
+&gt;
+&gt;main = do
+&gt;    (output, input) &lt;- spawn (Latest 0)
+&gt;    a1 &lt;- async $ do runEffect $ inputDevice &gt;-&gt; toOutput output
+&gt;                     performGC
+&gt;    a2 &lt;- async $ do runEffect $ fromInput input &gt;-&gt; P.take 5 &gt;-&gt; outputDevice
+&gt;                     performGC
+&gt;    mapM_ wait [a1, a2]
+
+&gt;-- callback.hs
+&gt;
+&gt;import Control.Monad
+&gt;import Pipes
+&gt;import Pipes.Concurrent
+&gt;import qualified Pipes.Prelude as P
+&gt;
+&gt;onLines :: (String -&gt; IO a) -&gt; IO b
+&gt;onLines callback = forever $ do
+&gt;    str &lt;- getLine
+&gt;    callback str
+&gt;
+&gt;onLines&#39; :: Producer String IO ()
+&gt;onLines&#39; = do
+&gt;    (output, input) &lt;- lift $ spawn Single
+&gt;    lift $ forkIO $ onLines (\str -&gt; atomically $ send output str)
+&gt;    fromInput input
+&gt;
+&gt;main = runEffect $ onLines&#39; &gt;-&gt; P.takeWhile (/= &quot;quit&quot;) &gt;-&gt; P.stdoutLn
+-}</span></span><span class="mpre">
+</span></div></body></html>

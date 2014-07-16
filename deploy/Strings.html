@@ -1,0 +1,22 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# OPTIONS -fglasgow-exts #-}
+
+module Strings (tests) where
+
+</span><span class="hl_comment"><span class="mpre">{-
+
+This test exercices GENERIC read, show, and eq for the company
+datatypes which we use a lot. The output of the program should be
+&quot;True&quot; which means that &quot;gread&quot; reads what &quot;gshow&quot; shows while the
+read term is equal to the original term in terms of &quot;geq&quot;.
+
+-}</span></span><span class="mpre">
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Strings.hs&quot;, srcSpanStartLine = 14, srcSpanStartColumn = 8, srcSpanEndLine = 14, srcSpanEndColumn = 18}, srcInfoPoints = []}) &quot;Test.HUnit&quot;"><span class="mpre">Test.HUnit</span></span><span class="mpre">
+
+import Data.Generics
+import CompanyDatatypes
+
+</span><a name="loc_19_1_19_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_1_19_6&#39;)"><span class="hl_vardecl"><span class="mpre">tests</span></span></a><span class="mpre"> = (case </span><a href="Data.Generics.Text.html#loc_71_1_71_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Text.html#loc_71_1_71_6&#39;)"><span class="hl_varref"><span class="mpre">gread</span></span></a><span class="mpre"> (</span><a href="Data.Generics.Text.html#loc_43_1_43_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Text.html#loc_43_1_43_6&#39;)"><span class="hl_varref"><span class="mpre">gshow</span></span></a><span class="mpre"> </span><a href="CompanyDatatypes.html#loc_21_1_21_7" onmouseover="nemnem.highlightLocalToRemote(&#39;CompanyDatatypes.html#loc_21_1_21_7&#39;)"><span class="hl_varref"><span class="mpre">genCom</span></span></a><span class="mpre">) of
+           [(</span><a name="loc_20_14_20_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_20_14_20_15&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">,_)] -&gt; </span><a href="Data.Generics.Twins.html#loc_255_1_255_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Twins.html#loc_255_1_255_4&#39;)"><span class="hl_varref"><span class="mpre">geq</span></span></a><span class="mpre"> </span><a href="CompanyDatatypes.html#loc_21_1_21_7" onmouseover="nemnem.highlightLocalToRemote(&#39;CompanyDatatypes.html#loc_21_1_21_7&#39;)"><span class="hl_varref"><span class="mpre">genCom</span></span></a><span class="mpre"> </span><a href="#loc_20_14_20_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_20_14_20_15&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+           _ -&gt; </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">~=?</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+</span></div></body></html>

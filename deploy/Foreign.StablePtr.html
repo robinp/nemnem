@@ -1,0 +1,48 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Foreign.StablePtr</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  ffi@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module is part of the Foreign Function Interface (FFI) and will usually</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- be imported via the module &quot;Foreign&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+
+module Foreign.StablePtr
+        ( </span><span class="hl_comment"><span class="mpre">-- * Stable references to Haskell values</span></span><span class="mpre">
+          StablePtr          </span><span class="hl_comment"><span class="mpre">-- abstract</span></span><span class="mpre">
+        , newStablePtr
+        , deRefStablePtr
+        , freeStablePtr
+        , castStablePtrToPtr
+        , castPtrToStablePtr
+        , </span><span class="hl_comment"><span class="mpre">-- ** The C-side interface</span></span><span class="mpre">
+
+          </span><span class="hl_comment"><span class="mpre">-- $cinterface</span></span><span class="mpre">
+        ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Foreign/StablePtr.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 8, srcSpanEndLine = 33, srcSpanEndColumn = 18}, srcInfoPoints = []}) &quot;GHC.Stable&quot;"><span class="mpre">GHC.Stable</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $cinterface</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The following definition is available to C programs inter-operating with</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Haskell code when including the header @HsFFI.h@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; typedef void *HsStablePtr;  /* C representation of a StablePtr */</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that no assumptions may be made about the values representing stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- pointers.  In fact, they need not even be valid memory addresses.  The only</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- guarantee provided is that if they are passed back to Haskell land, the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- function &#39;deRefStablePtr&#39; will be able to reconstruct the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Haskell value referred to by the stable pointer.</span></span><span class="mpre">
+
+</span></div></body></html>

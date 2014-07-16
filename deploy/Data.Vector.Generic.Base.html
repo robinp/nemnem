@@ -1,0 +1,141 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Rank2Types, MultiParamTypeClasses, FlexibleContexts,
+             TypeFamilies, ScopedTypeVariables, BangPatterns #-}
+{-# OPTIONS_HADDOCK hide #-}
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.Vector.Generic.Base</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) Roman Leshchinskiy 2008-2010</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Roman Leshchinskiy &lt;rl@cse.unsw.edu.au&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Class of pure vectors</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+
+module Data.Vector.Generic.Base (
+  Vector(..), Mutable
+) where
+
+import           </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 21, srcSpanStartColumn = 18, srcSpanEndLine = 21, srcSpanEndColumn = 45}, srcInfoPoints = []}) &quot;Data.Vector.Generic.Mutable&quot;"><span class="mpre">Data.Vector.Generic.Mutable</span></span><span class="mpre"> ( MVector )
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 22, srcSpanStartColumn = 18, srcSpanEndLine = 22, srcSpanEndColumn = 45}, srcInfoPoints = []}) &quot;Data.Vector.Generic.Mutable&quot;"><span class="mpre">Data.Vector.Generic.Mutable</span></span><span class="mpre"> as M
+
+import Control.Monad.Primitive
+
+</span><span class="hl_comment"><span class="mpre">-- | @Mutable v s a@ is the mutable version of the pure vector type @v a@ with</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the state token @s@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeFamDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 29, srcSpanStartColumn = 1, srcSpanEndLine = 29, srcSpanEndColumn = 49}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 29, srcSpanStartColumn = 1, srcSpanEndLine = 29, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generi"><span class="mpre">type family Mutable (v :: * -&gt; *) :: * -&gt; * -&gt; *</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Class of immutable vectors. Every immutable vector is associated with its</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- mutable version through the &#39;Mutable&#39; type family. Methods of this class</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- should not be used directly. Instead, &quot;Data.Vector.Generic&quot; and other</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Data.Vector modules provide safe and fusible wrappers.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Minimum complete implementation:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   * &#39;basicUnsafeFreeze&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   * &#39;basicUnsafeThaw&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   * &#39;basicLength&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   * &#39;basicUnsafeSlice&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   * &#39;basicUnsafeIndexM&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+class </span><span class="warning" data-warning="ClassDecl ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 48, srcSpanStartColumn = 7, srcSpanEndLine = 48, srcSpanEndColumn = 31}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 48, srcSpanStartColumn = 29, srcSpanEndLine = 48, srcSpanEndColumn = 31}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pu"><span class="mpre">MVector (Mutable v) a =&gt;</span></span><span class="mpre"> </span><a name="loc_48_32_48_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_32_48_38&#39;)"><span class="hl_classdecl"><span class="mpre">Vector</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> where
+  </span><span class="hl_comment"><span class="mpre">-- | /Assumed complexity: O(1)/</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Unsafely convert a mutable vector to its immutable version</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- without copying. The mutable vector may not be used after</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- this operation.</span></span><span class="mpre">
+  </span><a name="loc_54_3_54_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_3_54_20&#39;)"><span class="mpre">basicUnsafeFreeze</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 54, srcSpanStartColumn = 24, srcSpanEndLine = 54, srcSpanEndColumn = 38}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 54, srcSpanStartColumn = 36, srcSpanEndLine = 54, srcSpanEndColumn = 38}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/p"><span class="mpre">PrimMonad m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Mutable</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">PrimState</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre">) </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+
+  </span><span class="hl_comment"><span class="mpre">-- | /Assumed complexity: O(1)/</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Unsafely convert an immutable vector to its mutable version without</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- copying. The immutable vector may not be used after this operation.</span></span><span class="mpre">
+  </span><a name="loc_60_3_60_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_3_60_18&#39;)"><span class="mpre">basicUnsafeThaw</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 60, srcSpanStartColumn = 22, srcSpanEndLine = 60, srcSpanEndColumn = 36}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 60, srcSpanStartColumn = 34, srcSpanEndLine = 60, srcSpanEndColumn = 36}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/p"><span class="mpre">PrimMonad m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Mutable</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">PrimState</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre">) </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+
+  </span><span class="hl_comment"><span class="mpre">-- | /Assumed complexity: O(1)/</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Yield the length of the vector.</span></span><span class="mpre">
+  </span><a name="loc_65_3_65_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_65_3_65_14&#39;)"><span class="mpre">basicLength</span></a><span class="mpre">      :: </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | /Assumed complexity: O(1)/</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Yield a slice of the vector without copying it. No range checks are</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- performed.</span></span><span class="mpre">
+  </span><a name="loc_71_3_71_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_71_3_71_19&#39;)"><span class="mpre">basicUnsafeSlice</span></a><span class="mpre">  :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- ^ starting index</span></span><span class="mpre">
+                    -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- ^ length</span></span><span class="mpre">
+                    -&gt; </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | /Assumed complexity: O(1)/</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Yield the element at the given position in a monad. No range checks are</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- performed.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- The monad allows us to be strict in the vector if we want. Suppose we had</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &gt; unsafeIndex :: v a -&gt; Int -&gt; a</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- instead. Now, if we wanted to copy a vector, we&#39;d do something like</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &gt; copy mv v ... = ... unsafeWrite mv i (unsafeIndex v i) ...</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- For lazy vectors, the indexing would not be evaluated which means that we</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- would retain a reference to the original vector in each element we write.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- This is not what we want!</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- With &#39;basicUnsafeIndexM&#39;, we can do</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &gt; copy mv v ... = ... case basicUnsafeIndexM v i of</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &gt;                       Box x -&gt; unsafeWrite mv i x ...</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- which does not have this problem because indexing (but not the returned</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- element!) is evaluated immediately.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><a name="loc_100_3_100_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_3_100_20&#39;)"><span class="mpre">basicUnsafeIndexM</span></a><span class="mpre">  :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 100, srcSpanStartColumn = 25, srcSpanEndLine = 100, srcSpanEndColumn = 35}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 100, srcSpanStartColumn = 33, srcSpanEndLine = 100, srcSpanEndColumn = 35}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemn"><span class="mpre">Monad m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- |  /Assumed complexity: O(n)/</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Copy an immutable vector into a mutable one. The two vectors must have</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- the same length but this is not checked.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Instances of &#39;Vector&#39; should redefine this method if they wish to support</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- an efficient block copy operation.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Default definition: copying basic on &#39;basicUnsafeIndexM&#39; and</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &#39;basicUnsafeWrite&#39;.</span></span><span class="mpre">
+  </span><a name="loc_112_3_112_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_3_112_18&#39;)"><span class="mpre">basicUnsafeCopy</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 112, srcSpanStartColumn = 22, srcSpanEndLine = 112, srcSpanEndColumn = 36}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vector-0.10.11.0/Data/Vector/Generic/Base.hs&quot;, srcSpanStartLine = 112, srcSpanStartColumn = 34, srcSpanEndLine = 112, srcSpanEndColumn = 36}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemn"><span class="mpre">PrimMonad m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Mutable</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">PrimState</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre">) </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+
+  </span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_112_3_112_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_3_112_18&#39;)"><span class="mpre">basicUnsafeCopy</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+  </span><a href="#loc_112_3_112_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_3_112_18&#39;)"><span class="hl_fundecl"><span class="mpre">basicUnsafeCopy</span></span></a><span class="mpre"> !</span><a name="loc_115_20_115_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_20_115_23&#39;)"><span class="hl_vardecl"><span class="mpre">dst</span></span></a><span class="mpre"> !</span><a name="loc_115_25_115_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_25_115_28&#39;)"><span class="hl_vardecl"><span class="mpre">src</span></span></a><span class="mpre"> = </span><a href="#loc_119_7_119_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_7_119_14&#39;)"><span class="hl_varref"><span class="mpre">do_copy</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">
+    where
+      !</span><a name="loc_117_8_117_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_8_117_9&#39;)"><span class="hl_vardecl"><span class="mpre">n</span></span></a><span class="mpre"> = </span><a href="#loc_65_3_65_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_65_3_65_14&#39;)"><span class="hl_varref"><span class="mpre">basicLength</span></span></a><span class="mpre"> </span><a href="#loc_115_25_115_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_25_115_28&#39;)"><span class="hl_varref"><span class="mpre">src</span></span></a><span class="mpre">
+
+      </span><a name="loc_119_7_119_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_7_119_14&#39;)"><span class="hl_fundecl"><span class="mpre">do_copy</span></span></a><span class="mpre"> </span><a name="loc_119_15_119_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_15_119_16&#39;)"><span class="hl_vardecl"><span class="mpre">i</span></span></a><span class="mpre"> | </span><a href="#loc_119_15_119_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_15_119_16&#39;)"><span class="hl_varref"><span class="mpre">i</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;</span></span><span class="mpre"> </span><a href="#loc_117_8_117_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_8_117_9&#39;)"><span class="hl_varref"><span class="mpre">n</span></span></a><span class="mpre"> = do
+                            </span><a name="loc_120_29_120_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_29_120_30&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_100_3_100_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_3_100_20&#39;)"><span class="hl_varref"><span class="mpre">basicUnsafeIndexM</span></span></a><span class="mpre"> </span><a href="#loc_115_25_115_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_25_115_28&#39;)"><span class="hl_varref"><span class="mpre">src</span></span></a><span class="mpre"> </span><a href="#loc_119_15_119_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_15_119_16&#39;)"><span class="hl_varref"><span class="mpre">i</span></span></a><span class="mpre">
+                            </span><span class="hl_varref"><span class="mpre">M.basicUnsafeWrite</span></span><span class="mpre"> </span><a href="#loc_115_20_115_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_20_115_23&#39;)"><span class="hl_varref"><span class="mpre">dst</span></span></a><span class="mpre"> </span><a href="#loc_119_15_119_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_15_119_16&#39;)"><span class="hl_varref"><span class="mpre">i</span></span></a><span class="mpre"> </span><a href="#loc_120_29_120_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_29_120_30&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+                            </span><a href="#loc_119_7_119_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_7_119_14&#39;)"><span class="hl_varref"><span class="mpre">do_copy</span></span></a><span class="mpre"> (</span><a href="#loc_119_15_119_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_15_119_16&#39;)"><span class="hl_varref"><span class="mpre">i</span></span></a><span class="hl_infix"><span class="mpre">+</span></span><span class="hl_num"><span class="mpre">1</span></span><span class="mpre">)
+                | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Evaluate @a@ as far as storing it in a vector would and yield @b@.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- The @v a@ argument only fixes the type and is not touched. The method is</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- only used for optimisation purposes. Thus, it is safe for instances of</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &#39;Vector&#39; to evaluate @a@ less than it would be when stored in a vector</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- although this might result in suboptimal code.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- &gt; elemseq v x y = (singleton x `asTypeOf` v) `seq` y</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Default defintion: @a@ is not evaluated at all</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><a name="loc_135_3_135_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_135_3_135_10&#39;)"><span class="mpre">elemseq</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+
+  </span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_135_3_135_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_135_3_135_10&#39;)"><span class="mpre">elemseq</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+  </span><a href="#loc_135_3_135_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_135_3_135_10&#39;)"><span class="hl_fundecl"><span class="mpre">elemseq</span></span></a><span class="mpre"> _ = \_ </span><a name="loc_138_18_138_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_138_18_138_19&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_138_18_138_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_138_18_138_19&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+
+</span></div></body></html>

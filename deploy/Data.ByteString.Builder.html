@@ -1,0 +1,459 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, BangPatterns #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-orphans #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Trustworthy #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">{- | Copyright   : (c) 2010 Jasper Van der Jeugt
+                   (c) 2010 - 2011 Simon Meier
+License     : BSD3-style (see LICENSE)
+Maintainer  : Simon Meier &lt;iridcode@gmail.com&gt;
+Portability : GHC
+
+&#39;Builder&#39;s are used to efficiently construct sequences of bytes from
+  smaller parts.
+Typically,
+  such a construction is part of the implementation of an /encoding/, i.e.,
+  a function for converting Haskell values to sequences of bytes.
+Examples of encodings are the generation of the sequence of bytes
+  representing a HTML document to be sent in a HTTP response by a
+  web application or the serialization of a Haskell value using
+  a fixed binary format.
+
+For an /efficient implementation of an encoding/,
+  it is important that (a) little time is spent on converting
+  the Haskell values to the resulting sequence of bytes /and/
+  (b) that the representation of the resulting sequence
+  is such that it can be consumed efficiently.
+&#39;Builder&#39;s support (a) by providing an /O(1)/ concatentation operation
+  and efficient implementations of basic encodings for &#39;Char&#39;s, &#39;Int&#39;s,
+  and other standard Haskell values.
+They support (b) by providing their result as a lazy &#39;L.ByteString&#39;,
+  which is internally just a linked list of pointers to /chunks/
+  of consecutive raw memory.
+Lazy &#39;L.ByteString&#39;s can be efficiently consumed by functions that
+  write them to a file or send them over a network socket.
+Note that each chunk boundary incurs expensive extra work (e.g., a system call)
+  that must be amortized over the work spent on consuming the chunk body.
+&#39;Builder&#39;s therefore take special care to ensure that the
+  average chunk size is large enough.
+The precise meaning of large enough is application dependent.
+The current implementation is tuned
+  for an average chunk size between 4kb and 32kb,
+  which should suit most applications.
+
+As a simple example of an encoding implementation,
+  we show how to efficiently convert the following representation of mixed-data
+  tables to an UTF-8 encoded Comma-Separated-Values (CSV) table.
+
+&gt;data Cell = StringC String
+&gt;          | IntC Int
+&gt;          deriving( Eq, Ord, Show )
+&gt;
+&gt;type Row   = [Cell]
+&gt;type Table = [Row]
+
+We use the following imports and abbreviate &#39;mappend&#39; to simplify reading.
+
+@
+import qualified &quot;Data.ByteString.Lazy&quot;               as L
+import           &quot;Data.ByteString.Builder&quot;
+import           Data.Monoid
+import           Data.Foldable                        (&#39;foldMap&#39;)
+import           Data.List                            (&#39;intersperse&#39;)
+
+infixr 4 \&lt;\&gt;
+(\&lt;\&gt;) :: &#39;Monoid&#39; m =&gt; m -&gt; m -&gt; m
+(\&lt;\&gt;) = &#39;mappend&#39;
+@
+
+CSV is a character-based representation of tables. For maximal modularity,
+we could first render &#39;Table&#39;s as &#39;String&#39;s and then encode this &#39;String&#39;
+using some Unicode character encoding. However, this sacrifices performance
+due to the intermediate &#39;String&#39; representation being built and thrown away
+right afterwards. We get rid of this intermediate &#39;String&#39; representation by
+fixing the character encoding to UTF-8 and using &#39;Builder&#39;s to convert
+&#39;Table&#39;s directly to UTF-8 encoded CSV tables represented as lazy
+&#39;L.ByteString&#39;s.
+
+@
+encodeUtf8CSV :: Table -&gt; L.ByteString
+encodeUtf8CSV = &#39;toLazyByteString&#39; . renderTable
+
+renderTable :: Table -&gt; Builder
+renderTable rs = &#39;mconcat&#39; [renderRow r \&lt;\&gt; &#39;charUtf8&#39; \&#39;\\n\&#39; | r &lt;- rs]
+
+renderRow :: Row -&gt; Builder
+renderRow []     = &#39;mempty&#39;
+renderRow (c:cs) =
+    renderCell c \&lt;\&gt; mconcat [ charUtf8 \&#39;,\&#39; \&lt;\&gt; renderCell c\&#39; | c\&#39; &lt;- cs ]
+
+renderCell :: Cell -&gt; Builder
+renderCell (StringC cs) = renderString cs
+renderCell (IntC i)     = &#39;intDec&#39; i
+
+renderString :: String -&gt; Builder
+renderString cs = charUtf8 \&#39;\&quot;\&#39; \&lt;\&gt; foldMap escape cs \&lt;\&gt; charUtf8 \&#39;\&quot;\&#39;
+  where
+    escape \&#39;\\\\\&#39; = charUtf8 \&#39;\\\\\&#39; \&lt;\&gt; charUtf8 \&#39;\\\\\&#39;
+    escape \&#39;\\\&quot;\&#39; = charUtf8 \&#39;\\\\\&#39; \&lt;\&gt; charUtf8 \&#39;\\\&quot;\&#39;
+    escape c    = charUtf8 c
+@
+
+Note that the ASCII encoding is a subset of the UTF-8 encoding,
+  which is why we can use the optimized function &#39;intDec&#39; to
+  encode an &#39;Int&#39; as a decimal number with UTF-8 encoded digits.
+Using &#39;intDec&#39; is more efficient than @&#39;stringUtf8&#39; . &#39;show&#39;@,
+  as it avoids constructing an intermediate &#39;String&#39;.
+Avoiding this intermediate data structure significantly improves
+  performance because encoding &#39;Cell&#39;s is the core operation
+  for rendering CSV-tables.
+See &quot;Data.ByteString.Builder.Prim&quot; for further
+  information on how to improve the performance of &#39;renderString&#39;.
+
+We demonstrate our UTF-8 CSV encoding function on the following table.
+
+@
+strings :: [String]
+strings =  [\&quot;hello\&quot;, \&quot;\\\&quot;1\\\&quot;\&quot;, \&quot;&amp;#955;-w&amp;#246;rld\&quot;]
+
+table :: Table
+table = [map StringC strings, map IntC [-3..3]]
+@
+
+The expression @encodeUtf8CSV table@ results in the following lazy
+&#39;L.ByteString&#39;.
+
+&gt;Chunk &quot;\&quot;hello\&quot;,\&quot;\\\&quot;1\\\&quot;\&quot;,\&quot;\206\187-w\195\182rld\&quot;\n-3,-2,-1,0,1,2,3\n&quot; Empty
+
+We can clearly see that we are converting to a /binary/ format. The \&#39;&amp;#955;\&#39;
+and \&#39;&amp;#246;\&#39; characters, which have a Unicode codepoint above 127, are
+expanded to their corresponding UTF-8 multi-byte representation.
+
+We use the @criterion@ library (&lt;http://hackage.haskell.org/package/criterion&gt;)
+  to benchmark the efficiency of our encoding function on the following table.
+
+&gt;import Criterion.Main     -- add this import to the ones above
+&gt;
+&gt;maxiTable :: Table
+&gt;maxiTable = take 1000 $ cycle table
+&gt;
+&gt;main :: IO ()
+&gt;main = defaultMain
+&gt;  [ bench &quot;encodeUtf8CSV maxiTable (original)&quot; $
+&gt;      whnf (L.length . encodeUtf8CSV) maxiTable
+&gt;  ]
+
+On a Core2 Duo 2.20GHz on a 32-bit Linux,
+  the above code takes 1ms to generate the 22&#39;500 bytes long lazy &#39;L.ByteString&#39;.
+Looking again at the definitions above,
+  we see that we took care to avoid intermediate data structures,
+  as otherwise we would sacrifice performance.
+For example,
+  the following (arguably simpler) definition of &#39;renderRow&#39; is about 20% slower.
+
+&gt;renderRow :: Row -&gt; Builder
+&gt;renderRow  = mconcat . intersperse (charUtf8 &#39;,&#39;) . map renderCell
+
+Similarly, using /O(n)/ concatentations like &#39;++&#39; or the equivalent &#39;S.concat&#39;
+  operations on strict and lazy &#39;L.ByteString&#39;s should be avoided.
+The following definition of &#39;renderString&#39; is also about 20% slower.
+
+&gt;renderString :: String -&gt; Builder
+&gt;renderString cs = charUtf8 $ &quot;\&quot;&quot; ++ concatMap escape cs ++ &quot;\&quot;&quot;
+&gt;  where
+&gt;    escape &#39;\\&#39; = &quot;\\&quot;
+&gt;    escape &#39;\&quot;&#39; = &quot;\\\&quot;&quot;
+&gt;    escape c    = return c
+
+Apart from removing intermediate data-structures,
+  encodings can be optimized further by fine-tuning their execution
+  parameters using the functions in &quot;Data.ByteString.Builder.Extra&quot; and
+  their \&quot;inner loops\&quot; using the functions in
+  &quot;Data.ByteString.Builder.Prim&quot;.
+-}</span></span><span class="mpre">
+
+
+module Data.ByteString.Builder
+    (
+      </span><span class="hl_comment"><span class="mpre">-- * The Builder type</span></span><span class="mpre">
+      Builder
+
+      </span><span class="hl_comment"><span class="mpre">-- * Executing Builders</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- | Internally, &#39;Builder&#39;s are buffer-filling functions. They are</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- executed by a /driver/ that provides them with an actual buffer to</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- fill. Once called with a buffer, a &#39;Builder&#39; fills it and returns a</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- signal to the driver telling it that it is either done, has filled the</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- current buffer, or wants to directly insert a reference to a chunk of</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- memory. In the last two cases, the &#39;Builder&#39; also returns a</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- continutation &#39;Builder&#39; that the driver can call to fill the next</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- buffer. Here, we provide the two drivers that satisfy almost all use</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- cases. See &quot;Data.ByteString.Builder.Extra&quot;, for information</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- about fine-tuning them.</span></span><span class="mpre">
+    , toLazyByteString
+    , hPutBuilder
+
+      </span><span class="hl_comment"><span class="mpre">-- * Creating Builders</span></span><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- ** Binary encodings</span></span><span class="mpre">
+    , byteString
+    , lazyByteString
+    , shortByteString
+    , int8
+    , word8
+
+      </span><span class="hl_comment"><span class="mpre">-- *** Big-endian</span></span><span class="mpre">
+    , int16BE
+    , int32BE
+    , int64BE
+
+    , word16BE
+    , word32BE
+    , word64BE
+
+    , floatBE
+    , doubleBE
+
+      </span><span class="hl_comment"><span class="mpre">-- *** Little-endian</span></span><span class="mpre">
+    , int16LE
+    , int32LE
+    , int64LE
+
+    , word16LE
+    , word32LE
+    , word64LE
+
+    , floatLE
+    , doubleLE
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Character encodings</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- *** ASCII (Char7)</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- | The ASCII encoding is a 7-bit encoding. The /Char7/ encoding implemented here</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- works by truncating the Unicode codepoint to 7-bits, prefixing it</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- with a leading 0, and encoding the resulting 8-bits as a single byte.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- For the codepoints 0-127 this corresponds the ASCII encoding. In</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &quot;Data.ByteString.Builder.ASCII&quot;, we also provide efficient</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- implementations of ASCII-based encodings of numbers (e.g., decimal and</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- hexadecimal encodings).</span></span><span class="mpre">
+    , char7
+    , string7
+
+    </span><span class="hl_comment"><span class="mpre">-- *** ISO/IEC 8859-1 (Char8)</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- | The ISO/IEC 8859-1 encoding is an 8-bit encoding often known as Latin-1.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- The /Char8/ encoding implemented here works by truncating the Unicode codepoint</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- to 8-bits and encoding them as a single byte. For the codepoints 0-255 this corresponds</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- to the ISO/IEC 8859-1 encoding. Note that you can also use</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- the functions from &quot;Data.ByteString.Builder.ASCII&quot;, as the ASCII encoding</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- and ISO/IEC 8859-1 are equivalent on the codepoints 0-127.</span></span><span class="mpre">
+    , char8
+    , string8
+
+    </span><span class="hl_comment"><span class="mpre">-- *** UTF-8</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- | The UTF-8 encoding can encode /all/ Unicode codepoints. We recommend</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- using it always for encoding &#39;Char&#39;s and &#39;String&#39;s unless an application</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- really requires another encoding. Note that you can also use the</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- functions from &quot;Data.ByteString.Builder.ASCII&quot; for UTF-8 encoding,</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- as the ASCII encoding is equivalent to the UTF-8 encoding on the Unicode</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- codepoints 0-127.</span></span><span class="mpre">
+    , charUtf8
+    , stringUtf8
+
+    , module Data.ByteString.Builder.ASCII
+
+    ) where
+
+import           Data.ByteString.Builder.Internal
+import qualified Data.ByteString.Builder.Prim  as P
+import qualified Data.ByteString.Lazy.Internal as L
+import           Data.ByteString.Builder.ASCII
+
+import           Data.String (</span><a href="Data.String.html#loc_34_7_34_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.String.html#loc_34_7_34_15&#39;)"><span class="mpre">IsString</span></a><span class="mpre">(..))
+import           System.IO (</span><a href="GHC.IO.Handle.Types.html#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.Types.html#loc_100_6_100_12&#39;)"><span class="mpre">Handle</span></a><span class="mpre">)
+import           Foreign
+
+</span><span class="hl_comment"><span class="mpre">-- HADDOCK only imports</span></span><span class="mpre">
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/bytestring-0.10.4.0/Data/ByteString/Builder.hs&quot;, srcSpanStartLine = 275, srcSpanStartColumn = 18, srcSpanEndLine = 275, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre">               as S (concat)
+import           Data.Monoid
+import           Data.Foldable                      (</span><a href="Data.Foldable.html#loc_104_5_104_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Foldable.html#loc_104_5_104_12&#39;)"><span class="mpre">foldMap</span></a><span class="mpre">)
+import           Data.List                          (</span><a href="Data.List.html#loc_427_1_427_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.List.html#loc_427_1_427_12&#39;)"><span class="mpre">intersperse</span></a><span class="mpre">)
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Execute a &#39;Builder&#39; and return the generated chunks as a lazy &#39;L.ByteString&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The work is performed lazy, i.e., only when a chunk of the lazy &#39;L.ByteString&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is forced.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# NOINLINE </span><a href="#loc_286_1_286_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_286_1_286_17&#39;)"><span class="mpre">toLazyByteString</span></a><span class="mpre"> #-}</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- ensure code is shared</span></span><span class="mpre">
+</span><a href="#loc_286_1_286_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_286_1_286_17&#39;)"><span class="mpre">toLazyByteString</span></a><span class="mpre"> :: </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre"> -&gt; </span><a href="Data.ByteString.Lazy.Internal.html#loc_82_6_82_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Lazy.Internal.html#loc_82_6_82_16&#39;)"><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span></a><span class="mpre">
+</span><a name="loc_286_1_286_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_286_1_286_17&#39;)"><span class="hl_vardecl"><span class="mpre">toLazyByteString</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Internal.html#loc_1083_1_1083_21" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_1083_1_1083_21&#39;)"><span class="hl_varref"><span class="mpre">toLazyByteStringWith</span></span></a><span class="mpre">
+    (</span><a href="Data.ByteString.Builder.Internal.html#loc_1038_1_1038_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_1038_1_1038_13&#39;)"><span class="hl_varref"><span class="mpre">safeStrategy</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Lazy.Internal.html#loc_213_1_213_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Lazy.Internal.html#loc_213_1_213_15&#39;)"><span class="hl_varref"><span class="mpre">L.smallChunkSize</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Lazy.Internal.html#loc_208_1_208_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Lazy.Internal.html#loc_208_1_208_17&#39;)"><span class="hl_varref"><span class="mpre">L.defaultChunkSize</span></span></a><span class="mpre">) </span><a href="Data.ByteString.Lazy.Internal.html#loc_82_19_82_24" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Lazy.Internal.html#loc_82_19_82_24&#39;)"><span class="hl_conref"><span class="mpre">L.Empty</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- Not yet stable enough.
+   See note on &#39;hPut&#39; in Data.ByteString.Builder.Internal
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Output a &#39;Builder&#39; to a &#39;Handle&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;Builder&#39; is executed directly on the buffer of the &#39;Handle&#39;. If the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- buffer is too small (or not present), then it is replaced with a large</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- enough buffer.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- It is recommended that the &#39;Handle&#39; is set to binary and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;BlockBuffering&#39; mode. See &#39;hSetBinaryMode&#39; and &#39;hSetBuffering&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This function is more efficient than @hPut . &#39;toLazyByteString&#39;@ because in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- many cases no buffer allocation has to be done. Moreover, the results of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- several executions of short &#39;Builder&#39;s are concatenated in the &#39;Handle&#39;s</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- buffer, therefore avoiding unnecessary buffer flushes.</span></span><span class="mpre">
+</span><a href="#loc_306_1_306_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_306_1_306_12&#39;)"><span class="mpre">hPutBuilder</span></a><span class="mpre"> :: </span><a href="GHC.IO.Handle.Types.html#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.Types.html#loc_100_6_100_12&#39;)"><span class="hl_tyconref"><span class="mpre">Handle</span></span></a><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_306_1_306_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_306_1_306_12&#39;)"><span class="hl_fundecl"><span class="mpre">hPutBuilder</span></span></a><span class="mpre"> </span><a name="loc_306_13_306_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_306_13_306_14&#39;)"><span class="hl_vardecl"><span class="mpre">h</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Internal.html#loc_596_1_596_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_596_1_596_5&#39;)"><span class="hl_varref"><span class="mpre">hPut</span></span></a><span class="mpre"> </span><a href="#loc_306_13_306_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_306_13_306_14&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Data.ByteString.Builder.Internal.html#loc_508_1_508_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_508_1_508_11&#39;)"><span class="hl_varref"><span class="mpre">putBuilder</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Binary encodings</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a single signed byte as-is.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_317_1_317_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_317_1_317_5&#39;)"><span class="mpre">int8</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_317_1_317_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_317_1_317_5&#39;)"><span class="mpre">int8</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int8</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_317_1_317_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_317_1_317_5&#39;)"><span class="hl_vardecl"><span class="mpre">int8</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_239_1_239_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_239_1_239_5&#39;)"><span class="hl_varref"><span class="mpre">P.int8</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a single unsigned byte as-is.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_323_1_323_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_323_1_323_6&#39;)"><span class="mpre">word8</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_323_1_323_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_323_1_323_6&#39;)"><span class="mpre">word8</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_323_1_323_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_323_1_323_6&#39;)"><span class="hl_vardecl"><span class="mpre">word8</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_73_1_73_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_73_1_73_6&#39;)"><span class="hl_varref"><span class="mpre">P.word8</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Binary little-endian encodings</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode an &#39;Int16&#39; in little endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_333_1_333_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_333_1_333_8&#39;)"><span class="mpre">int16LE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_333_1_333_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_333_1_333_8&#39;)"><span class="mpre">int16LE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int16</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_333_1_333_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_333_1_333_8&#39;)"><span class="hl_vardecl"><span class="mpre">int16LE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_249_1_249_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_249_1_249_8&#39;)"><span class="hl_varref"><span class="mpre">P.int16LE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode an &#39;Int32&#39; in little endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_338_1_338_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_338_1_338_8&#39;)"><span class="mpre">int32LE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_338_1_338_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_338_1_338_8&#39;)"><span class="mpre">int32LE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int32</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_338_1_338_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_338_1_338_8&#39;)"><span class="hl_vardecl"><span class="mpre">int32LE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_259_1_259_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_259_1_259_8&#39;)"><span class="hl_varref"><span class="mpre">P.int32LE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode an &#39;Int64&#39; in little endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_343_1_343_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_343_1_343_8&#39;)"><span class="mpre">int64LE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_343_1_343_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_343_1_343_8&#39;)"><span class="mpre">int64LE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int64</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_343_1_343_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_343_1_343_8&#39;)"><span class="hl_vardecl"><span class="mpre">int64LE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_269_1_269_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_269_1_269_8&#39;)"><span class="hl_varref"><span class="mpre">P.int64LE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a &#39;Word16&#39; in little endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_348_1_348_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_348_1_348_9&#39;)"><span class="mpre">word16LE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_348_1_348_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_348_1_348_9&#39;)"><span class="mpre">word16LE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word16</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_348_1_348_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_348_1_348_9&#39;)"><span class="hl_vardecl"><span class="mpre">word16LE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_95_1_95_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_95_1_95_9&#39;)"><span class="hl_varref"><span class="mpre">P.word16LE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a &#39;Word32&#39; in little endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_353_1_353_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_353_1_353_9&#39;)"><span class="mpre">word32LE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_353_1_353_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_353_1_353_9&#39;)"><span class="mpre">word32LE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word32</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_353_1_353_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_353_1_353_9&#39;)"><span class="hl_vardecl"><span class="mpre">word32LE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_119_1_119_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_119_1_119_9&#39;)"><span class="hl_varref"><span class="mpre">P.word32LE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a &#39;Word64&#39; in little endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_358_1_358_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_358_1_358_9&#39;)"><span class="mpre">word64LE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_358_1_358_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_358_1_358_9&#39;)"><span class="mpre">word64LE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word64</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_358_1_358_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_358_1_358_9&#39;)"><span class="hl_vardecl"><span class="mpre">word64LE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_172_1_172_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_172_1_172_9&#39;)"><span class="hl_varref"><span class="mpre">P.word64LE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a &#39;Float&#39; in little endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_363_1_363_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_363_1_363_8&#39;)"><span class="mpre">floatLE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_363_1_363_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_363_1_363_8&#39;)"><span class="mpre">floatLE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Float</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_363_1_363_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_363_1_363_8&#39;)"><span class="hl_vardecl"><span class="mpre">floatLE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_311_1_311_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_311_1_311_8&#39;)"><span class="hl_varref"><span class="mpre">P.floatLE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a &#39;Double&#39; in little endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_368_1_368_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_368_1_368_9&#39;)"><span class="mpre">doubleLE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_368_1_368_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_368_1_368_9&#39;)"><span class="mpre">doubleLE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Double</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_368_1_368_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_368_1_368_9&#39;)"><span class="hl_vardecl"><span class="mpre">doubleLE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_321_1_321_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_321_1_321_9&#39;)"><span class="hl_varref"><span class="mpre">P.doubleLE</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Binary big-endian encodings</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode an &#39;Int16&#39; in big endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_378_1_378_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_378_1_378_8&#39;)"><span class="mpre">int16BE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_378_1_378_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_378_1_378_8&#39;)"><span class="mpre">int16BE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int16</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_378_1_378_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_378_1_378_8&#39;)"><span class="hl_vardecl"><span class="mpre">int16BE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_244_1_244_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_244_1_244_8&#39;)"><span class="hl_varref"><span class="mpre">P.int16BE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode an &#39;Int32&#39; in big endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_383_1_383_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_383_1_383_8&#39;)"><span class="mpre">int32BE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_383_1_383_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_383_1_383_8&#39;)"><span class="mpre">int32BE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int32</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_383_1_383_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_383_1_383_8&#39;)"><span class="hl_vardecl"><span class="mpre">int32BE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_254_1_254_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_254_1_254_8&#39;)"><span class="hl_varref"><span class="mpre">P.int32BE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode an &#39;Int64&#39; in big endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_388_1_388_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_388_1_388_8&#39;)"><span class="mpre">int64BE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_388_1_388_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_388_1_388_8&#39;)"><span class="mpre">int64BE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int64</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_388_1_388_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_388_1_388_8&#39;)"><span class="hl_vardecl"><span class="mpre">int64BE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_264_1_264_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_264_1_264_8&#39;)"><span class="hl_varref"><span class="mpre">P.int64BE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a &#39;Word16&#39; in big endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_393_1_393_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_393_1_393_9&#39;)"><span class="mpre">word16BE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_393_1_393_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_393_1_393_9&#39;)"><span class="mpre">word16BE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word16</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_393_1_393_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_393_1_393_9&#39;)"><span class="hl_vardecl"><span class="mpre">word16BE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_84_1_84_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_84_1_84_9&#39;)"><span class="hl_varref"><span class="mpre">P.word16BE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a &#39;Word32&#39; in big endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_398_1_398_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_398_1_398_9&#39;)"><span class="mpre">word32BE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_398_1_398_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_398_1_398_9&#39;)"><span class="mpre">word32BE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word32</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_398_1_398_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_398_1_398_9&#39;)"><span class="hl_vardecl"><span class="mpre">word32BE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_106_1_106_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_106_1_106_9&#39;)"><span class="hl_varref"><span class="mpre">P.word32BE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a &#39;Word64&#39; in big endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_403_1_403_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_403_1_403_9&#39;)"><span class="mpre">word64BE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_403_1_403_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_403_1_403_9&#39;)"><span class="mpre">word64BE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word64</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_403_1_403_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_403_1_403_9&#39;)"><span class="hl_vardecl"><span class="mpre">word64BE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_135_1_135_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_135_1_135_9&#39;)"><span class="hl_varref"><span class="mpre">P.word64BE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a &#39;Float&#39; in big endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_408_1_408_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_408_1_408_8&#39;)"><span class="mpre">floatBE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_408_1_408_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_408_1_408_8&#39;)"><span class="mpre">floatBE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Float</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_408_1_408_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_408_1_408_8&#39;)"><span class="hl_vardecl"><span class="mpre">floatBE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_306_1_306_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_306_1_306_8&#39;)"><span class="hl_varref"><span class="mpre">P.floatBE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a &#39;Double&#39; in big endian format.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_413_1_413_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_413_1_413_9&#39;)"><span class="mpre">doubleBE</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_413_1_413_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_413_1_413_9&#39;)"><span class="mpre">doubleBE</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Double</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_413_1_413_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_413_1_413_9&#39;)"><span class="hl_vardecl"><span class="mpre">doubleBE</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.Binary.html#loc_316_1_316_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.Binary.html#loc_316_1_316_9&#39;)"><span class="hl_varref"><span class="mpre">P.doubleBE</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ASCII encoding</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Char7 encode a &#39;Char&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_422_1_422_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_422_1_422_6&#39;)"><span class="mpre">char7</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_422_1_422_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_422_1_422_6&#39;)"><span class="mpre">char7</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_422_1_422_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_422_1_422_6&#39;)"><span class="hl_vardecl"><span class="mpre">char7</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.ASCII.html#loc_93_1_93_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.ASCII.html#loc_93_1_93_6&#39;)"><span class="hl_varref"><span class="mpre">P.char7</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Char7 encode a &#39;String&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_427_1_427_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_427_1_427_8&#39;)"><span class="mpre">string7</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_427_1_427_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_427_1_427_8&#39;)"><span class="mpre">string7</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_427_1_427_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_427_1_427_8&#39;)"><span class="hl_vardecl"><span class="mpre">string7</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_491_1_491_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_491_1_491_17&#39;)"><span class="hl_varref"><span class="mpre">P.primMapListFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.ASCII.html#loc_93_1_93_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.ASCII.html#loc_93_1_93_6&#39;)"><span class="hl_varref"><span class="mpre">P.char7</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ISO/IEC 8859-1 encoding</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Char8 encode a &#39;Char&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_436_1_436_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_436_1_436_6&#39;)"><span class="mpre">char8</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_436_1_436_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_436_1_436_6&#39;)"><span class="mpre">char8</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_436_1_436_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_436_1_436_6&#39;)"><span class="hl_vardecl"><span class="mpre">char8</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_486_1_486_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_486_1_486_10&#39;)"><span class="hl_varref"><span class="mpre">P.primFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.html#loc_683_1_683_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_683_1_683_6&#39;)"><span class="hl_varref"><span class="mpre">P.char8</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Char8 encode a &#39;String&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_441_1_441_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_441_1_441_8&#39;)"><span class="mpre">string8</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_441_1_441_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_441_1_441_8&#39;)"><span class="mpre">string8</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_441_1_441_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_441_1_441_8&#39;)"><span class="hl_vardecl"><span class="mpre">string8</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_491_1_491_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_491_1_491_17&#39;)"><span class="hl_varref"><span class="mpre">P.primMapListFixed</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.html#loc_683_1_683_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_683_1_683_6&#39;)"><span class="hl_varref"><span class="mpre">P.char8</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- UTF-8 encoding</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | UTF-8 encode a &#39;Char&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_450_1_450_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_450_1_450_9&#39;)"><span class="mpre">charUtf8</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_450_1_450_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_450_1_450_9&#39;)"><span class="mpre">charUtf8</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_450_1_450_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_450_1_450_9&#39;)"><span class="hl_vardecl"><span class="mpre">charUtf8</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_545_1_545_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_545_1_545_12&#39;)"><span class="hl_varref"><span class="mpre">P.primBounded</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.html#loc_693_1_693_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_693_1_693_9&#39;)"><span class="hl_varref"><span class="mpre">P.charUtf8</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | UTF-8 encode a &#39;String&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_455_1_455_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_455_1_455_11&#39;)"><span class="mpre">stringUtf8</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_455_1_455_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_455_1_455_11&#39;)"><span class="mpre">stringUtf8</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_455_1_455_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_455_1_455_11&#39;)"><span class="hl_vardecl"><span class="mpre">stringUtf8</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.Prim.html#loc_591_1_591_19" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_591_1_591_19&#39;)"><span class="hl_varref"><span class="mpre">P.primMapListBounded</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Prim.html#loc_693_1_693_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Prim.html#loc_693_1_693_9&#39;)"><span class="hl_varref"><span class="mpre">P.charUtf8</span></span></a><span class="mpre">
+
+instance </span><a href="Data.String.html#loc_34_7_34_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.String.html#loc_34_7_34_15&#39;)"><span class="hl_classref"><span class="mpre">IsString</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre"> where
+    </span><a href="Data.String.html#loc_35_5_35_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.String.html#loc_35_5_35_15&#39;)"><span class="hl_vardecl"><span class="mpre">fromString</span></span></a><span class="mpre"> = </span><a href="#loc_455_1_455_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_455_1_455_11&#39;)"><span class="hl_varref"><span class="mpre">stringUtf8</span></span></a><span class="mpre">
+</span></div></body></html>

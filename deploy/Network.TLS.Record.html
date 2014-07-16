@@ -1,0 +1,42 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Network.TLS.Record</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : unknown</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The Record Protocol takes messages to be transmitted, fragments the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data into manageable blocks, optionally compresses the data, applies</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a MAC, encrypts, and transmits the result.  Received data is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- decrypted, verified, decompressed, reassembled, and then delivered to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- higher-level clients.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Network.TLS.Record
+    ( Record(..)
+    </span><span class="hl_comment"><span class="mpre">-- * Fragment manipulation types</span></span><span class="mpre">
+    , Fragment
+    , fragmentPlaintext
+    , fragmentCiphertext
+    , recordToRaw
+    , rawToRecord
+    , recordToHeader
+    , Plaintext
+    , Compressed
+    , Ciphertext
+    </span><span class="hl_comment"><span class="mpre">-- * Engage and disengage from the record layer</span></span><span class="mpre">
+    , engageRecord
+    , disengageRecord
+    </span><span class="hl_comment"><span class="mpre">-- * State tracking</span></span><span class="mpre">
+    , RecordM
+    , runRecordM
+    , RecordState(..)
+    , newRecordState
+    , getRecordVersion
+    , setRecordIV
+    ) where
+
+import Network.TLS.Record.Types
+import Network.TLS.Record.Engage
+import Network.TLS.Record.Disengage
+import Network.TLS.Record.State
+</span></div></body></html>

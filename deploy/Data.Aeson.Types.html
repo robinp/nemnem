@@ -1,0 +1,73 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module:      Data.Aeson.Types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright:   (c) 2011, 2012 Bryan O&#39;Sullivan</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--              (c) 2011 MailRank, Inc.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License:     Apache</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer:  Bryan O&#39;Sullivan &lt;bos@serpentine.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability:   experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability: portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Types for working with JSON data.</span></span><span class="mpre">
+
+module Data.Aeson.Types
+    (
+    </span><span class="hl_comment"><span class="mpre">-- * Core JSON types</span></span><span class="mpre">
+      Value(..)
+    , Array
+    , emptyArray
+    , Pair
+    , Object
+    , emptyObject
+    </span><span class="hl_comment"><span class="mpre">-- * Convenience types and functions</span></span><span class="mpre">
+    , DotNetTime(..)
+    , typeMismatch
+    </span><span class="hl_comment"><span class="mpre">-- * Type conversion</span></span><span class="mpre">
+    , Parser
+    , Result(..)
+    , FromJSON(..)
+    , fromJSON
+    , parse
+    , parseEither
+    , parseMaybe
+    , ToJSON(..)
+    , modifyFailure
+
+#ifdef GENERICS
+    </span><span class="hl_comment"><span class="mpre">-- ** Generic JSON classes</span></span><span class="mpre">
+    , GFromJSON(..)
+    , GToJSON(..)
+    , genericToJSON
+    , genericParseJSON
+#endif
+
+    </span><span class="hl_comment"><span class="mpre">-- * Inspecting @&#39;Value&#39;s@</span></span><span class="mpre">
+    , withObject
+    , withText
+    , withArray
+    , withNumber
+    , withScientific
+    , withBool
+
+    </span><span class="hl_comment"><span class="mpre">-- * Constructors and accessors</span></span><span class="mpre">
+    , (.=)
+    , (.:)
+    , (.:?)
+    , (.!=)
+    , object
+
+    </span><span class="hl_comment"><span class="mpre">-- * Generic and TH encoding configuration</span></span><span class="mpre">
+    , Options(..)
+    , SumEncoding(..)
+    , defaultOptions
+    , defaultTaggedObject
+    ) where
+
+import Data.Aeson.Types.Instances
+import Data.Aeson.Types.Internal
+
+#ifdef GENERICS
+import Data.Aeson.Types.Generic ()
+#endif
+</span></div></body></html>

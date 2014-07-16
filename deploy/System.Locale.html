@@ -1,0 +1,99 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ &gt;= 701 &amp;&amp; MIN_VERSION_base(4,4,1)
+{-# LANGUAGE Safe #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  System.Locale</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD3 (see LICENSE file)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module provides the ability to adapt to local conventions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- At present, it supports only time and date information as used by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @calendarTimeToString@ from the @System.Time@ module in the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @old-time@ package.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module System.Locale (
+
+    TimeLocale(..)
+
+    , defaultTimeLocale
+
+    , iso8601DateFormat
+    , rfc822DateFormat
+    )
+where
+
+import Prelude
+
+data </span><a name="loc_36_6_36_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_6_36_16&#39;)"><span class="hl_tycondecl"><span class="mpre">TimeLocale</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">TimeLocale</span></span><span class="mpre"> {
+        </span><span class="hl_comment"><span class="mpre">-- |full and abbreviated week days</span></span><span class="mpre">
+        </span><a name="loc_38_9_38_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_9_38_14&#39;)"><span class="hl_fielddecl"><span class="mpre">wDays</span></span></a><span class="mpre">  :: [(</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">)],
+        </span><span class="hl_comment"><span class="mpre">-- |full and abbreviated months</span></span><span class="mpre">
+        </span><a name="loc_40_9_40_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_40_9_40_15&#39;)"><span class="hl_fielddecl"><span class="mpre">months</span></span></a><span class="mpre"> :: [(</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">)],
+        </span><a name="loc_41_9_41_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_41_9_41_18&#39;)"><span class="hl_fielddecl"><span class="mpre">intervals</span></span></a><span class="mpre"> :: [(</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">)],
+        </span><span class="hl_comment"><span class="mpre">-- |AM\/PM symbols</span></span><span class="mpre">
+        </span><a name="loc_43_9_43_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_9_43_13&#39;)"><span class="hl_fielddecl"><span class="mpre">amPm</span></span></a><span class="mpre">   :: (</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">),
+        </span><span class="hl_comment"><span class="mpre">-- |formatting strings</span></span><span class="mpre">
+        </span><a name="loc_45_9_45_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_45_9_45_20&#39;)"><span class="hl_fielddecl"><span class="mpre">dateTimeFmt</span></span></a><span class="mpre">, </span><a name="loc_45_22_45_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_45_22_45_29&#39;)"><span class="hl_fielddecl"><span class="mpre">dateFmt</span></span></a><span class="mpre">,
+        </span><a name="loc_46_9_46_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_9_46_16&#39;)"><span class="hl_fielddecl"><span class="mpre">timeFmt</span></span></a><span class="mpre">, </span><a name="loc_46_18_46_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_18_46_27&#39;)"><span class="hl_fielddecl"><span class="mpre">time12Fmt</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+        } </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/old-locale-1.0.0.6/System/Locale.hs&quot;, srcSpanStartLine = 47, srcSpanStartColumn = 11, srcSpanEndLine = 47, srcSpanEndColumn = 35}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/old-locale-1.0.0.6/System/Locale.hs&quot;, srcSpanStartLine = 47, srcSpanStartColumn = 11, srcSpanEndLine = 47, srcSpanEndColumn = 19},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/old-locale-1.0.0.6/System/Locale.hs&quot;, srcSpanStartLin"><span class="mpre">deriving (Eq, Ord, Show)</span></span><span class="mpre">
+
+</span><a href="#loc_50_1_50_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_50_1_50_18&#39;)"><span class="mpre">defaultTimeLocale</span></a><span class="mpre"> :: </span><a href="#loc_36_6_36_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_6_36_16&#39;)"><span class="hl_tyconref"><span class="mpre">TimeLocale</span></span></a><span class="mpre">
+</span><a name="loc_50_1_50_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_50_1_50_18&#39;)"><span class="hl_vardecl"><span class="mpre">defaultTimeLocale</span></span></a><span class="mpre"> =  </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/old-locale-1.0.0.6/System/Locale.hs&quot;, srcSpanStartLine = 50, srcSpanStartColumn = 22, srcSpanEndLine = 77, srcSpanEndColumn = 10}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/old-locale-1.0.0.6/System/Locale.hs&quot;, srcSpanStartLine = 50, srcSpanStartColumn = 33, srcSpanEndLine = 50, srcSpanEndColumn = 34},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/old-locale-1.0.0.6/System/Locale.hs&quot;, srcSpanStartLi"><span class="mpre">TimeLocale {
+        wDays  = [(&quot;Sunday&quot;,   &quot;Sun&quot;),  (&quot;Monday&quot;,    &quot;Mon&quot;),
+                  (&quot;Tuesday&quot;,  &quot;Tue&quot;),  (&quot;Wednesday&quot;, &quot;Wed&quot;),
+                  (&quot;Thursday&quot;, &quot;Thu&quot;),  (&quot;Friday&quot;,    &quot;Fri&quot;),
+                  (&quot;Saturday&quot;, &quot;Sat&quot;)],
+
+        months = [(&quot;January&quot;,   &quot;Jan&quot;), (&quot;February&quot;,  &quot;Feb&quot;),
+                  (&quot;March&quot;,     &quot;Mar&quot;), (&quot;April&quot;,     &quot;Apr&quot;),
+                  (&quot;May&quot;,       &quot;May&quot;), (&quot;June&quot;,      &quot;Jun&quot;),
+                  (&quot;July&quot;,      &quot;Jul&quot;), (&quot;August&quot;,    &quot;Aug&quot;),
+                  (&quot;September&quot;, &quot;Sep&quot;), (&quot;October&quot;,   &quot;Oct&quot;),
+                  (&quot;November&quot;,  &quot;Nov&quot;), (&quot;December&quot;,  &quot;Dec&quot;)],
+
+        intervals = [ (&quot;year&quot;,&quot;years&quot;)
+                    , (&quot;month&quot;, &quot;months&quot;)
+                    , (&quot;day&quot;,&quot;days&quot;)
+                    , (&quot;hour&quot;,&quot;hours&quot;)
+                    , (&quot;min&quot;,&quot;mins&quot;)
+                    , (&quot;sec&quot;,&quot;secs&quot;)
+                    , (&quot;usec&quot;,&quot;usecs&quot;)
+                    ],
+
+        amPm = (&quot;AM&quot;, &quot;PM&quot;),
+        dateTimeFmt = &quot;%a %b %e %H:%M:%S %Z %Y&quot;,
+        dateFmt = &quot;%m/%d/%y&quot;,
+        timeFmt = &quot;%H:%M:%S&quot;,
+        time12Fmt = &quot;%I:%M:%S %p&quot;
+        }</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">{- | Construct format string according to &lt;http://en.wikipedia.org/wiki/ISO_8601 ISO-8601&gt;.
+
+The @Maybe String@ argument allows to supply an optional time specification. E.g.:
+
+@
+&#39;iso8601DateFormat&#39; Nothing            == &quot;%Y-%m-%d&quot;           -- i.e. @/YYYY-MM-DD/@
+&#39;iso8601DateFormat&#39; (Just &quot;%H:%M:%S&quot;)  == &quot;%Y-%m-%dT%H:%M:%S&quot;  -- i.e. @/YYYY-MM-DD/T/HH:MM:SS/@
+@
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_91_1_91_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_18&#39;)"><span class="mpre">iso8601DateFormat</span></a><span class="mpre"> :: </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_91_1_91_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_18&#39;)"><span class="hl_fundecl"><span class="mpre">iso8601DateFormat</span></span></a><span class="mpre"> </span><a name="loc_91_19_91_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_19_91_27&#39;)"><span class="hl_vardecl"><span class="mpre">mTimeFmt</span></span></a><span class="mpre"> =
+    </span><span class="hl_string"><span class="mpre">&quot;%Y-%m-%d&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> case </span><a href="#loc_91_19_91_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_19_91_27&#39;)"><span class="hl_varref"><span class="mpre">mTimeFmt</span></span></a><span class="mpre"> of
+             </span><a href="Data.Maybe.html#loc_49_19_49_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_19_49_26&#39;)"><span class="hl_conref"><span class="mpre">Nothing</span></span></a><span class="mpre">  -&gt; </span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre">
+             </span><a href="Data.Maybe.html#loc_49_29_49_33" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_29_49_33&#39;)"><span class="hl_conref"><span class="mpre">Just</span></span></a><span class="mpre"> </span><a name="loc_94_19_94_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_94_19_94_22&#39;)"><span class="hl_vardecl"><span class="mpre">fmt</span></span></a><span class="mpre"> -&gt; </span><span class="hl_char"><span class="mpre">&#39;T&#39;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">:</span></span><span class="mpre"> </span><a href="#loc_94_19_94_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_94_19_94_22&#39;)"><span class="hl_varref"><span class="mpre">fmt</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Format string according to &lt;http://tools.ietf.org/html/rfc822#section-5 RFC822&gt;.</span></span><span class="mpre">
+</span><a href="#loc_98_1_98_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_1_98_17&#39;)"><span class="mpre">rfc822DateFormat</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_98_1_98_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_1_98_17&#39;)"><span class="hl_vardecl"><span class="mpre">rfc822DateFormat</span></span></a><span class="mpre"> = </span><span class="hl_string"><span class="mpre">&quot;%a, %_d %b %Y %H:%M:%S %Z&quot;</span></span><span class="mpre">
+</span></div></body></html>

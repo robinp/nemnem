@@ -1,0 +1,124 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, MagicHash #-}
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.Primitive.MachDeps</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) Roman Leshchinskiy 2009-2012</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Roman Leshchinskiy &lt;rl@cse.unsw.edu.au&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Machine-dependent constants</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+
+module Data.Primitive.MachDeps where
+
+#include &quot;MachDeps.h&quot;
+
+import GHC.Prim
+
+</span><a href="#loc_68_1_68_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_1_68_12&#39;)"><span class="mpre">sIZEOF_CHAR</span></a><span class="mpre">,
+ </span><a href="#loc_69_1_69_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_1_69_15&#39;)"><span class="mpre">aLIGNMENT_CHAR</span></a><span class="mpre">,
+
+ </span><a href="#loc_71_1_71_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_71_1_71_11&#39;)"><span class="mpre">sIZEOF_INT</span></a><span class="mpre">,
+ </span><a href="#loc_72_1_72_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_14&#39;)"><span class="mpre">aLIGNMENT_INT</span></a><span class="mpre">,
+
+ </span><a href="#loc_74_1_74_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_1_74_12&#39;)"><span class="mpre">sIZEOF_WORD</span></a><span class="mpre">,
+ </span><a href="#loc_75_1_75_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_15&#39;)"><span class="mpre">aLIGNMENT_WORD</span></a><span class="mpre">,
+
+ </span><a href="#loc_77_1_77_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_1_77_14&#39;)"><span class="mpre">sIZEOF_DOUBLE</span></a><span class="mpre">,
+ </span><a href="#loc_78_1_78_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_1_78_17&#39;)"><span class="mpre">aLIGNMENT_DOUBLE</span></a><span class="mpre">,
+
+ </span><a href="#loc_80_1_80_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_13&#39;)"><span class="mpre">sIZEOF_FLOAT</span></a><span class="mpre">,
+ </span><a href="#loc_81_1_81_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_1_81_16&#39;)"><span class="mpre">aLIGNMENT_FLOAT</span></a><span class="mpre">,
+
+ </span><a href="#loc_83_1_83_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_11&#39;)"><span class="mpre">sIZEOF_PTR</span></a><span class="mpre">,
+ </span><a href="#loc_84_1_84_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_14&#39;)"><span class="mpre">aLIGNMENT_PTR</span></a><span class="mpre">,
+
+ </span><a href="#loc_86_1_86_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_14&#39;)"><span class="mpre">sIZEOF_FUNPTR</span></a><span class="mpre">,
+ </span><a href="#loc_87_1_87_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_1_87_17&#39;)"><span class="mpre">aLIGNMENT_FUNPTR</span></a><span class="mpre">,
+
+ </span><a href="#loc_89_1_89_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_17&#39;)"><span class="mpre">sIZEOF_STABLEPTR</span></a><span class="mpre">,
+ </span><a href="#loc_90_1_90_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_90_1_90_20&#39;)"><span class="mpre">aLIGNMENT_STABLEPTR</span></a><span class="mpre">,
+
+ </span><a href="#loc_92_1_92_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_12&#39;)"><span class="mpre">sIZEOF_INT8</span></a><span class="mpre">,
+ </span><a href="#loc_93_1_93_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_93_1_93_15&#39;)"><span class="mpre">aLIGNMENT_INT8</span></a><span class="mpre">,
+
+ </span><a href="#loc_95_1_95_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_13&#39;)"><span class="mpre">sIZEOF_WORD8</span></a><span class="mpre">,
+ </span><a href="#loc_96_1_96_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_1_96_16&#39;)"><span class="mpre">aLIGNMENT_WORD8</span></a><span class="mpre">,
+
+ </span><a href="#loc_98_1_98_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_1_98_13&#39;)"><span class="mpre">sIZEOF_INT16</span></a><span class="mpre">,
+ </span><a href="#loc_99_1_99_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_99_1_99_16&#39;)"><span class="mpre">aLIGNMENT_INT16</span></a><span class="mpre">,
+
+ </span><a href="#loc_101_1_101_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_14&#39;)"><span class="mpre">sIZEOF_WORD16</span></a><span class="mpre">,
+ </span><a href="#loc_102_1_102_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_102_1_102_17&#39;)"><span class="mpre">aLIGNMENT_WORD16</span></a><span class="mpre">,
+
+ </span><a href="#loc_104_1_104_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_1_104_13&#39;)"><span class="mpre">sIZEOF_INT32</span></a><span class="mpre">,
+ </span><a href="#loc_105_1_105_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_16&#39;)"><span class="mpre">aLIGNMENT_INT32</span></a><span class="mpre">,
+
+ </span><a href="#loc_107_1_107_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_1_107_14&#39;)"><span class="mpre">sIZEOF_WORD32</span></a><span class="mpre">,
+ </span><a href="#loc_108_1_108_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_17&#39;)"><span class="mpre">aLIGNMENT_WORD32</span></a><span class="mpre">,
+
+ </span><a href="#loc_110_1_110_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_1_110_13&#39;)"><span class="mpre">sIZEOF_INT64</span></a><span class="mpre">,
+ </span><a href="#loc_111_1_111_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_1_111_16&#39;)"><span class="mpre">aLIGNMENT_INT64</span></a><span class="mpre">,
+
+ </span><a href="#loc_113_1_113_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_1_113_14&#39;)"><span class="mpre">sIZEOF_WORD64</span></a><span class="mpre">,
+ </span><a href="#loc_114_1_114_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_114_1_114_17&#39;)"><span class="mpre">aLIGNMENT_WORD64</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+
+
+</span><a name="loc_68_1_68_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_1_68_12&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_CHAR</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_HSCHAR</span></span><span class="mpre">
+</span><a name="loc_69_1_69_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_1_69_15&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_CHAR</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_HSCHAR</span></span><span class="mpre">
+
+</span><a name="loc_71_1_71_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_71_1_71_11&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_INT</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_HSINT</span></span><span class="mpre">
+</span><a name="loc_72_1_72_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_14&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_INT</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_HSINT</span></span><span class="mpre">
+
+</span><a name="loc_74_1_74_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_1_74_12&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_WORD</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_HSWORD</span></span><span class="mpre">
+</span><a name="loc_75_1_75_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_15&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_WORD</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_HSWORD</span></span><span class="mpre">
+
+</span><a name="loc_77_1_77_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_1_77_14&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_DOUBLE</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_HSDOUBLE</span></span><span class="mpre">
+</span><a name="loc_78_1_78_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_1_78_17&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_DOUBLE</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_HSDOUBLE</span></span><span class="mpre">
+
+</span><a name="loc_80_1_80_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_13&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_FLOAT</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_HSFLOAT</span></span><span class="mpre">
+</span><a name="loc_81_1_81_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_1_81_16&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_FLOAT</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_HSFLOAT</span></span><span class="mpre">
+
+</span><a name="loc_83_1_83_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_11&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_PTR</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_HSPTR</span></span><span class="mpre">
+</span><a name="loc_84_1_84_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_14&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_PTR</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_HSPTR</span></span><span class="mpre">
+
+</span><a name="loc_86_1_86_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_14&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_FUNPTR</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_HSFUNPTR</span></span><span class="mpre">
+</span><a name="loc_87_1_87_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_1_87_17&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_FUNPTR</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_HSFUNPTR</span></span><span class="mpre">
+
+</span><a name="loc_89_1_89_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_17&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_STABLEPTR</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_HSSTABLEPTR</span></span><span class="mpre">
+</span><a name="loc_90_1_90_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_90_1_90_20&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_STABLEPTR</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_HSSTABLEPTR</span></span><span class="mpre">
+
+</span><a name="loc_92_1_92_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_12&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_INT8</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_INT8</span></span><span class="mpre">
+</span><a name="loc_93_1_93_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_93_1_93_15&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_INT8</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_INT8</span></span><span class="mpre">
+
+</span><a name="loc_95_1_95_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_13&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_WORD8</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_WORD8</span></span><span class="mpre">
+</span><a name="loc_96_1_96_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_1_96_16&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_WORD8</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_WORD8</span></span><span class="mpre">
+
+</span><a name="loc_98_1_98_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_1_98_13&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_INT16</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_INT16</span></span><span class="mpre">
+</span><a name="loc_99_1_99_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_99_1_99_16&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_INT16</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_INT16</span></span><span class="mpre">
+
+</span><a name="loc_101_1_101_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_14&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_WORD16</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_WORD16</span></span><span class="mpre">
+</span><a name="loc_102_1_102_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_102_1_102_17&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_WORD16</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_WORD16</span></span><span class="mpre">
+
+</span><a name="loc_104_1_104_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_1_104_13&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_INT32</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_INT32</span></span><span class="mpre">
+</span><a name="loc_105_1_105_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_16&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_INT32</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_INT32</span></span><span class="mpre">
+
+</span><a name="loc_107_1_107_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_1_107_14&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_WORD32</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_WORD32</span></span><span class="mpre">
+</span><a name="loc_108_1_108_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_17&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_WORD32</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_WORD32</span></span><span class="mpre">
+
+</span><a name="loc_110_1_110_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_1_110_13&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_INT64</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_INT64</span></span><span class="mpre">
+</span><a name="loc_111_1_111_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_1_111_16&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_INT64</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_INT64</span></span><span class="mpre">
+
+</span><a name="loc_113_1_113_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_1_113_14&#39;)"><span class="hl_vardecl"><span class="mpre">sIZEOF_WORD64</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">SIZEOF_WORD64</span></span><span class="mpre">
+</span><a name="loc_114_1_114_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_114_1_114_17&#39;)"><span class="hl_vardecl"><span class="mpre">aLIGNMENT_WORD64</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">ALIGNMENT_WORD64</span></span><span class="mpre">
+
+#if WORD_SIZE_IN_BITS == 32
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/MachDeps.hs&quot;, srcSpanStartLine = 117, srcSpanStartColumn = 1, srcSpanEndLine = 117, srcSpanEndColumn = 24}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/MachDeps.hs&quot;, srcSpanStartLine = 117, srcSpanStartColumn = 1, srcSpanEndLine = 117, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/M"><span class="mpre">type Word64_# = Word64#</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/MachDeps.hs&quot;, srcSpanStartLine = 118, srcSpanStartColumn = 1, srcSpanEndLine = 118, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/MachDeps.hs&quot;, srcSpanStartLine = 118, srcSpanStartColumn = 1, srcSpanEndLine = 118, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/M"><span class="mpre">type Int64_# = Int64#</span></span><span class="mpre">
+#else
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/MachDeps.hs&quot;, srcSpanStartLine = 120, srcSpanStartColumn = 1, srcSpanEndLine = 120, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/MachDeps.hs&quot;, srcSpanStartLine = 120, srcSpanStartColumn = 1, srcSpanEndLine = 120, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/M"><span class="mpre">type Word64_# = Word#</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/MachDeps.hs&quot;, srcSpanStartLine = 121, srcSpanStartColumn = 1, srcSpanEndLine = 121, srcSpanEndColumn = 20}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/MachDeps.hs&quot;, srcSpanStartLine = 121, srcSpanStartColumn = 1, srcSpanEndLine = 121, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/primitive-0.5.3.0/Data/Primitive/M"><span class="mpre">type Int64_# = Int#</span></span><span class="mpre">
+#endif
+
+</span></div></body></html>

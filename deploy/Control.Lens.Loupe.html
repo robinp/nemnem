@@ -1,0 +1,44 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Lens.Loupe</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2012-14 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  Rank2Types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module exports a minimalist API for working with lenses in highly</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- monomorphic settings.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+module Control.Lens.Loupe
+  (
+    ALens, ALens&#39;
+  , cloneLens
+  , storing
+  , (^#)
+  , ( #~ ), ( #%~ ), ( #%%~ ), (&lt;#~), (&lt;#%~)
+  , ( #= ), ( #%= ), ( #%%= ), (&lt;#=), (&lt;#%=)
+  </span><span class="hl_comment"><span class="mpre">-- * Deprecated Aliases</span></span><span class="mpre">
+  , Loupe, SimpleLoupe
+  ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 25, srcSpanStartColumn = 8, srcSpanEndLine = 25, srcSpanEndColumn = 37}, srcInfoPoints = []}) &quot;Control.Lens.Internal.Context&quot;"><span class="mpre">Control.Lens.Internal.Context</span></span><span class="mpre">
+import Control.Lens.Lens
+import Control.Lens.Type
+
+</span><span class="hl_comment"><span class="mpre">-- | This is an older alias for a type-restricted form of lens that is able to be passed around</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in containers monomorphically.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Deprecated. This has since been renamed to &#39;ALens&#39; for consistency.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 1, srcSpanEndLine = 33, srcSpanEndColumn = 57}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 1, srcSpanEndLine = 33, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 33"><span class="mpre">type Loupe s t a b = LensLike (Pretext (-&gt;) a b) s t a b</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDeprPragmaDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 1, srcSpanEndLine = 34, srcSpanEndColumn = 37}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 1, srcSpanEndLine = 34, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLi"><span class="mpre">{-# DEPRECATED Loupe &quot;use ALens&quot; #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;SimpleLoupe&#39; = &#39;Simple&#39; &#39;Loupe&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Deprecated for two reasons. &#39;Loupe&#39; is now &#39;ALens&#39;, and we no longer use the verbose @SimpleFoo@ naming</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- convention, this has since been renamed to &#39;ALens&#39;&#39; for consistency.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 42, srcSpanStartColumn = 1, srcSpanEndLine = 42, srcSpanEndColumn = 37}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 42, srcSpanStartColumn = 1, srcSpanEndLine = 42, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 42"><span class="mpre">type SimpleLoupe s a = Loupe s s a a</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDeprPragmaDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 43, srcSpanStartColumn = 1, srcSpanEndLine = 43, srcSpanEndColumn = 44}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLine = 43, srcSpanStartColumn = 1, srcSpanEndLine = 43, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Loupe.hs&quot;, srcSpanStartLi"><span class="mpre">{-# DEPRECATED SimpleLoupe &quot;use ALens&#39;&quot; #-}</span></span><span class="mpre">
+</span></div></body></html>

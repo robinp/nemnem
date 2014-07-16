@@ -1,0 +1,55 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, ForeignFunctionInterface #-}
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Network.Socket.ByteString.Internal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) Johan Tibell 2007-2010</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : johan.tibell@gmail.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Network.Socket.ByteString.Internal
+    (
+      mkInvalidRecvArgError
+#if !defined(mingw32_HOST_OS)
+    , c_writev
+    , c_sendmsg
+#endif
+    ) where
+
+import System.IO.Error (ioeSetErrorString, mkIOError)
+
+#if !defined(mingw32_HOST_OS)
+# if __GLASGOW_HASKELL__ &gt;= 703
+import Foreign.C.Types (CInt(..))
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Network/Socket/ByteString/Internal.hs&quot;, srcSpanStartLine = 26, srcSpanStartColumn = 8, srcSpanEndLine = 26, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;System.Posix.Types&quot;"><span class="mpre">System.Posix.Types</span></span><span class="mpre"> (CSsize(..))
+# else
+import Foreign.C.Types (CInt)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Network/Socket/ByteString/Internal.hs&quot;, srcSpanStartLine = 29, srcSpanStartColumn = 8, srcSpanEndLine = 29, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;System.Posix.Types&quot;"><span class="mpre">System.Posix.Types</span></span><span class="mpre"> (CSsize)
+# endif
+import Foreign.Ptr (Ptr)
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Network/Socket/ByteString/Internal.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 8, srcSpanEndLine = 33, srcSpanEndColumn = 39}, srcInfoPoints = []}) &quot;Network.Socket.ByteString.IOVec&quot;"><span class="mpre">Network.Socket.ByteString.IOVec</span></span><span class="mpre"> (IOVec)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Network/Socket/ByteString/Internal.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 8, srcSpanEndLine = 34, srcSpanEndColumn = 40}, srcInfoPoints = []}) &quot;Network.Socket.ByteString.MsgHdr&quot;"><span class="mpre">Network.Socket.ByteString.MsgHdr</span></span><span class="mpre"> (MsgHdr)
+#endif
+
+#if __GLASGOW_HASKELL__ &lt; 611
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Network/Socket/ByteString/Internal.hs&quot;, srcSpanStartLine = 38, srcSpanStartColumn = 8, srcSpanEndLine = 38, srcSpanEndColumn = 18}, srcInfoPoints = []}) &quot;GHC.IOBase&quot;"><span class="mpre">GHC.IOBase</span></span><span class="mpre"> (IOErrorType(..))
+#else
+import GHC.IO.Exception (</span><a href="GHC.IO.Exception.html#loc_257_6_257_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_257_6_257_17&#39;)"><span class="mpre">IOErrorType</span></a><span class="mpre">(..))
+#endif
+
+</span><a href="#loc_44_1_44_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_22&#39;)"><span class="mpre">mkInvalidRecvArgError</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IOError</span></span><span class="mpre">
+</span><a name="loc_44_1_44_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_22&#39;)"><span class="hl_fundecl"><span class="mpre">mkInvalidRecvArgError</span></span></a><span class="mpre"> </span><a name="loc_44_23_44_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_23_44_26&#39;)"><span class="hl_vardecl"><span class="mpre">loc</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">ioeSetErrorString</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">mkIOError</span></span><span class="mpre">
+                                    </span><a href="GHC.IO.Exception.html#loc_272_5_272_20" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_272_5_272_20&#39;)"><span class="hl_conref"><span class="mpre">InvalidArgument</span></span></a><span class="mpre">
+                                    </span><a href="#loc_44_23_44_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_23_44_26&#39;)"><span class="hl_varref"><span class="mpre">loc</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre">) </span><span class="hl_string"><span class="mpre">&quot;non-positive length&quot;</span></span><span class="mpre">
+
+#if !defined(mingw32_HOST_OS)
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Network/Socket/ByteString/Internal.hs&quot;, srcSpanStartLine = 49, srcSpanStartColumn = 1, srcSpanEndLine = 50, srcSpanEndColumn = 53}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Network/Socket/ByteString/Internal.hs&quot;, srcSpanStartLine = 49, srcSpanStartColumn = 1, srcSpanEndLine = 49, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Networ"><span class="mpre">foreign import ccall unsafe &quot;writev&quot;
+  c_writev :: CInt -&gt; Ptr IOVec -&gt; CInt -&gt; IO CSsize</span></span><span class="mpre">
+
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Network/Socket/ByteString/Internal.hs&quot;, srcSpanStartLine = 52, srcSpanStartColumn = 1, srcSpanEndLine = 53, srcSpanEndColumn = 55}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Network/Socket/ByteString/Internal.hs&quot;, srcSpanStartLine = 52, srcSpanStartColumn = 1, srcSpanEndLine = 52, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/network-2.5.0.0/Networ"><span class="mpre">foreign import ccall unsafe &quot;sendmsg&quot;
+  c_sendmsg :: CInt -&gt; Ptr MsgHdr -&gt; CInt -&gt; IO CSsize</span></span><span class="mpre">
+#endif
+</span></div></body></html>

@@ -1,0 +1,19 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Safe #-}
+#endif
+
+module Char (
+        isAscii, isLatin1, isControl, isPrint, isSpace, isUpper, isLower,
+        isAlpha, isDigit, isOctDigit, isHexDigit, isAlphaNum,
+        digitToInt, intToDigit,
+        toUpper, toLower,
+        ord, chr,
+        readLitChar, showLitChar, lexLitChar,
+
+        </span><span class="hl_comment"><span class="mpre">-- ...and what the Prelude exports</span></span><span class="mpre">
+        Char, String
+    ) where
+
+import Data.Char
+</span></div></body></html>

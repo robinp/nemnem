@@ -1,0 +1,94 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+
+#if __GLASGOW_HASKELL__ &gt;= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.HashMap.Lazy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  2010-2012 Johan Tibell</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  johan.tibell@gmail.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A map from /hashable/ keys to values.  A map cannot contain</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- duplicate keys; each key can map to at most one value.  A &#39;HashMap&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- makes no guarantees as to the order of its elements.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The implementation is based on /hash array mapped tries/.  A</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;HashMap&#39; is often faster than other tree-based set types,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- especially when key comparison is expensive, as in the case of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- strings.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Many operations have a average-case complexity of /O(log n)/.  The</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- implementation uses a large base (i.e. 16) so in practice these</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- operations are constant time.</span></span><span class="mpre">
+module Data.HashMap.Lazy
+    (
+      </span><span class="hl_comment"><span class="mpre">-- * Strictness properties</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- $strictness</span></span><span class="mpre">
+
+      HashMap
+
+      </span><span class="hl_comment"><span class="mpre">-- * Construction</span></span><span class="mpre">
+    , empty
+    , singleton
+
+      </span><span class="hl_comment"><span class="mpre">-- * Basic interface</span></span><span class="mpre">
+    , HM.null
+    , size
+    , member
+    , HM.lookup
+    , lookupDefault
+    , (!)
+    , insert
+    , insertWith
+    , delete
+    , adjust
+
+      </span><span class="hl_comment"><span class="mpre">-- * Combine</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- ** Union</span></span><span class="mpre">
+    , union
+    , unionWith
+    , unions
+
+      </span><span class="hl_comment"><span class="mpre">-- * Transformations</span></span><span class="mpre">
+    , HM.map
+    , mapWithKey
+    , traverseWithKey
+
+      </span><span class="hl_comment"><span class="mpre">-- * Difference and intersection</span></span><span class="mpre">
+    , difference
+    , intersection
+    , intersectionWith
+
+      </span><span class="hl_comment"><span class="mpre">-- * Folds</span></span><span class="mpre">
+    , foldl&#39;
+    , foldlWithKey&#39;
+    , HM.foldr
+    , foldrWithKey
+
+      </span><span class="hl_comment"><span class="mpre">-- * Filter</span></span><span class="mpre">
+    , HM.filter
+    , filterWithKey
+
+      </span><span class="hl_comment"><span class="mpre">-- * Conversions</span></span><span class="mpre">
+    , keys
+    , elems
+
+      </span><span class="hl_comment"><span class="mpre">-- ** Lists</span></span><span class="mpre">
+    , toList
+    , fromList
+    , fromListWith
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unordered-containers-0.2.4.0/Data/HashMap/Lazy.hs&quot;, srcSpanStartLine = 87, srcSpanStartColumn = 8, srcSpanEndLine = 87, srcSpanEndColumn = 25}, srcInfoPoints = []}) &quot;Data.HashMap.Base&quot;"><span class="mpre">Data.HashMap.Base</span></span><span class="mpre"> as HM
+
+</span><span class="hl_comment"><span class="mpre">-- $strictness</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module satisfies the following strictness property:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * Key arguments are evaluated to WHNF</span></span><span class="mpre">
+</span></div></body></html>

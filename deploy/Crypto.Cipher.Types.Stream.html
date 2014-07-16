@@ -1,0 +1,21 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Crypto.Cipher.Types.Stream</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : Stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : Excellent</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- stream cipher basic types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Crypto.Cipher.Types.Stream
+    ( StreamCipher(..)
+    ) where
+
+import Crypto.Cipher.Types.Base
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/Stream.hs&quot;, srcSpanStartLine = 15, srcSpanStartColumn = 8, srcSpanEndLine = 15, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> (ByteString)
+
+</span><span class="hl_comment"><span class="mpre">-- | Symmetric stream cipher class</span></span><span class="mpre">
+class </span><span class="warning" data-warning="ClassDecl ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/Stream.hs&quot;, srcSpanStartLine = 18, srcSpanStartColumn = 7, srcSpanEndLine = 18, srcSpanEndColumn = 23}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/Stream.hs&quot;, srcSpanStartLine = 18, srcSpanStartColumn = 21, srcSpanEndLine = 18, srcSpanEndColumn = 23}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/"><span class="mpre">Cipher cipher =&gt;</span></span><span class="mpre"> </span><a name="loc_18_24_18_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_24_18_36&#39;)"><span class="hl_classdecl"><span class="mpre">StreamCipher</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">cipher</span></span><span class="mpre"> where
+    </span><span class="hl_comment"><span class="mpre">-- | Combine using the stream cipher</span></span><span class="mpre">
+    </span><a name="loc_20_5_20_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_20_5_20_18&#39;)"><span class="mpre">streamCombine</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">cipher</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">, </span><span class="hl_tyvar"><span class="mpre">cipher</span></span><span class="mpre">)
+</span></div></body></html>

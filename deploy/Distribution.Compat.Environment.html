@@ -1,0 +1,25 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+{-# OPTIONS_HADDOCK hide #-}
+
+module Distribution.Compat.Environment (getEnvironment)
+       where
+
+import qualified System.Environment as System
+
+#ifdef mingw32_HOST_OS
+import qualified Data.Char as Char (toUpper)
+#endif
+
+</span><a href="#loc_18_1_18_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_1_18_15&#39;)"><span class="mpre">getEnvironment</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> [(</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">)]
+#ifdef mingw32_HOST_OS
+</span><span class="hl_comment"><span class="mpre">-- On Windows, the names of environment variables are case-insensitive, but are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- often given in mixed-case (e.g. &quot;PATH&quot; is &quot;Path&quot;), so we have to normalise</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- them.</span></span><span class="mpre">
+</span><a name="loc_18_1_18_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_1_18_15&#39;)"><span class="hl_vardecl"><span class="mpre">getEnvironment</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fmap</span></span><span class="mpre"> </span><a href="#loc_20_5_20_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_20_5_20_15&#39;)"><span class="hl_varref"><span class="mpre">upcaseVars</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">System.getEnvironment</span></span><span class="mpre">
+  where
+    </span><a name="loc_20_5_20_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_20_5_20_15&#39;)"><span class="hl_vardecl"><span class="mpre">upcaseVars</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">map</span></span><span class="mpre"> </span><a href="#loc_21_5_21_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_5_21_14&#39;)"><span class="hl_varref"><span class="mpre">upcaseVar</span></span></a><span class="mpre">
+    </span><a name="loc_21_5_21_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_5_21_14&#39;)"><span class="hl_fundecl"><span class="mpre">upcaseVar</span></span></a><span class="mpre"> (</span><a name="loc_21_16_21_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_16_21_19&#39;)"><span class="hl_vardecl"><span class="mpre">var</span></span></a><span class="mpre">, </span><a name="loc_21_21_21_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_21_21_24&#39;)"><span class="hl_vardecl"><span class="mpre">val</span></span></a><span class="mpre">) = (</span><span class="hl_varref"><span class="mpre">map</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Char.toUpper</span></span><span class="mpre"> </span><a href="#loc_21_16_21_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_16_21_19&#39;)"><span class="hl_varref"><span class="mpre">var</span></span></a><span class="mpre">, </span><a href="#loc_21_21_21_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_21_21_24&#39;)"><span class="hl_varref"><span class="mpre">val</span></span></a><span class="mpre">)
+#else
+</span><span class="hl_vardecl"><span class="mpre">getEnvironment</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">System.getEnvironment</span></span><span class="mpre">
+#endif
+</span></div></body></html>

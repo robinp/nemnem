@@ -1,0 +1,52 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{-
+
+Copyright (c) 2013 Lukas Mai
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+* Neither the name of the author nor the names of his contributors
+  may be used to endorse or promote products derived from this software
+  without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY LUKAS MAI AND CONTRIBUTORS &quot;AS IS&quot; AND ANY
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-}</span></span><span class="mpre">
+
+module Data.Default.Instances.Containers (
+</span><span class="hl_comment"><span class="mpre">-- | This module defines &#39;Default&#39; instances for the types &#39;S.Set&#39;, &#39;M.Map&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;IntMap&#39;, &#39;IntSet&#39;, &#39;Seq&#39;, and &#39;Tree&#39;.</span></span><span class="mpre">
+) where
+
+import Data.Default.Class
+import Data.Monoid (</span><a href="Data.Monoid.html#loc_80_9_80_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_80_9_80_15&#39;)"><span class="mpre">mempty</span></a><span class="mpre">)
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/data-default-instances-containers-0.0.1/Data/Default/Instances/Containers.hs&quot;, srcSpanStartLine = 39, srcSpanStartColumn = 18, srcSpanEndLine = 39, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;Data.Set&quot;"><span class="mpre">Data.Set</span></span><span class="mpre"> as S
+import qualified Data.Map as M
+import Data.IntMap (IntMap)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/data-default-instances-containers-0.0.1/Data/Default/Instances/Containers.hs&quot;, srcSpanStartLine = 42, srcSpanStartColumn = 8, srcSpanEndLine = 42, srcSpanEndColumn = 19}, srcInfoPoints = []}) &quot;Data.IntSet&quot;"><span class="mpre">Data.IntSet</span></span><span class="mpre"> (IntSet)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/data-default-instances-containers-0.0.1/Data/Default/Instances/Containers.hs&quot;, srcSpanStartLine = 43, srcSpanStartColumn = 8, srcSpanEndLine = 43, srcSpanEndColumn = 21}, srcInfoPoints = []}) &quot;Data.Sequence&quot;"><span class="mpre">Data.Sequence</span></span><span class="mpre"> (Seq)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/data-default-instances-containers-0.0.1/Data/Default/Instances/Containers.hs&quot;, srcSpanStartLine = 44, srcSpanStartColumn = 8, srcSpanEndLine = 44, srcSpanEndColumn = 17}, srcInfoPoints = []}) &quot;Data.Tree&quot;"><span class="mpre">Data.Tree</span></span><span class="mpre"> (Tree(..))
+
+instance </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">S.Set</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre">) where </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">S.empty</span></span><span class="mpre">
+instance </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">M.Map</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre">) where </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">M.empty</span></span><span class="mpre">
+instance </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">IntMap</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">v</span></span><span class="mpre">) where </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><a href="Data.Monoid.html#loc_80_9_80_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_80_9_80_15&#39;)"><span class="hl_varref"><span class="mpre">mempty</span></span></a><span class="mpre">
+instance </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">IntSet</span></span><span class="mpre"> where </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><a href="Data.Monoid.html#loc_80_9_80_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_80_9_80_15&#39;)"><span class="hl_varref"><span class="mpre">mempty</span></span></a><span class="mpre">
+instance </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Seq</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) where </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><a href="Data.Monoid.html#loc_80_9_80_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_80_9_80_15&#39;)"><span class="hl_varref"><span class="mpre">mempty</span></span></a><span class="mpre">
+instance </span><span class="warning" data-warning="InstDecl ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/data-default-instances-containers-0.0.1/Data/Default/Instances/Containers.hs&quot;, srcSpanStartLine = 51, srcSpanStartColumn = 10, srcSpanEndLine = 51, srcSpanEndColumn = 24}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/data-default-instances-containers-0.0.1/Data/Default/Instances/Containers.hs&quot;, srcSpanStartLine = 51, srcSpanStartColumn = 10, srcSpanEndLine = 51, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename ="><span class="mpre">(Default a) =&gt;</span></span><span class="mpre"> </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Tree</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) where </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">Node</span></span><span class="mpre"> </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_varref"><span class="mpre">def</span></span></a><span class="mpre"> []
+</span></div></body></html>

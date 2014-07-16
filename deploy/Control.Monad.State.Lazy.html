@@ -1,0 +1,131 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Monad.State.Lazy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Andy Gill 2001,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Oregon Graduate Institute of Science and Technology, 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (multi-param classes, functional dependencies)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Lazy state monads.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      This module is inspired by the paper</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      /Functional Programming with Overloading and Higher-Order Polymorphism/,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--        Mark P Jones (&lt;http://web.cecs.pdx.edu/~mpj/&gt;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          Advanced School of Functional Programming, 1995.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Control.Monad.State.Lazy (
+    </span><span class="hl_comment"><span class="mpre">-- * MonadState class</span></span><span class="mpre">
+    MonadState(..),
+    modify,
+    modify&#39;,
+    gets,
+    </span><span class="hl_comment"><span class="mpre">-- * The State monad</span></span><span class="mpre">
+    State,
+    runState,
+    evalState,
+    execState,
+    mapState,
+    withState,
+    </span><span class="hl_comment"><span class="mpre">-- * The StateT monad transformer</span></span><span class="mpre">
+    StateT(StateT),
+    runStateT,
+    evalStateT,
+    execStateT,
+    mapStateT,
+    withStateT,
+    module Control.Monad,
+    module Control.Monad.Fix,
+    module Control.Monad.Trans,
+    </span><span class="hl_comment"><span class="mpre">-- * Examples</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $examples</span></span><span class="mpre">
+  ) where
+
+import Control.Monad.State.Class
+
+import Control.Monad.Trans
+import Control.Monad.Trans.State.Lazy
+        (State, </span><a href="Control.Monad.Trans.State.Lazy.html#loc_98_1_98_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_98_1_98_9&#39;)"><span class="mpre">runState</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.State.Lazy.html#loc_107_1_107_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_107_1_107_10&#39;)"><span class="mpre">evalState</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.State.Lazy.html#loc_116_1_116_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_116_1_116_10&#39;)"><span class="mpre">execState</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.State.Lazy.html#loc_123_1_123_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_123_1_123_9&#39;)"><span class="mpre">mapState</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.State.Lazy.html#loc_130_1_130_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_130_1_130_10&#39;)"><span class="mpre">withState</span></a><span class="mpre">,
+         </span><a href="Control.Monad.Trans.State.Lazy.html#loc_142_9_142_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_142_9_142_15&#39;)"><span class="mpre">StateT</span></a><span class="mpre">(StateT), </span><a href="Control.Monad.Trans.State.Lazy.html#loc_142_33_142_42" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_142_33_142_42&#39;)"><span class="mpre">runStateT</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.State.Lazy.html#loc_149_1_149_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_149_1_149_11&#39;)"><span class="mpre">evalStateT</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.State.Lazy.html#loc_158_1_158_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_158_1_158_11&#39;)"><span class="mpre">execStateT</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.State.Lazy.html#loc_167_1_167_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_167_1_167_10&#39;)"><span class="mpre">mapStateT</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.State.Lazy.html#loc_174_1_174_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.State.Lazy.html#loc_174_1_174_11&#39;)"><span class="mpre">withStateT</span></a><span class="mpre">)
+
+import Control.Monad
+import Control.Monad.Fix
+
+</span><span class="hl_comment"><span class="mpre">-- ---------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- $examples</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A function to increment a counter.  Taken from the paper</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Generalising Monads to Arrows/, John</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Hughes (&lt;http://www.math.chalmers.se/~rjmh/&gt;), November 1998:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; tick :: State Int Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; tick = do n &lt;- get</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;           put (n+1)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;           return n</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Add one to the given number using the state monad:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; plusOne :: Int -&gt; Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; plusOne n = execState tick n</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A contrived addition example. Works only with positive numbers:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; plus :: Int -&gt; Int -&gt; Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; plus n x = execState (sequence $ replicate n tick) x</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- An example from /The Craft of Functional Programming/, Simon</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Thompson (&lt;http://www.cs.kent.ac.uk/people/staff/sjt/&gt;),</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Addison-Wesley 1999: \&quot;Given an arbitrary tree, transform it to a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- tree of integers in which the original elements are replaced by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- natural numbers, starting from 0.  The same element has to be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- replaced by the same number at every occurrence, and when we meet</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- an as-yet-unvisited element we have to find a \&#39;new\&#39; number to match</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- it with:\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Tree a = Nil | Node a (Tree a) (Tree a) deriving (Show, Eq)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; type Table a = [a]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; numberTree :: Eq a =&gt; Tree a -&gt; State (Table a) (Tree Int)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; numberTree Nil = return Nil</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; numberTree (Node x t1 t2)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;        =  do num &lt;- numberNode x</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;              nt1 &lt;- numberTree t1</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;              nt2 &lt;- numberTree t2</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;              return (Node num nt1 nt2)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     numberNode :: Eq a =&gt; a -&gt; State (Table a) Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     numberNode x</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;        = do table &lt;- get</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;             (newTable, newPos) &lt;- return (nNode x table)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;             put newTable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;             return newPos</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     nNode::  (Eq a) =&gt; a -&gt; Table a -&gt; (Table a, Int)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     nNode x table</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;        = case (findIndexInList (== x) table) of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;          Nothing -&gt; (table ++ [x], length table)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;          Just i  -&gt; (table, i)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     findIndexInList :: (a -&gt; Bool) -&gt; [a] -&gt; Maybe Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     findIndexInList = findIndexInListHelp 0</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     findIndexInListHelp _ _ [] = Nothing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     findIndexInListHelp count f (h:t)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;        = if (f h)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;          then Just count</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;          else findIndexInListHelp (count+1) f t</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- numTree applies numberTree with an initial state:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; numTree :: (Eq a) =&gt; Tree a -&gt; Tree Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; numTree t = evalState (numberTree t) []</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; testTree = Node &quot;Zero&quot; (Node &quot;One&quot; (Node &quot;Two&quot; Nil Nil) (Node &quot;One&quot; (Node &quot;Zero&quot; Nil Nil) Nil)) Nil</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; numTree testTree =&gt; Node 0 (Node 1 (Node 2 Nil Nil) (Node 1 (Node 0 Nil Nil) Nil)) Nil</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- sumTree is a little helper function that does not use the State monad:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; sumTree :: (Num a) =&gt; Tree a -&gt; a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; sumTree Nil = 0</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; sumTree (Node e t1 t2) = e + (sumTree t1) + (sumTree t2)</span></span><span class="mpre">
+</span></div></body></html>

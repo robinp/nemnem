@@ -1,0 +1,39 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Bool</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;Bool&#39; type and related functions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Bool (
+   </span><span class="hl_comment"><span class="mpre">-- * Booleans</span></span><span class="mpre">
+   Bool(..),
+   </span><span class="hl_comment"><span class="mpre">-- ** Operations </span></span><span class="mpre">
+   (&amp;&amp;),
+   (||),
+   not,
+   otherwise,
+   bool,
+  ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Bool.hs&quot;, srcSpanStartLine = 29, srcSpanStartColumn = 8, srcSpanEndLine = 29, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Case analysis for the &#39;Bool&#39; type.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @bool a b p@ evaluates to @a@ when @p@ is @False@, and evaluates to @b@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- when @p@ is @True@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.7.0.0/</span></span><span class="mpre">
+</span><a href="#loc_37_1_37_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_1_37_5&#39;)"><span class="mpre">bool</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_37_1_37_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_1_37_5&#39;)"><span class="hl_fundecl"><span class="mpre">bool</span></span></a><span class="mpre"> </span><a name="loc_37_6_37_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_6_37_7&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> _ </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre"> = </span><a href="#loc_37_6_37_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_6_37_7&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre">
+</span><a href="#loc_37_1_37_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_1_37_5&#39;)"><span class="hl_fundecl"><span class="mpre">bool</span></span></a><span class="mpre"> _ </span><a name="loc_38_8_38_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_8_38_9&#39;)"><span class="hl_vardecl"><span class="mpre">t</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">  = </span><a href="#loc_38_8_38_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_8_38_9&#39;)"><span class="hl_varref"><span class="mpre">t</span></span></a><span class="mpre">
+</span></div></body></html>

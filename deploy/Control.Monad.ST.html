@@ -1,0 +1,36 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Unsafe #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Monad.ST</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (requires universal quantification for runST)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This library provides support for /strict/ state threads, as</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- described in the PLDI \&#39;94 paper by John Launchbury and Simon Peyton</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Jones /Lazy Functional State Threads/.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- References (variables) that can be used within the @ST@ monad are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- provided by &quot;Data.STRef&quot;, and arrays are provided by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;Data.Array.ST&quot;.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Control.Monad.ST (
+        </span><span class="hl_comment"><span class="mpre">-- * The &#39;ST&#39; Monad</span></span><span class="mpre">
+        ST,             </span><span class="hl_comment"><span class="mpre">-- abstract, instance of Functor, Monad, Typeable.</span></span><span class="mpre">
+        runST,
+        fixST,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Converting &#39;ST&#39; to &#39;IO&#39;</span></span><span class="mpre">
+        RealWorld,              </span><span class="hl_comment"><span class="mpre">-- abstract</span></span><span class="mpre">
+        stToIO,
+    ) where
+
+import Control.Monad.ST.Safe
+
+</span></div></body></html>

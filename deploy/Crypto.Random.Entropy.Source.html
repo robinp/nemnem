@@ -1,0 +1,23 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Crypto.Random.Entropy.Source</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : Good</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Crypto.Random.Entropy.Source where
+
+import Foreign.Ptr
+import Data.Word (Word8)
+
+</span><span class="hl_comment"><span class="mpre">-- | A handle to an entropy maker, either a system capability</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- or a hardware generator.</span></span><span class="mpre">
+class </span><a name="loc_15_7_15_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_15_7_15_20&#39;)"><span class="hl_classdecl"><span class="mpre">EntropySource</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> where
+    </span><span class="hl_comment"><span class="mpre">-- | try to open an handle for this source</span></span><span class="mpre">
+    </span><a name="loc_17_5_17_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_5_17_16&#39;)"><span class="mpre">entropyOpen</span></a><span class="mpre">   :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+    </span><span class="hl_comment"><span class="mpre">-- | try to gather a number of entropy bytes into a buffer.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- return the number of actual bytes gathered</span></span><span class="mpre">
+    </span><a name="loc_20_5_20_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_20_5_20_18&#39;)"><span class="mpre">entropyGather</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Ptr</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- | Close an open handle</span></span><span class="mpre">
+    </span><a name="loc_22_5_22_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_22_5_22_17&#39;)"><span class="mpre">entropyClose</span></a><span class="mpre">  :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span></div></body></html>

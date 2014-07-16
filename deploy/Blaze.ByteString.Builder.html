@@ -1,0 +1,96 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Blaze.ByteString.Builder</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) 2010 Jasper Van der Jeugt &amp; Simon Meier</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD3-style (see LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Simon Meier &lt;iridcode@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : tested on GHC only</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;Blaze.ByteString.Builder&quot; is the main module, which you should import as a user</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of the @blaze-builder@ library.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import Blaze.ByteString.Builder</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- It provides you with a type &#39;Builder&#39; that allows to efficiently construct</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- lazy bytestrings with a large average chunk size.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Intuitively, a &#39;Builder&#39; denotes the construction of a part of a lazy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- bytestring. Builders can either be created using one of the primitive</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- combinators in &quot;Blaze.ByteString.Builder.Write&quot; or by using one of the predefined</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- combinators for standard Haskell values (see the exposed modules of this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- package).  Concatenation of builders is done using &#39;mappend&#39; from the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Monoid&#39; typeclass.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Here is a small example that serializes a list of strings using the UTF-8</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- encoding.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @ import &quot;Blaze.ByteString.Builder.Char.Utf8&quot;@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; strings :: [String]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; strings = replicate 10000 &quot;Hello there!&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The function @&#39;fromString&#39;@ creates a &#39;Builder&#39; denoting the UTF-8 encoded</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- argument. Hence, UTF-8 encoding and concatenating all @strings@ can be done</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- follows.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; concatenation :: Builder</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; concatenation = mconcat $ map fromString strings</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The function &#39;toLazyByteString&#39;  can be used to execute a &#39;Builder&#39; and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- obtain the resulting lazy bytestring.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; result :: L.ByteString</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; result = toLazyByteString concatenation</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The @result@ is a lazy bytestring containing 10000 repetitions of the string</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @\&quot;Hello there!\&quot;@ encoded using UTF-8. The corresponding 120000 bytes are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- distributed among three chunks of 32kb and a last chunk of 6kb.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /A note on history./ This serialization library was inspired by the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @Data.Binary.Builder@ module provided by the @binary@ package. It was</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- originally developed with the specific needs of the @blaze-html@ package in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- mind. Since then it has been restructured to serve as a drop-in replacement</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for @Data.Binary.Builder@, which it improves upon both in speed as well as</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- expressivity.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Blaze.ByteString.Builder
+    (
+      </span><span class="hl_comment"><span class="mpre">-- * The &#39;Builder&#39; type</span></span><span class="mpre">
+      Builder
+
+      </span><span class="hl_comment"><span class="mpre">-- * Creating builders</span></span><span class="mpre">
+    , module Blaze.ByteString.Builder.Int
+    , module Blaze.ByteString.Builder.Word
+    , module Blaze.ByteString.Builder.ByteString
+    , flush
+
+      </span><span class="hl_comment"><span class="mpre">-- * Executing builders</span></span><span class="mpre">
+    , toLazyByteString
+    , toLazyByteStringWith
+    , toByteString
+    , toByteStringIO
+    , toByteStringIOWith
+
+    </span><span class="hl_comment"><span class="mpre">-- * &#39;Write&#39;s</span></span><span class="mpre">
+    , Write
+    , fromWrite
+    , fromWriteSingleton
+    , fromWriteList
+    , writeToByteString
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Writing &#39;Storable&#39;s</span></span><span class="mpre">
+    , writeStorable
+    , fromStorable
+    , fromStorables
+
+    ) where
+
+import Blaze.ByteString.Builder.Internal
+import Blaze.ByteString.Builder.Int
+import Blaze.ByteString.Builder.Word
+import Blaze.ByteString.Builder.ByteString
+
+</span></div></body></html>

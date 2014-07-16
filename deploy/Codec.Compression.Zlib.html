@@ -1,0 +1,119 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) 2006-2008 Duncan Coutts</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  duncan@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable (H98 + FFI)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Compression and decompression of data streams in the zlib format.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The format is described in detail in RFC #1950:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;http://www.ietf.org/rfc/rfc1950.txt&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- See also the zlib home page: &lt;http://zlib.net/&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+module Codec.Compression.Zlib (
+
+  </span><span class="hl_comment"><span class="mpre">-- | This module provides pure functions for compressing and decompressing</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- streams of data in the zlib format and represented by lazy &#39;ByteString&#39;s.</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- This makes it easy to use either in memory or with disk or network IO.</span></span><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- * Simple compression and decompression</span></span><span class="mpre">
+  compress,
+  decompress,
+
+  </span><span class="hl_comment"><span class="mpre">-- * Extended api with control over compression parameters</span></span><span class="mpre">
+  compressWith,
+  decompressWith,
+
+  CompressParams(..), defaultCompressParams,
+  DecompressParams(..), defaultDecompressParams,
+
+  </span><span class="hl_comment"><span class="mpre">-- ** The compression parameter types</span></span><span class="mpre">
+  CompressionLevel(..),
+    defaultCompression,
+    noCompression,
+    bestSpeed,
+    bestCompression,
+    compressionLevel,
+  Method(..),
+    deflateMethod,
+  WindowBits(..),
+    defaultWindowBits,
+    windowBits,
+  MemoryLevel(..),
+    defaultMemoryLevel,
+    minMemoryLevel,
+    maxMemoryLevel,
+    memoryLevel,
+  CompressionStrategy(..),
+    defaultStrategy,
+    filteredStrategy,
+    huffmanOnlyStrategy,
+
+  ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/zlib-0.5.4.1/Codec/Compression/Zlib.hs&quot;, srcSpanStartLine = 59, srcSpanStartColumn = 8, srcSpanEndLine = 59, srcSpanEndColumn = 28}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy&quot;"><span class="mpre">Data.ByteString.Lazy</span></span><span class="mpre"> (ByteString)
+
+import qualified Codec.Compression.Zlib.Internal as Internal
+import Codec.Compression.Zlib.Internal hiding (</span><a href="Codec.Compression.Zlib.Internal.html#loc_220_1_220_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Codec.Compression.Zlib.Internal.html#loc_220_1_220_9&#39;)"><span class="mpre">compress</span></a><span class="mpre">, </span><a href="Codec.Compression.Zlib.Internal.html#loc_335_1_335_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Codec.Compression.Zlib.Internal.html#loc_335_1_335_11&#39;)"><span class="mpre">decompress</span></a><span class="mpre">)
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Decompress a stream of data in the zlib format.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- There are a number of errors that can occur. In each case an exception will</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- be thrown. The possible error conditions are:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * if the stream does not start with a valid gzip header</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * if the compressed stream is corrupted</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * if the compressed stream ends permaturely</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that the decompression is performed /lazily/. Errors in the data stream</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- may not be detected until the end of the stream is demanded (since it is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- only at the end that the final checksum can be checked). If this is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- important to you, you must make sure to consume the whole decompressed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- stream before doing any IO action that depends on it.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_83_1_83_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_11&#39;)"><span class="mpre">decompress</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_83_1_83_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_11&#39;)"><span class="hl_vardecl"><span class="mpre">decompress</span></span></a><span class="mpre"> = </span><a href="#loc_92_1_92_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_15&#39;)"><span class="hl_varref"><span class="mpre">decompressWith</span></span></a><span class="mpre"> </span><a href="Codec.Compression.Zlib.Internal.html#loc_134_1_134_24" onmouseover="nemnem.highlightLocalToRemote(&#39;Codec.Compression.Zlib.Internal.html#loc_134_1_134_24&#39;)"><span class="hl_varref"><span class="mpre">defaultDecompressParams</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Like &#39;decompress&#39; but with the ability to specify various decompression</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- parameters. Typical usage:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; decompressWith defaultCompressParams { ... }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_92_1_92_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_15&#39;)"><span class="mpre">decompressWith</span></a><span class="mpre"> :: </span><a href="Codec.Compression.Zlib.Internal.html#loc_110_6_110_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Codec.Compression.Zlib.Internal.html#loc_110_6_110_22&#39;)"><span class="hl_tyconref"><span class="mpre">DecompressParams</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_92_1_92_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_15&#39;)"><span class="hl_vardecl"><span class="mpre">decompressWith</span></span></a><span class="mpre"> = </span><a href="Codec.Compression.Zlib.Internal.html#loc_335_1_335_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Codec.Compression.Zlib.Internal.html#loc_335_1_335_11&#39;)"><span class="hl_varref"><span class="mpre">Internal.decompress</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">zlibFormat</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Compress a stream of data into the zlib format.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This uses the default compression parameters. In partiular it uses the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- default compression level which favours a higher compression ratio over</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- compression speed, though it does not use the maximum compression level.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Use &#39;compressWith&#39; to adjust the compression level or other compression</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- parameters.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_105_1_105_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_9&#39;)"><span class="mpre">compress</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_105_1_105_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_9&#39;)"><span class="hl_vardecl"><span class="mpre">compress</span></span></a><span class="mpre"> = </span><a href="#loc_118_1_118_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_1_118_13&#39;)"><span class="hl_varref"><span class="mpre">compressWith</span></span></a><span class="mpre"> </span><a href="Codec.Compression.Zlib.Internal.html#loc_120_1_120_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Codec.Compression.Zlib.Internal.html#loc_120_1_120_22&#39;)"><span class="hl_varref"><span class="mpre">defaultCompressParams</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Like &#39;compress&#39; but with the ability to specify various compression</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- parameters. Typical usage:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; compressWith defaultCompressParams { ... }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In particular you can set the compression level:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; compressWith defaultCompressParams { compressLevel = BestCompression }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_118_1_118_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_1_118_13&#39;)"><span class="mpre">compressWith</span></a><span class="mpre"> :: </span><a href="Codec.Compression.Zlib.Internal.html#loc_81_6_81_20" onmouseover="nemnem.highlightLocalToRemote(&#39;Codec.Compression.Zlib.Internal.html#loc_81_6_81_20&#39;)"><span class="hl_tyconref"><span class="mpre">CompressParams</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_118_1_118_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_1_118_13&#39;)"><span class="hl_vardecl"><span class="mpre">compressWith</span></span></a><span class="mpre"> = </span><a href="Codec.Compression.Zlib.Internal.html#loc_220_1_220_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Codec.Compression.Zlib.Internal.html#loc_220_1_220_9&#39;)"><span class="hl_varref"><span class="mpre">Internal.compress</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">zlibFormat</span></span><span class="mpre">
+</span></div></body></html>

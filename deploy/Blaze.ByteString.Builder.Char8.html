@@ -1,0 +1,85 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- ignore warning from &#39;import Data.Text.Encoding&#39;</span></span><span class="mpre">
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
+{-# LANGUAGE CPP #-}
+
+#ifdef USE_MONO_PAT_BINDS
+{-# LANGUAGE MonoPatBinds #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Blaze.ByteString.Builder.Char8</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) 2010 Simon Meier</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD3-style (see LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Simon Meier &lt;iridcode@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : tested on GHC only</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- //Note:// This package is intended for low-level use like implementing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- protocols. If you need to //serialize// Unicode characters use one of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- UTF encodings (e.g. &#39;Blaze.ByteString.Builder.Char.UTF-8&#39;).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Write&#39;s and &#39;Builder&#39;s for serializing the lower 8-bits of characters.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This corresponds to what the &#39;bytestring&#39; package offer in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.ByteString.Char8&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Blaze.ByteString.Builder.Char8
+    (
+      </span><span class="hl_comment"><span class="mpre">-- * Writing Latin-1 (ISO 8859-1) encodable characters to a buffer</span></span><span class="mpre">
+      writeChar
+
+      </span><span class="hl_comment"><span class="mpre">-- * Creating Builders from Latin-1 (ISO 8859-1) encodable characters</span></span><span class="mpre">
+    , fromChar
+    , fromString
+    , fromShow
+    , fromText
+    , fromLazyText
+    ) where
+
+import Foreign
+import Data.Char (ord)
+
+import qualified Data.Text               as TS
+import qualified Data.Text.Encoding      as TS </span><span class="hl_comment"><span class="mpre">-- imported for documentation links</span></span><span class="mpre">
+import qualified Data.Text.Lazy          as TL
+import qualified Data.Text.Lazy.Encoding as TS </span><span class="hl_comment"><span class="mpre">-- imported for documentation links</span></span><span class="mpre">
+
+import Blaze.ByteString.Builder.Internal
+import Blaze.ByteString.Builder.Word
+
+</span><span class="hl_comment"><span class="mpre">-- | Write the lower 8-bits of a character to a buffer.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_56_1_56_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_1_56_10&#39;)"><span class="mpre">writeChar</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_56_1_56_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_1_56_10&#39;)"><span class="mpre">writeChar</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre"> -&gt; </span><a href="Blaze.ByteString.Builder.Internal.Write.html#loc_98_6_98_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.Write.html#loc_98_6_98_11&#39;)"><span class="hl_tyconref"><span class="mpre">Write</span></span></a><span class="mpre">
+</span><a name="loc_56_1_56_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_1_56_10&#39;)"><span class="hl_vardecl"><span class="mpre">writeChar</span></span></a><span class="mpre"> = </span><a href="Blaze.ByteString.Builder.Word.html#loc_117_1_117_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Word.html#loc_117_1_117_11&#39;)"><span class="hl_varref"><span class="mpre">writeWord8</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">ord</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /O(1)/. Serialize the lower 8-bits of a character.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_61_1_61_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_1_61_9&#39;)"><span class="mpre">fromChar</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre"> -&gt; </span><a href="Blaze.ByteString.Builder.Internal.Types.html#loc_69_9_69_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.Types.html#loc_69_9_69_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_61_1_61_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_1_61_9&#39;)"><span class="hl_vardecl"><span class="mpre">fromChar</span></span></a><span class="mpre"> = </span><a href="Blaze.ByteString.Builder.Internal.Write.html#loc_233_1_233_19" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.Write.html#loc_233_1_233_19&#39;)"><span class="hl_varref"><span class="mpre">fromWriteSingleton</span></span></a><span class="mpre"> </span><a href="#loc_56_1_56_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_1_56_10&#39;)"><span class="hl_varref"><span class="mpre">writeChar</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /O(n)/. Serialize the lower 8-bits of all characters of a string</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_66_1_66_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_11&#39;)"><span class="mpre">fromString</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="Blaze.ByteString.Builder.Internal.Types.html#loc_69_9_69_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.Types.html#loc_69_9_69_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_66_1_66_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_11&#39;)"><span class="hl_vardecl"><span class="mpre">fromString</span></span></a><span class="mpre"> = </span><a href="Blaze.ByteString.Builder.Internal.Write.html#loc_249_1_249_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.Write.html#loc_249_1_249_14&#39;)"><span class="hl_varref"><span class="mpre">fromWriteList</span></span></a><span class="mpre"> </span><a href="#loc_56_1_56_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_1_56_10&#39;)"><span class="hl_varref"><span class="mpre">writeChar</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /O(n)/. Serialize a value by &#39;Show&#39;ing it and serializing the lower 8-bits</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of the resulting string.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_72_1_72_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_9&#39;)"><span class="mpre">fromShow</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/Blaze/ByteString/Builder/Char8.hs&quot;, srcSpanStartLine = 71, srcSpanStartColumn = 13, srcSpanEndLine = 71, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/Blaze/ByteString/Builder/Char8.hs&quot;, srcSpanStartLine = 71, srcSpanStartColumn = 20, srcSpanEndLine = 71, srcSpanEndColumn = 22}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;"><span class="mpre">Show a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><a href="Blaze.ByteString.Builder.Internal.Types.html#loc_69_9_69_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.Types.html#loc_69_9_69_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_72_1_72_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_9&#39;)"><span class="hl_vardecl"><span class="mpre">fromShow</span></span></a><span class="mpre"> = </span><a href="#loc_66_1_66_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_11&#39;)"><span class="hl_varref"><span class="mpre">fromString</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /O(n)/. Serialize the lower 8-bits of all characters in the strict text.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_78_1_78_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_1_78_9&#39;)"><span class="mpre">fromText</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_78_1_78_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_1_78_9&#39;)"><span class="mpre">fromText</span></a><span class="mpre"> :: </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">TS.Text</span></span></a><span class="mpre"> -&gt; </span><a href="Blaze.ByteString.Builder.Internal.Types.html#loc_69_9_69_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.Types.html#loc_69_9_69_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_78_1_78_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_1_78_9&#39;)"><span class="hl_vardecl"><span class="mpre">fromText</span></span></a><span class="mpre"> = </span><a href="#loc_66_1_66_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_11&#39;)"><span class="hl_varref"><span class="mpre">fromString</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Data.Text.html#loc_392_1_392_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.html#loc_392_1_392_7&#39;)"><span class="hl_varref"><span class="mpre">TS.unpack</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /O(n)/. Serialize the lower 8-bits of all characters in the lazy text.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_84_1_84_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_13&#39;)"><span class="mpre">fromLazyText</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_84_1_84_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_13&#39;)"><span class="mpre">fromLazyText</span></a><span class="mpre"> :: </span><a href="Data.Text.Internal.Lazy.html#loc_47_6_47_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.Lazy.html#loc_47_6_47_10&#39;)"><span class="hl_tyconref"><span class="mpre">TL.Text</span></span></a><span class="mpre"> -&gt; </span><a href="Blaze.ByteString.Builder.Internal.Types.html#loc_69_9_69_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.Types.html#loc_69_9_69_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_84_1_84_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_13&#39;)"><span class="hl_vardecl"><span class="mpre">fromLazyText</span></span></a><span class="mpre"> = </span><a href="#loc_66_1_66_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_11&#39;)"><span class="hl_varref"><span class="mpre">fromString</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Data.Text.Lazy.html#loc_354_1_354_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Lazy.html#loc_354_1_354_7&#39;)"><span class="hl_varref"><span class="mpre">TL.unpack</span></span></a><span class="mpre">
+</span></div></body></html>

@@ -1,0 +1,71 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">module Data.Vault.LAZINESS (
+    </span><span class="hl_comment"><span class="mpre">-- * Vault</span></span><span class="mpre">
+    Vault, Key,
+    empty, newKey, lookup, insert, adjust, delete, union,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Locker</span></span><span class="mpre">
+    Locker,
+    lock, unlock,
+    ) where
+
+import Prelude hiding (lookup)
+import Control.Monad.ST
+import qualified Data.Vault.ST.LAZINESS as ST
+
+
+</span><span class="hl_comment"><span class="mpre">{-----------------------------------------------------------------------------
+    Vault
+------------------------------------------------------------------------------}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A persistent store for values of arbitrary types.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This variant is the simplest and creates keys in the &#39;IO&#39; monad.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- See the module &quot;Data.Vault.ST&quot; if you want to use it with the &#39;ST&#39; monad instead.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vault-0.3.0.3/src/Data/Vault/IO.hs&quot;, srcSpanStartLine = 24, srcSpanStartColumn = 1, srcSpanEndLine = 24, srcSpanEndColumn = 32}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vault-0.3.0.3/src/Data/Vault/IO.hs&quot;, srcSpanStartLine = 24, srcSpanStartColumn = 1, srcSpanEndLine = 24, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vault-0.3.0.3/src/Data/Vault/IO.hs&quot;, srcSpanStartLine = 24"><span class="mpre">type Vault = ST.Vault RealWorld</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Keys for the vault.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vault-0.3.0.3/src/Data/Vault/IO.hs&quot;, srcSpanStartLine = 27, srcSpanStartColumn = 1, srcSpanEndLine = 27, srcSpanEndColumn = 28}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vault-0.3.0.3/src/Data/Vault/IO.hs&quot;, srcSpanStartLine = 27, srcSpanStartColumn = 1, srcSpanEndLine = 27, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vault-0.3.0.3/src/Data/Vault/IO.hs&quot;, srcSpanStartLine = 27"><span class="mpre">type Key = ST.Key RealWorld</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The empty vault.</span></span><span class="mpre">
+</span><a href="#loc_31_1_31_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_31_1_31_6&#39;)"><span class="mpre">empty</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre">
+</span><a name="loc_31_1_31_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_31_1_31_6&#39;)"><span class="hl_vardecl"><span class="mpre">empty</span></span></a><span class="mpre"> = </span><a href="Data.Vault.ST.LAZINESS.html#loc_43_1_43_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Vault.ST.LAZINESS.html#loc_43_1_43_6&#39;)"><span class="hl_varref"><span class="mpre">ST.empty</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Create a new key for use with a vault.</span></span><span class="mpre">
+</span><a href="#loc_35_1_35_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_1_35_7&#39;)"><span class="mpre">newKey</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+</span><a name="loc_35_1_35_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_35_1_35_7&#39;)"><span class="hl_vardecl"><span class="mpre">newKey</span></span></a><span class="mpre"> = </span><a href="GHC.IO.html#loc_91_1_91_7" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_91_1_91_7&#39;)"><span class="hl_varref"><span class="mpre">stToIO</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">ST.newKey</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Lookup the value of a key in the vault.</span></span><span class="mpre">
+</span><a href="#loc_39_1_39_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_1_39_7&#39;)"><span class="mpre">lookup</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> -&gt; </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_39_1_39_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_1_39_7&#39;)"><span class="hl_vardecl"><span class="mpre">lookup</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">ST.lookup</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Insert a value for a given key. Overwrites any previous value.</span></span><span class="mpre">
+</span><a href="#loc_43_1_43_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_7&#39;)"><span class="mpre">insert</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre">
+</span><a name="loc_43_1_43_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_7&#39;)"><span class="hl_vardecl"><span class="mpre">insert</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">ST.insert</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Adjust the value for a given key if it&#39;s present in the vault.</span></span><span class="mpre">
+</span><a href="#loc_47_1_47_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_7&#39;)"><span class="mpre">adjust</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre">
+</span><a name="loc_47_1_47_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_7&#39;)"><span class="hl_vardecl"><span class="mpre">adjust</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">ST.adjust</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Delete a key from the vault.</span></span><span class="mpre">
+</span><a href="#loc_51_1_51_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_51_1_51_7&#39;)"><span class="mpre">delete</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre">
+</span><a name="loc_51_1_51_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_51_1_51_7&#39;)"><span class="hl_vardecl"><span class="mpre">delete</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">ST.delete</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Merge two vaults (left-biased).</span></span><span class="mpre">
+</span><a href="#loc_55_1_55_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_1_55_6&#39;)"><span class="mpre">union</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre">
+</span><a name="loc_55_1_55_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_1_55_6&#39;)"><span class="hl_vardecl"><span class="mpre">union</span></span></a><span class="mpre"> = </span><a href="Data.Vault.ST.LAZINESS.html#loc_62_1_62_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Vault.ST.LAZINESS.html#loc_62_1_62_6&#39;)"><span class="hl_varref"><span class="mpre">ST.union</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-----------------------------------------------------------------------------
+    Locker
+------------------------------------------------------------------------------}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A persistent store for a single value.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vault-0.3.0.3/src/Data/Vault/IO.hs&quot;, srcSpanStartLine = 62, srcSpanStartColumn = 1, srcSpanEndLine = 62, srcSpanEndColumn = 34}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vault-0.3.0.3/src/Data/Vault/IO.hs&quot;, srcSpanStartLine = 62, srcSpanStartColumn = 1, srcSpanEndLine = 62, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vault-0.3.0.3/src/Data/Vault/IO.hs&quot;, srcSpanStartLine = 62"><span class="mpre">type Locker = ST.Locker RealWorld</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Put a single value into a &#39;Locker&#39;.</span></span><span class="mpre">
+</span><a href="#loc_66_1_66_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_5&#39;)"><span class="mpre">lock</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Locker</span></span><span class="mpre">
+</span><a name="loc_66_1_66_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_5&#39;)"><span class="hl_vardecl"><span class="mpre">lock</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">ST.lock</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Retrieve the value from the &#39;Locker&#39;.</span></span><span class="mpre">
+</span><a href="#loc_70_1_70_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_1_70_7&#39;)"><span class="mpre">unlock</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Locker</span></span><span class="mpre"> -&gt; </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_70_1_70_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_1_70_7&#39;)"><span class="hl_vardecl"><span class="mpre">unlock</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">ST.unlock</span></span><span class="mpre">
+</span></div></body></html>

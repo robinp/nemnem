@@ -1,0 +1,40 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Generics</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow, CWI 2001--2004</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the LICENSE file)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  generics@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (uses Data.Generics.Basics)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- \&quot;Scrap your boilerplate\&quot; --- Generic programming in Haskell </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- See &lt;http://www.cs.uu.nl/wiki/GenericProgramming/SYB&gt;. To scrap your</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- boilerplate it is sufficient to import the present module, which simply</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- re-exports all themes of the Data.Generics library.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Generics (
+
+  </span><span class="hl_comment"><span class="mpre">-- * All Data.Generics modules</span></span><span class="mpre">
+  module Data.Data,               </span><span class="hl_comment"><span class="mpre">-- primitives and instances of the Data class</span></span><span class="mpre">
+  module Data.Generics.Aliases,   </span><span class="hl_comment"><span class="mpre">-- aliases for type case, generic types</span></span><span class="mpre">
+  module Data.Generics.Schemes,   </span><span class="hl_comment"><span class="mpre">-- traversal schemes (everywhere etc.)</span></span><span class="mpre">
+  module Data.Generics.Text,      </span><span class="hl_comment"><span class="mpre">-- generic read and show</span></span><span class="mpre">
+  module Data.Generics.Twins,     </span><span class="hl_comment"><span class="mpre">-- twin traversal, e.g., generic eq</span></span><span class="mpre">
+  module Data.Generics.Builders,  </span><span class="hl_comment"><span class="mpre">-- term builders</span></span><span class="mpre">
+
+ ) where
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/src/Data/Generics.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 8, srcSpanEndLine = 33, srcSpanEndColumn = 17}, srcInfoPoints = []}) &quot;Data.Data&quot;"><span class="mpre">Data.Data</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/src/Data/Generics.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 8, srcSpanEndLine = 34, srcSpanEndColumn = 31}, srcInfoPoints = []}) &quot;Data.Generics.Instances&quot;"><span class="mpre">Data.Generics.Instances</span></span><span class="mpre"> ()
+import Data.Generics.Aliases
+import Data.Generics.Schemes
+import Data.Generics.Text
+import Data.Generics.Twins
+import Data.Generics.Builders
+</span></div></body></html>

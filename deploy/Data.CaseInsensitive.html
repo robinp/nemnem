@@ -1,0 +1,34 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, NoImplicitPrelude #-}
+
+#if __GLASGOW_HASKELL__ &gt;= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.CaseInsensitive</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) 2011-2013 Bas van Dijk</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Bas van Dijk &lt;v.dijk.bas@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module is intended to be imported qualified. May I suggest:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- import           Data.CaseInsensitive  ( CI )</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- import qualified Data.CaseInsensitive as CI</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Note that the FoldCase instance for ByteStrings is only/</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /guaranteed to be correct for ISO-8859-1 encoded strings!/</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.CaseInsensitive ( CI
+                            , mk
+                            , original
+                            , foldedCase
+                            , map
+                            , FoldCase(foldCase)
+                            ) where
+import Data.CaseInsensitive.Internal
+</span></div></body></html>

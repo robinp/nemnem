@@ -1,0 +1,20 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE GADTs #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Profunctor.Trace</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2011-2012 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  GADTs</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Data.Profunctor.Trace
+  ( Trace(..)
+  ) where
+
+</span><span class="hl_comment"><span class="mpre">-- | Coend of &#39;Data.Profunctor.Profunctor&#39; from @Hask -&gt; Hask@.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclGDataDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/profunctors-4.0.4/src/Data/Profunctor/Trace.hs&quot;, srcSpanStartLine = 18, srcSpanStartColumn = 1, srcSpanEndLine = 20, srcSpanEndColumn = 0}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/profunctors-4.0.4/src/Data/Profunctor/Trace.hs&quot;, srcSpanStartLine = 18, srcSpanStartColumn = 14, srcSpanEndLine = 18, srcSpanEndColumn = 19},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/profunctors-4.0.4/src/Data/Profu"><span class="mpre">data Trace f where
+  Trace :: f a a -&gt; Trace f</span></span><span class="mpre">
+</span></div></body></html>

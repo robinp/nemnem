@@ -1,0 +1,181 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-#LANGUAGE RankNTypes#-}
+
+
+module Pipes.Text.IO 
+   ( 
+   </span><span class="hl_comment"><span class="mpre">-- * Text IO</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- $textio</span></span><span class="mpre">
+   
+   </span><span class="hl_comment"><span class="mpre">-- * Caveats</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- $caveats</span></span><span class="mpre">
+   
+   </span><span class="hl_comment"><span class="mpre">-- * Producers</span></span><span class="mpre">
+   fromHandle
+   , stdin
+   , readFile
+   </span><span class="hl_comment"><span class="mpre">-- * Consumers</span></span><span class="mpre">
+   , toHandle
+   , stdout
+   , writeFile
+   ) where
+
+import qualified System.IO as IO
+import Control.Exception (</span><a href="GHC.IO.html#loc_304_1_304_8" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_304_1_304_8&#39;)"><span class="mpre">throwIO</span></a><span class="mpre">, </span><a href="Control.Exception.Base.html#loc_212_1_212_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_212_1_212_4&#39;)"><span class="mpre">try</span></a><span class="mpre">)
+import Foreign.C.Error (</span><a href="Foreign.C.Error.html#loc_112_9_112_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Foreign.C.Error.html#loc_112_9_112_14&#39;)"><span class="mpre">Errno</span></a><span class="mpre">(</span><a href="Foreign.C.Error.html#loc_112_17_112_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Foreign.C.Error.html#loc_112_17_112_22&#39;)"><span class="mpre">Errno</span></a><span class="mpre">), </span><a href="Foreign.C.Error.html#loc_213_1_213_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Foreign.C.Error.html#loc_213_1_213_6&#39;)"><span class="mpre">ePIPE</span></a><span class="mpre">)
+import qualified GHC.IO.Exception as G
+import Data.Text (</span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="mpre">Text</span></a><span class="mpre">)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import Pipes
+import qualified Pipes.Safe.Prelude as Safe
+import qualified Pipes.Safe as Safe
+import Pipes.Safe (</span><a href="Pipes.Safe.html#loc_260_67_260_76" onmouseover="nemnem.highlightLocalToRemote(&#39;Pipes.Safe.html#loc_260_67_260_76&#39;)"><span class="mpre">MonadSafe</span></a><span class="mpre">(..), Base(..))
+import Prelude hiding (readFile, writeFile)
+
+</span><span class="hl_comment"><span class="mpre">{- $textio
+    Where pipes @IO@ replaces lazy @IO@, @Producer Text IO r@ replaces lazy &#39;Text&#39;. 
+    This module exports some convenient functions for producing and consuming 
+    pipes &#39;Text&#39; in @IO@, namely, &#39;readFile&#39;, &#39;writeFile&#39;, &#39;fromHandle&#39;, &#39;toHandle&#39;, 
+    &#39;stdin&#39; and &#39;stdout&#39;.  Some caveats described below. 
+    
+    The main points are as in 
+    &lt;https://hackage.haskell.org/package/pipes-bytestring-1.0.0/docs/Pipes-ByteString.html Pipes.ByteString&gt;:
+    
+    A &#39;Handle&#39; can be associated with a &#39;Producer&#39; or &#39;Consumer&#39; according 
+    as it is read or written to.
+    
+&gt; import Pipes
+&gt; import qualified Pipes.Text as Text
+&gt; import qualified Pipes.Text.IO as Text
+&gt; import System.IO
+&gt;
+&gt; main =
+&gt;     withFile &quot;inFile.txt&quot;  ReadMode  $ \hIn  -&gt;
+&gt;     withFile &quot;outFile.txt&quot; WriteMode $ \hOut -&gt;
+&gt;     runEffect $ Text.fromHandle hIn &gt;-&gt; Text.toHandle hOut
+
+To stream from files, the following is perhaps more Prelude-like (note that it uses Pipes.Safe):
+
+&gt; import Pipes
+&gt; import qualified Pipes.Text as Text
+&gt; import qualified Pipes.Text.IO as Text
+&gt; import Pipes.Safe
+&gt;
+&gt; main = runSafeT $ runEffect $ Text.readFile &quot;inFile.txt&quot; &gt;-&gt; Text.writeFile &quot;outFile.txt&quot;
+
+    Finally, you can stream to and from &#39;stdin&#39; and &#39;stdout&#39; using the predefined &#39;stdin&#39;
+    and &#39;stdout&#39; pipes, as with the following \&quot;echo\&quot; program:
+
+&gt; main = runEffect $ Text.stdin &gt;-&gt; Text.stdout
+
+
+-}</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">{- $caveats
+
+    The operations exported here are a convenience, like the similar operations in 
+    @Data.Text.IO@  (or rather, @Data.Text.Lazy.IO@, since, again, @Producer Text m r@ is
+    &#39;effectful text&#39; and something like the pipes equivalent of lazy Text.)
+
+    * Like the functions in @Data.Text.IO@, they attempt to work with the system encoding. 
+  
+    * Like the functions in @Data.Text.IO@, they significantly slower than ByteString operations. Where
+       you know what encoding you are working with, use @Pipes.ByteString@ and @Pipes.Text.Encoding@ instead,
+       e.g. @view utf8 Bytes.stdin@ instead of @Text.stdin@
+  
+    * Like the functions in  @Data.Text.IO@ , they use Text exceptions, not the standard Pipes protocols. 
+
+   Something like 
+ 
+&gt;  view utf8 . Bytes.fromHandle :: Handle -&gt; Producer Text IO (Producer ByteString m ()) 
+
+   yields a stream of Text, and follows
+   standard pipes protocols by reverting to (i.e. returning) the underlying byte stream
+   upon reaching any decoding error. (See especially the pipes-binary package.) 
+
+  By contrast, something like 
+
+&gt; Text.fromHandle :: Handle -&gt; Producer Text IO () 
+
+  supplies a stream of text returning &#39;()&#39;, which is convenient for many tasks, 
+  but violates the pipes @pipes-binary@ approach to decoding errors and 
+  throws an exception of the kind characteristic of the @text@ library instead.
+
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-| Convert a &#39;IO.Handle&#39; into a text stream using a text size 
+    determined by the good sense of the text library. Note with the remarks 
+    at the head of this module that this
+    is  slower than @view utf8 (Pipes.ByteString.fromHandle h)@
+    but uses the system encoding and has other nice @Data.Text.IO@ features
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_116_1_116_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_116_1_116_11&#39;)"><span class="mpre">fromHandle</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 115, srcSpanStartColumn = 15, srcSpanEndLine = 115, srcSpanEndColumn = 27}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 115, srcSpanStartColumn = 25, srcSpanEndLine = 115, srcSpanEndColumn = 27}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-te"><span class="mpre">MonadIO m =&gt;</span></span><span class="mpre"> </span><a href="GHC.IO.Handle.Types.html#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.Types.html#loc_100_6_100_12&#39;)"><span class="hl_tyconref"><span class="mpre">IO.Handle</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Producer</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_116_1_116_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_116_1_116_11&#39;)"><span class="hl_fundecl"><span class="mpre">fromHandle</span></span></a><span class="mpre"> </span><a name="loc_116_12_116_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_116_12_116_13&#39;)"><span class="hl_vardecl"><span class="mpre">h</span></span></a><span class="mpre"> =  </span><a href="#loc_117_7_117_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_7_117_9&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre"> where
+      </span><a name="loc_117_7_117_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_7_117_9&#39;)"><span class="hl_vardecl"><span class="mpre">go</span></span></a><span class="mpre"> = do </span><a name="loc_117_15_117_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_15_117_18&#39;)"><span class="hl_vardecl"><span class="mpre">txt</span></span></a><span class="mpre"> &lt;- </span><a href="Control.Monad.IO.Class.html#loc_32_5_32_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.IO.Class.html#loc_32_5_32_11&#39;)"><span class="hl_varref"><span class="mpre">liftIO</span></span></a><span class="mpre"> (</span><a href="Data.Text.IO.html#loc_116_1_116_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.IO.html#loc_116_1_116_10&#39;)"><span class="hl_varref"><span class="mpre">T.hGetChunk</span></span></a><span class="mpre"> </span><a href="#loc_116_12_116_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_116_12_116_13&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre">)
+              if </span><a href="Data.Text.html#loc_531_1_531_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.html#loc_531_1_531_5&#39;)"><span class="hl_varref"><span class="mpre">T.null</span></span></a><span class="mpre"> </span><a href="#loc_117_15_117_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_15_117_18&#39;)"><span class="hl_varref"><span class="mpre">txt</span></span></a><span class="mpre"> then </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+                            else do </span><a href="Pipes.html#loc_132_1_132_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Pipes.html#loc_132_1_132_6&#39;)"><span class="hl_varref"><span class="mpre">yield</span></span></a><span class="mpre"> </span><a href="#loc_117_15_117_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_15_117_18&#39;)"><span class="hl_varref"><span class="mpre">txt</span></span></a><span class="mpre">
+                                    </span><a href="#loc_117_7_117_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_7_117_9&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre"> 
+</span><span class="hl_comment"><span class="mpre">{-# INLINABLE fromHandle#-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Stream text from &#39;stdin&#39;</span></span><span class="mpre">
+</span><a href="#loc_125_1_125_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_6&#39;)"><span class="mpre">stdin</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 124, srcSpanStartColumn = 10, srcSpanEndLine = 124, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 124, srcSpanStartColumn = 20, srcSpanEndLine = 124, srcSpanEndColumn = 22}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-te"><span class="mpre">MonadIO m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Producer</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_125_1_125_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_6&#39;)"><span class="hl_vardecl"><span class="mpre">stdin</span></span></a><span class="mpre"> = </span><a href="#loc_116_1_116_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_116_1_116_11&#39;)"><span class="hl_varref"><span class="mpre">fromHandle</span></span></a><span class="mpre"> </span><a href="GHC.IO.Handle.FD.html#loc_52_1_52_6" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.FD.html#loc_52_1_52_6&#39;)"><span class="hl_varref"><span class="mpre">IO.stdin</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_125_1_125_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_6&#39;)"><span class="mpre">stdin</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">{-| Stream text from a file in the simple fashion of @Data.Text.IO@ 
+
+&gt;&gt;&gt; runSafeT $ runEffect $ Text.readFile &quot;hello.hs&quot; &gt;-&gt; Text.map toUpper &gt;-&gt; hoist lift Text.stdout
+MAIN = PUTSTRLN &quot;HELLO WORLD&quot;
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_136_1_136_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_136_1_136_9&#39;)"><span class="mpre">readFile</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 135, srcSpanStartColumn = 13, srcSpanEndLine = 135, srcSpanEndColumn = 27}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 135, srcSpanStartColumn = 25, srcSpanEndLine = 135, srcSpanEndColumn = 27}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-te"><span class="mpre">MonadSafe m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Producer</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_136_1_136_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_136_1_136_9&#39;)"><span class="hl_fundecl"><span class="mpre">readFile</span></span></a><span class="mpre"> </span><a name="loc_136_10_136_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_136_10_136_14&#39;)"><span class="hl_vardecl"><span class="mpre">file</span></span></a><span class="mpre"> = </span><a href="Pipes.Safe.Prelude.html#loc_24_1_24_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Pipes.Safe.Prelude.html#loc_24_1_24_9&#39;)"><span class="hl_varref"><span class="mpre">Safe.withFile</span></span></a><span class="mpre"> </span><a href="#loc_136_10_136_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_136_10_136_14&#39;)"><span class="hl_varref"><span class="mpre">file</span></span></a><span class="mpre"> </span><a href="GHC.IO.IOMode.html#loc_28_21_28_29" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.IOMode.html#loc_28_21_28_29&#39;)"><span class="hl_conref"><span class="mpre">IO.ReadMode</span></span></a><span class="mpre"> </span><a href="#loc_116_1_116_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_116_1_116_11&#39;)"><span class="hl_varref"><span class="mpre">fromHandle</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_136_1_136_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_136_1_136_9&#39;)"><span class="mpre">readFile</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">{-| Stream text to &#39;stdout&#39;
+
+    Unlike &#39;toHandle&#39;, &#39;stdout&#39; gracefully terminates on a broken output pipe.
+
+    Note: For best performance, it might be best just to use @(for source (liftIO . putStr))@ 
+    instead of @(source &gt;-&gt; stdout)@ .
+-}</span></span><span class="mpre">
+</span><a href="#loc_148_1_148_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_148_1_148_7&#39;)"><span class="mpre">stdout</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 147, srcSpanStartColumn = 11, srcSpanEndLine = 147, srcSpanEndColumn = 23}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 147, srcSpanStartColumn = 21, srcSpanEndLine = 147, srcSpanEndColumn = 23}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-te"><span class="mpre">MonadIO m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Consumer&#39;</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_148_1_148_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_148_1_148_7&#39;)"><span class="hl_vardecl"><span class="mpre">stdout</span></span></a><span class="mpre"> = </span><a href="#loc_150_5_150_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_150_5_150_7&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre">
+  where
+    </span><a name="loc_150_5_150_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_150_5_150_7&#39;)"><span class="hl_vardecl"><span class="mpre">go</span></span></a><span class="mpre"> = do
+        </span><a name="loc_151_9_151_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_151_9_151_12&#39;)"><span class="hl_vardecl"><span class="mpre">txt</span></span></a><span class="mpre"> &lt;- </span><a href="Pipes.html#loc_246_1_246_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Pipes.html#loc_246_1_246_6&#39;)"><span class="hl_varref"><span class="mpre">await</span></span></a><span class="mpre">
+        </span><a name="loc_152_9_152_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_152_9_152_10&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">  &lt;- </span><a href="Control.Monad.IO.Class.html#loc_32_5_32_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.IO.Class.html#loc_32_5_32_11&#39;)"><span class="hl_varref"><span class="mpre">liftIO</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Control.Exception.Base.html#loc_212_1_212_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_212_1_212_4&#39;)"><span class="hl_varref"><span class="mpre">try</span></span></a><span class="mpre"> (</span><a href="Data.Text.IO.html#loc_304_1_304_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.IO.html#loc_304_1_304_7&#39;)"><span class="hl_varref"><span class="mpre">T.putStr</span></span></a><span class="mpre"> </span><a href="#loc_151_9_151_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_151_9_151_12&#39;)"><span class="hl_varref"><span class="mpre">txt</span></span></a><span class="mpre">)
+        case </span><a href="#loc_152_9_152_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_152_9_152_10&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> of
+            </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> (</span><span class="warning" data-warning="PatPRec (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 154, srcSpanStartColumn = 19, srcSpanEndLine = 155, srcSpanEndColumn = 55}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 154, srcSpanStartColumn = 29, srcSpanEndLine = 154, srcSpanEndColumn = 30},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStart"><span class="mpre">G.IOError { G.ioe_type  = G.ResourceVanished
+                            , G.ioe_errno = Just ioe }</span></span><span class="mpre">)
+                 | </span><a href="Foreign.C.Error.html#loc_112_17_112_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Foreign.C.Error.html#loc_112_17_112_22&#39;)"><span class="hl_conref"><span class="mpre">Errno</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">ioe</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">==</span></span><span class="mpre"> </span><a href="Foreign.C.Error.html#loc_213_1_213_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Foreign.C.Error.html#loc_213_1_213_6&#39;)"><span class="hl_varref"><span class="mpre">ePIPE</span></span></a><span class="mpre">
+                     -&gt; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+            </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre">  </span><a name="loc_158_19_158_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_158_19_158_20&#39;)"><span class="hl_vardecl"><span class="mpre">e</span></span></a><span class="mpre">  -&gt; </span><a href="Control.Monad.IO.Class.html#loc_32_5_32_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.IO.Class.html#loc_32_5_32_11&#39;)"><span class="hl_varref"><span class="mpre">liftIO</span></span></a><span class="mpre"> (</span><a href="GHC.IO.html#loc_304_1_304_8" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_304_1_304_8&#39;)"><span class="hl_varref"><span class="mpre">throwIO</span></span></a><span class="mpre"> </span><a href="#loc_158_19_158_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_158_19_158_20&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre">)
+            </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre"> -&gt; </span><a href="#loc_150_5_150_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_150_5_150_7&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{-# INLINABLE stdout #-}</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">{-| Convert a text stream into a &#39;Handle&#39;
+
+    Note: again, for best performance, where possible use 
+    @(for source (liftIO . hPutStr handle))@ instead of @(source &gt;-&gt; toHandle handle)@.
+-}</span></span><span class="mpre">
+</span><a href="#loc_169_1_169_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_169_1_169_9&#39;)"><span class="mpre">toHandle</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 168, srcSpanStartColumn = 13, srcSpanEndLine = 168, srcSpanEndColumn = 25}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 168, srcSpanStartColumn = 23, srcSpanEndLine = 168, srcSpanEndColumn = 25}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-te"><span class="mpre">MonadIO m =&gt;</span></span><span class="mpre"> </span><a href="GHC.IO.Handle.Types.html#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.Types.html#loc_100_6_100_12&#39;)"><span class="hl_tyconref"><span class="mpre">IO.Handle</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Consumer&#39;</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">r</span></span><span class="mpre">
+</span><a name="loc_169_1_169_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_169_1_169_9&#39;)"><span class="hl_fundecl"><span class="mpre">toHandle</span></span></a><span class="mpre"> </span><a name="loc_169_10_169_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_169_10_169_11&#39;)"><span class="hl_vardecl"><span class="mpre">h</span></span></a><span class="mpre"> = </span><a href="Pipes.html#loc_150_1_150_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Pipes.html#loc_150_1_150_4&#39;)"><span class="hl_varref"><span class="mpre">for</span></span></a><span class="mpre"> </span><a href="Pipes.html#loc_299_1_299_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Pipes.html#loc_299_1_299_4&#39;)"><span class="hl_varref"><span class="mpre">cat</span></span></a><span class="mpre"> (</span><a href="Control.Monad.IO.Class.html#loc_32_5_32_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.IO.Class.html#loc_32_5_32_11&#39;)"><span class="hl_varref"><span class="mpre">liftIO</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Data.Text.IO.html#loc_174_1_174_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.IO.html#loc_174_1_174_8&#39;)"><span class="hl_varref"><span class="mpre">T.hPutStr</span></span></a><span class="mpre"> </span><a href="#loc_169_10_169_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_169_10_169_11&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre">)
+</span><span class="hl_comment"><span class="mpre">{-# INLINABLE toHandle #-}</span></span><span class="mpre">
+
+</span><span class="hl_pragma"><span class="mpre">{-# RULES &quot;p &gt;-&gt; toHandle h&quot; forall p h .
+        p &gt;-&gt; toHandle h = for p (\txt -&gt; liftIO (T.hPutStr h txt))
+  #-}</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Stream text into a file. Uses @pipes-safe@.</span></span><span class="mpre">
+</span><a href="#loc_179_1_179_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_179_1_179_10&#39;)"><span class="mpre">writeFile</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 178, srcSpanStartColumn = 14, srcSpanEndLine = 178, srcSpanEndColumn = 30}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanStartLine = 178, srcSpanStartColumn = 14, srcSpanEndLine = 178, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/pipes-text-0.0.0.12/Pipes/Text/IO.hs&quot;, srcSpanSt"><span class="mpre">(MonadSafe m) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Consumer&#39;</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_179_1_179_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_179_1_179_10&#39;)"><span class="hl_fundecl"><span class="mpre">writeFile</span></span></a><span class="mpre"> </span><a name="loc_179_11_179_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_179_11_179_15&#39;)"><span class="hl_vardecl"><span class="mpre">file</span></span></a><span class="mpre"> = </span><a href="Pipes.Safe.Prelude.html#loc_24_1_24_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Pipes.Safe.Prelude.html#loc_24_1_24_9&#39;)"><span class="hl_varref"><span class="mpre">Safe.withFile</span></span></a><span class="mpre"> </span><a href="#loc_179_11_179_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_179_11_179_15&#39;)"><span class="hl_varref"><span class="mpre">file</span></span></a><span class="mpre"> </span><a href="GHC.IO.IOMode.html#loc_28_32_28_41" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.IOMode.html#loc_28_32_28_41&#39;)"><span class="hl_conref"><span class="mpre">IO.WriteMode</span></span></a><span class="mpre"> </span><a href="#loc_169_1_169_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_169_1_169_9&#39;)"><span class="hl_varref"><span class="mpre">toHandle</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_179_1_179_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_179_1_179_10&#39;)"><span class="mpre">writeFile</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span></div></body></html>

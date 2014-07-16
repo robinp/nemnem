@@ -1,0 +1,31 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#ifdef __GLASGOW_HASKELL__
+{-# LANGUAGE Trustworthy #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  System.Cmd</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Executing an external command.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module provides a simple interface for executing external commands.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For a more complex, but more powerful, interface, see the &quot;System.Process&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- module.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module System.Cmd {-# DEPRECATED &quot;Use \&quot;System.Process\&quot; instead&quot; #-} </span><span class="hl_comment"><span class="mpre">-- deprecated in 7.8</span></span><span class="mpre">
+    ( system,        </span><span class="hl_comment"><span class="mpre">-- :: String -&gt; IO ExitCode</span></span><span class="mpre">
+      rawSystem,     </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; [String] -&gt; IO ExitCode</span></span><span class="mpre">
+    ) where
+
+import System.Process
+
+</span></div></body></html>

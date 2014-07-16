@@ -1,0 +1,107 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">
+module AutoTest(
+    module AutoTest,
+    module Test.QuickCheck,
+    module Data.List
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine = 8, srcSpanStartColumn = 8, srcSpanEndLine = 8, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;Test.QuickCheck&quot;"><span class="mpre">Test.QuickCheck</span></span><span class="mpre"> hiding ((==&gt;))
+import Data.Char
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine = 10, srcSpanStartColumn = 8, srcSpanEndLine = 10, srcSpanEndColumn = 21}, srcInfoPoints = []}) &quot;System.Random&quot;"><span class="mpre">System.Random</span></span><span class="mpre">
+import Data.List
+import Control.Monad
+
+</span><span class="warning" data-warning="DeclInfixDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine = 14, srcSpanStartColumn = 1, srcSpanEndLine = 14, srcSpanEndColumn = 13}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine = 14, srcSpanStartColumn = 8, srcSpanEndLine = 14, srcSpanEndColumn = 9}]}) (AssocRight (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0"><span class="mpre">infixr 0 ==&gt;</span></span><span class="mpre">
+</span><a name="loc_15_1_15_2" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_15_1_15_2&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> </span><span class="hl_fundecl"><span class="mpre">==&gt;</span></span><span class="mpre"> </span><a name="loc_15_7_15_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_15_7_15_8&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">not</span></span><span class="mpre"> </span><a href="#loc_15_1_15_2" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_15_1_15_2&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">||</span></span><span class="mpre"> </span><a href="#loc_15_7_15_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_15_7_15_8&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">
+
+
+</span><a href="#loc_19_1_19_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_1_19_10&#39;)"><span class="mpre">constTest</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_19_1_19_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_1_19_10&#39;)"><span class="hl_fundecl"><span class="mpre">constTest</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+</span><a href="#loc_19_1_19_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_1_19_10&#39;)"><span class="hl_fundecl"><span class="mpre">constTest</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;Failed on constTest&quot;</span></span><span class="mpre">
+
+
+
+data </span><a name="loc_24_6_24_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_24_6_24_15&#39;)"><span class="hl_tycondecl"><span class="mpre">QFilePath</span></span></a><span class="mpre"> = </span><a name="loc_24_18_24_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_24_18_24_27&#39;)"><span class="hl_condecl"><span class="mpre">QFilePath</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+                 </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine = 25, srcSpanStartColumn = 18, srcSpanEndLine = 25, srcSpanEndColumn = 31}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine = 25, srcSpanStartColumn = 18, srcSpanEndLine = 25, srcSpanEndColumn = 26}]}) [IHead (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/"><span class="mpre">deriving Show</span></span><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Arbitrary</span></span><span class="mpre"> </span><a href="#loc_24_6_24_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_24_6_24_15&#39;)"><span class="hl_tyconref"><span class="mpre">QFilePath</span></span></a><span class="mpre"> where
+    </span><span class="hl_vardecl"><span class="mpre">arbitrary</span></span><span class="mpre"> = </span><a href="Control.Monad.html#loc_274_1_274_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_274_1_274_6&#39;)"><span class="hl_varref"><span class="mpre">liftM</span></span></a><span class="mpre"> </span><a href="#loc_24_18_24_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_24_18_24_27&#39;)"><span class="hl_conref"><span class="mpre">QFilePath</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">arbitrary</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- QuickCheck 2.4.1.1 has its own Arbitrary Char instance, so commented out for now</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance Arbitrary Char where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     arbitrary = elements &quot;?|./:\\abcd 123;_&quot;</span></span><span class="mpre">
+
+
+
+</span><a href="#loc_38_1_38_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_1_38_10&#39;)"><span class="mpre">quickSafe</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine = 37, srcSpanStartColumn = 14, srcSpanEndLine = 37, srcSpanEndColumn = 27}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine = 37, srcSpanStartColumn = 25, srcSpanEndLine = 37, srcSpanEndColumn = 27}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2"><span class="mpre">Testable a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_38_1_38_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_1_38_10&#39;)"><span class="hl_fundecl"><span class="mpre">quickSafe</span></span></a><span class="mpre"> </span><a name="loc_38_11_38_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_11_38_15&#39;)"><span class="hl_vardecl"><span class="mpre">prop</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">quickCheckWith</span></span><span class="mpre"> (</span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine = 38, srcSpanStartColumn = 34, srcSpanEndLine = 38, srcSpanEndColumn = 60}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine = 38, srcSpanStartColumn = 42, srcSpanEndLine = 38, srcSpanEndColumn = 43},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/filepath-1.3.0.2/tests/AutoTest.hs&quot;, srcSpanStartLine "><span class="mpre">stdArgs { chatty = False }</span></span><span class="mpre">) </span><a href="#loc_38_11_38_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_11_38_15&#39;)"><span class="hl_varref"><span class="mpre">prop</span></span></a><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- checkit quick prop</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- below is mainly stolen from Test.QuickCheck, modified to crash out on failure</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Doesn&#39;t compile with QuickCheck 2.4.1.1, so we just use the quickCheck function for now</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-
+quick :: Config
+quick = Config
+  { configMaxTest = 500
+  , configMaxFail = 1000
+  , configSize    = (+ 3) . (`div` 2)
+  , configEvery   = \n args -&gt; let s = show n in s ++ [ &#39;\b&#39; | _ &lt;- s ]
+  }
+
+checkit :: Testable a =&gt; Config -&gt; a -&gt; IO ()
+checkit config a =
+  do rnd &lt;- newStdGen
+     tests config (evaluate a) rnd 0 0 []
+
+
+tests :: Config -&gt; Gen Result -&gt; StdGen -&gt; Int -&gt; Int -&gt; [[String]] -&gt; IO () 
+tests config gen rnd0 ntest nfail stamps
+  | ntest == configMaxTest config = do done &quot;OK, passed&quot; ntest stamps
+  | nfail == configMaxFail config = do done &quot;Arguments exhausted after&quot; ntest stamps
+                                       error &quot;More entropy required!&quot;
+  | otherwise               =
+      do putStr (configEvery config ntest (arguments result))
+         case ok result of
+           Nothing    -&gt;
+             tests config gen rnd1 ntest (nfail+1) stamps
+           Just True  -&gt;
+             tests config gen rnd1 (ntest+1) nfail (stamp result:stamps)
+           Just False -&gt;
+             error ( &quot;Falsifiable, after &quot;
+                   ++ show ntest
+                   ++ &quot; tests:\n&quot;
+                   ++ unlines (arguments result)
+                    )
+     where
+      result      = generate (configSize config ntest) rnd2 gen
+      (rnd1,rnd2) = split rnd0
+
+done :: String -&gt; Int -&gt; [[String]] -&gt; IO ()
+done mesg ntest stamps =
+  do putStr ( mesg ++ &quot; &quot; ++ show ntest ++ &quot; tests&quot; ++ table )
+ where
+  table = display
+        . map entry
+        . reverse
+        . sort
+        . map pairLength
+        . group
+        . sort
+        . filter (not . null)
+        $ stamps
+
+  display []  = &quot;.\n&quot;
+  display [x] = &quot; (&quot; ++ x ++ &quot;).\n&quot;
+  display xs  = &quot;.\n&quot; ++ unlines (map (++ &quot;.&quot;) xs)
+
+  pairLength xss@(xs:_) = (length xss, xs)
+  entry (n, xs)         = percentage n ntest
+                       ++ &quot; &quot;
+                       ++ concat (intersperse &quot;, &quot; xs)
+
+  percentage n m        = show ((100 * n) `div` m) ++ &quot;%&quot;
+-}</span></span><span class="mpre">
+
+</span></div></body></html>

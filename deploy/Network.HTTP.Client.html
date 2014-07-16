@@ -1,0 +1,130 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- | This is the main entry point for using http-client. Used by itself, this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- module provides low-level access for streaming request and response bodies,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and only non-secure HTTP connections. Helper packages such as http-conduit</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- provided higher level streaming approaches, while other helper packages like</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- http-client-tls provide secure connections.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- There are three core components to be understood here: requests, responses,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and managers. A @Manager@ keeps track of open connections to various hosts,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and when requested, will provide either an existing open connection or</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- create a new connection on demand. A @Manager@ also automatically reaps</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- connections which have been unused for a certain period of time. A @Manager@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- allows for more efficient HTTP usage by allowing for keep-alive connections.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Secure HTTP connections can be allowed by modifying the settings used for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- creating a manager. The simplest way to create a @Manager@ is with:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;newManager&#39; &#39;defaultManagerSettings&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- or using the &#39;bracket&#39; pattern with</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;withManager&#39; &#39;defaultManagerSettings&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The next core component is a @Request@, which represents a single HTTP</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- request to be sent to a specific server. @Request@s allow for many settings</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to control exact how they function, but usually the simplest approach for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- creating a @Request@ is to use &#39;parseUrl&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Finally, a @Response@ is the result of sending a single @Request@ to a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- server, over a connection which was acquired from a @Manager@. Note that you</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- must close the response when you&#39;re done with it to ensure that the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- connection is recycled to the @Manager@ to either be used by another</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- request, or to be reaped. Usage of @withResponse@ will ensure that this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- happens automatically.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Helper packages may provide replacements for various recommendations listed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- above. For example, if using http-client-tls, instead of using</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;defaultManagerSettings&#39;, you would want to use @tlsManagerSettings@. Be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- sure to read the relevant helper library documentation for more information.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A note on exceptions: for the most part, all actions that perform I/O should</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- be assumed to throw an @HttpException@ in the event of some problem, and all</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- pure functions will be total. For example, @withResponse@, @httpLbs@, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @BodyReader@ can all throw exceptions. Functions like @responseStatus@ and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @applyBasicAuth@ are guaranteed to be total (or there\&#39;s a bug in the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- library).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- One thing to be cautioned about: the type of @parseUrl@ allows it to work in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- different monads. If used in the @IO@ monad, it will throw an exception in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the case of an invalid URI. In addition, if you leverage the @IsString@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance of the @Request@ value via @OverloadedStrings@, an invalid URI will</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- result in a partial value. Caveat emptor!</span></span><span class="mpre">
+module Network.HTTP.Client
+    ( </span><span class="hl_comment"><span class="mpre">-- * Performing requests</span></span><span class="mpre">
+      withResponse
+    , httpLbs
+    , httpNoBody
+    , responseOpen
+    , responseClose
+      </span><span class="hl_comment"><span class="mpre">-- * Connection manager</span></span><span class="mpre">
+    , Manager
+    , newManager
+    , closeManager
+    , withManager
+      </span><span class="hl_comment"><span class="mpre">-- ** Connection manager settings</span></span><span class="mpre">
+    , ManagerSettings
+    , defaultManagerSettings
+    , managerConnCount
+    , managerRawConnection
+    , managerTlsConnection
+    , managerResponseTimeout
+    , managerRetryableException
+    , managerWrapIOException
+      </span><span class="hl_comment"><span class="mpre">-- * Request</span></span><span class="mpre">
+    , parseUrl
+    , applyBasicAuth
+    , urlEncodedBody
+    , getUri
+      </span><span class="hl_comment"><span class="mpre">-- ** Request type and fields</span></span><span class="mpre">
+    , Request
+    , method
+    , secure
+    , host
+    , port
+    , path
+    , queryString
+    , requestHeaders
+    , requestBody
+    , proxy
+    , applyBasicProxyAuth
+    , decompress
+    , redirectCount
+    , checkStatus
+    , responseTimeout
+    , cookieJar
+      </span><span class="hl_comment"><span class="mpre">-- ** Request body</span></span><span class="mpre">
+    , RequestBody (..)
+    , Popper
+    , NeedsPopper
+    , GivesPopper
+      </span><span class="hl_comment"><span class="mpre">-- * Response</span></span><span class="mpre">
+    , Response
+    , responseStatus
+    , responseVersion
+    , responseHeaders
+    , responseBody
+    , responseCookieJar
+      </span><span class="hl_comment"><span class="mpre">-- ** Response body</span></span><span class="mpre">
+    , BodyReader
+    , brRead
+    , brConsume
+      </span><span class="hl_comment"><span class="mpre">-- * Misc</span></span><span class="mpre">
+    , HttpException (..)
+    , Cookie (..)
+    , CookieJar
+    , Proxy (..)
+      </span><span class="hl_comment"><span class="mpre">-- * Cookies</span></span><span class="mpre">
+    , module Network.HTTP.Client.Cookies
+    ) where
+
+import Network.HTTP.Client.Body
+import Network.HTTP.Client.Cookies
+import Network.HTTP.Client.Core
+import Network.HTTP.Client.Manager
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/http-client-0.3.5/Network/HTTP/Client.hs&quot;, srcSpanStartLine = 127, srcSpanStartColumn = 8, srcSpanEndLine = 127, srcSpanEndColumn = 35}, srcInfoPoints = []}) &quot;Network.HTTP.Client.Request&quot;"><span class="mpre">Network.HTTP.Client.Request</span></span><span class="mpre">
+import Network.HTTP.Client.Response
+import Network.HTTP.Client.Types
+</span></div></body></html>

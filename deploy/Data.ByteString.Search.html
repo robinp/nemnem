@@ -1,0 +1,255 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module         : Data.ByteString.Search</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright      : Daniel Fischer (2007-2011)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                  Chris Kuklewicz</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Licence        : BSD3</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer     : Daniel Fischer &lt;daniel.is.fischer@googlemail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability      : Provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability    : non-portable (BangPatterns)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Fast overlapping Boyer-Moore search of strict</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;S.ByteString&#39; values. Breaking, splitting and replacing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- using the Boyer-Moore algorithm.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Descriptions of the algorithm can be found at</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;http://www-igm.univ-mlv.fr/~lecroq/string/node14.html#SECTION00140&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;http://en.wikipedia.org/wiki/Boyer-Moore_string_search_algorithm&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Original authors: Daniel Fischer (daniel.is.fischer at googlemail.com) and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Chris Kuklewicz (haskell at list.mightyreason.com).</span></span><span class="mpre">
+module Data.ByteString.Search ( </span><span class="hl_comment"><span class="mpre">-- * Overview</span></span><span class="mpre">
+                                </span><span class="hl_comment"><span class="mpre">-- $overview</span></span><span class="mpre">
+
+                                </span><span class="hl_comment"><span class="mpre">-- ** Performance</span></span><span class="mpre">
+                                </span><span class="hl_comment"><span class="mpre">-- $performance</span></span><span class="mpre">
+
+                                </span><span class="hl_comment"><span class="mpre">-- ** Complexity</span></span><span class="mpre">
+                                </span><span class="hl_comment"><span class="mpre">-- $complexity</span></span><span class="mpre">
+
+                                </span><span class="hl_comment"><span class="mpre">-- ** Partial application</span></span><span class="mpre">
+                                </span><span class="hl_comment"><span class="mpre">-- $partial</span></span><span class="mpre">
+
+                                </span><span class="hl_comment"><span class="mpre">-- * Finding substrings</span></span><span class="mpre">
+                                indices
+                              , nonOverlappingIndices
+                                </span><span class="hl_comment"><span class="mpre">-- * Breaking on substrings</span></span><span class="mpre">
+                              , breakOn
+                              , breakAfter
+                                </span><span class="hl_comment"><span class="mpre">-- * Replacing</span></span><span class="mpre">
+                              , replace
+                                </span><span class="hl_comment"><span class="mpre">-- * Splitting</span></span><span class="mpre">
+                              , split
+                              , splitKeepEnd
+                              , splitKeepFront
+                              ) where
+
+import qualified Data.ByteString.Search.Internal.BoyerMoore as BM
+import Data.ByteString.Search.Substitution
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/stringsearch-0.3.6.5/Data/ByteString/Search.hs&quot;, srcSpanStartLine = 49, srcSpanStartColumn = 18, srcSpanEndLine = 49, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> as S
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/stringsearch-0.3.6.5/Data/ByteString/Search.hs&quot;, srcSpanStartLine = 50, srcSpanStartColumn = 18, srcSpanEndLine = 50, srcSpanEndColumn = 38}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy&quot;"><span class="mpre">Data.ByteString.Lazy</span></span><span class="mpre"> as L
+
+</span><span class="hl_comment"><span class="mpre">-- $overview</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module provides functions related to searching a substring within</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a string, using the Boyer-Moore algorithm with minor modifications</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to improve the overall performance and avoid the worst case</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- performance degradation of the original Boyer-Moore algorithm for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- periodic patterns.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- When searching a pattern in a UTF-8-encoded &#39;S.ByteString&#39;, be aware that</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- these functions work on bytes, not characters, so the indices are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- byte-offsets, not character offsets.</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- $performance</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In general, the Boyer-Moore algorithm is the most efficient method to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- search for a pattern inside a string. The advantage over other algorithms</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (e.g. Na&amp;#239;ve, Knuth-Morris-Pratt, Horspool, Sunday) can be made</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- arbitrarily large for specially selected patterns and targets, but</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- usually, it&#39;s a factor of 2&amp;#8211;3 versus Knuth-Morris-Pratt and of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 6&amp;#8211;10 versus the na&amp;#239;ve algorithm. The Horspool and Sunday</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- algorithms, which are simplified variants of the Boyer-Moore algorithm,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- typically have performance between Boyer-Moore and Knuth-Morris-Pratt,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- mostly closer to Boyer-Moore. The advantage of the Boyer-moore variants</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- over other algorithms generally becomes larger for longer patterns. For</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- very short patterns (or patterns with a very short period), other</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- algorithms, e.g. &quot;Data.ByteString.Search.DFA&quot; can be faster (my</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- tests suggest that \&quot;very short\&quot; means two, maybe three bytes).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In general, searching in a strict &#39;S.ByteString&#39; is slightly faster</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- than searching in a lazy &#39;L.ByteString&#39;, but for long targets, the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- smaller memory footprint of lazy &#39;L.ByteString&#39;s can make searching</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- those (sometimes much) faster. On the other hand, there are cases</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- where searching in a strict target is much faster, even for long targets.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $complexity</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Preprocessing the pattern is /O/(@patternLength@ + &amp;#963;) in time and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- space (&amp;#963; is the alphabet size, 256 here) for all functions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The time complexity of the searching phase for &#39;indices&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is /O/(@targetLength@ \/ @patternLength@) in the best case.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For non-periodic patterns, the worst case complexity is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O/(@targetLength@), but for periodic patterns, the worst case complexity</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is /O/(@targetLength@ * @patternLength@) for the original Boyer-Moore</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- algorithm.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The searching functions in this module contain a modification which</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- drastically improves the performance for periodic patterns.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- I believe that for strict target strings, the worst case is now</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O/(@targetLength@) also for periodic patterns.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- I may be wrong, though.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The other functions don&#39;t have to deal with possible overlapping</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- patterns, hence the worst case complexity for the processing phase</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is /O/(@targetLength@) (respectively /O/(@firstIndex + patternLength@)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for the breaking functions if the pattern occurs).</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $partial</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- All functions can usefully be partially applied. Given only a pattern,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the pattern is preprocessed only once, allowing efficient re-use.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                            Exported Functions                            --</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;indices&#39;@ finds the starting indices of all possibly overlapping</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   occurrences of the pattern in the target string.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   If the pattern is empty, the result is @[0 .. &#39;length&#39; target]@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   In general, @&#39;not&#39; . &#39;null&#39; $ &#39;indices&#39; pat target@ is a much more</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   efficient version of &#39;S.isInfixOf&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_128_1_128_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_8&#39;)"><span class="mpre">indices</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_128_1_128_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_8&#39;)"><span class="mpre">indices</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">     </span><span class="hl_comment"><span class="mpre">-- ^ Pattern to find</span></span><span class="mpre">
+        -&gt; </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">     </span><span class="hl_comment"><span class="mpre">-- ^ String to search</span></span><span class="mpre">
+        -&gt; [</span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">]            </span><span class="hl_comment"><span class="mpre">-- ^ Offsets of matches</span></span><span class="mpre">
+</span><a name="loc_128_1_128_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_8&#39;)"><span class="hl_vardecl"><span class="mpre">indices</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Search.Internal.BoyerMoore.html#loc_205_1_205_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.BoyerMoore.html#loc_205_1_205_8&#39;)"><span class="hl_varref"><span class="mpre">BM.matchSS</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;nonOverlappingIndices&#39;@ finds the starting indices of all</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   non-overlapping occurrences of the pattern in the target string.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   It is more efficient than removing indices from the list produced</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   by &#39;indices&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_138_1_138_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_138_1_138_22&#39;)"><span class="mpre">nonOverlappingIndices</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_138_1_138_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_138_1_138_22&#39;)"><span class="mpre">nonOverlappingIndices</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- ^ Pattern to find</span></span><span class="mpre">
+                      -&gt; </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- ^ String to search</span></span><span class="mpre">
+                      -&gt; [</span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">]          </span><span class="hl_comment"><span class="mpre">-- ^ Offsets of matches</span></span><span class="mpre">
+</span><a name="loc_138_1_138_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_138_1_138_22&#39;)"><span class="hl_vardecl"><span class="mpre">nonOverlappingIndices</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Search.Internal.BoyerMoore.html#loc_215_1_215_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.BoyerMoore.html#loc_215_1_215_9&#39;)"><span class="hl_varref"><span class="mpre">BM.matchNOS</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;breakOn&#39; pattern target@ splits @target@ at the first occurrence</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   of @pattern@. If the pattern does not occur in the target, the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   second component of the result is empty, otherwise it starts with</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   @pattern@. If the pattern is empty, the first component is empty.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;uncurry&#39; &#39;S.append&#39; . &#39;breakOn&#39; pattern = &#39;id&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_153_1_153_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_1_153_8&#39;)"><span class="mpre">breakOn</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_153_1_153_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_1_153_8&#39;)"><span class="mpre">breakOn</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">  </span><span class="hl_comment"><span class="mpre">-- ^ String to search for</span></span><span class="mpre">
+        -&gt; </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">  </span><span class="hl_comment"><span class="mpre">-- ^ String to search in</span></span><span class="mpre">
+        -&gt; (</span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">)
+                         </span><span class="hl_comment"><span class="mpre">-- ^ Head and tail of string broken at substring</span></span><span class="mpre">
+</span><a name="loc_153_1_153_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_1_153_8&#39;)"><span class="hl_vardecl"><span class="mpre">breakOn</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Search.Internal.BoyerMoore.html#loc_272_1_272_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.BoyerMoore.html#loc_272_1_272_16&#39;)"><span class="hl_varref"><span class="mpre">BM.breakSubstringS</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;breakAfter&#39; pattern target@ splits @target@ behind the first occurrence</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   of @pattern@. An empty second component means that either the pattern</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   does not occur in the target or the first occurrence of pattern is at</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   the very end of target. To discriminate between those cases, use e.g.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;S.isSuffixOf&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;uncurry&#39; &#39;S.append&#39; . &#39;breakAfter&#39; pattern = &#39;id&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_169_1_169_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_169_1_169_11&#39;)"><span class="mpre">breakAfter</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_169_1_169_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_169_1_169_11&#39;)"><span class="mpre">breakAfter</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">  </span><span class="hl_comment"><span class="mpre">-- ^ String to search for</span></span><span class="mpre">
+           -&gt; </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">  </span><span class="hl_comment"><span class="mpre">-- ^ String to search in</span></span><span class="mpre">
+           -&gt; (</span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">)
+                            </span><span class="hl_comment"><span class="mpre">-- ^ Head and tail of string broken after substring</span></span><span class="mpre">
+</span><a name="loc_169_1_169_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_169_1_169_11&#39;)"><span class="hl_vardecl"><span class="mpre">breakAfter</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Search.Internal.BoyerMoore.html#loc_277_1_277_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.BoyerMoore.html#loc_277_1_277_12&#39;)"><span class="hl_varref"><span class="mpre">BM.breakAfterS</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;replace&#39; pat sub text@ replaces all (non-overlapping) occurrences of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   @pat@ in @text@ with @sub@. If occurrences of @pat@ overlap, the first</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   occurrence that does not overlap with a replaced previous occurrence</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   is substituted. Occurrences of @pat@ arising from a substitution</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   will not be substituted. For example:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;replace&#39; \&quot;ana\&quot; \&quot;olog\&quot; \&quot;banana\&quot; = \&quot;bologna\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;replace&#39; \&quot;ana\&quot; \&quot;o\&quot; \&quot;bananana\&quot; = \&quot;bono\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;replace&#39; \&quot;aab\&quot; \&quot;abaa\&quot; \&quot;aaabb\&quot; = \&quot;aabaab\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   The result is a /lazy/ &#39;L.ByteString&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   which is lazily produced, without copying.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   Equality of pattern and substitution is not checked, but</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   (&#39;S.concat&#39; . &#39;L.toChunks&#39; $ &#39;replace&#39; pat pat text) == text</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   holds. If the pattern is empty but not the substitution, the result</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   is equivalent to (were they &#39;String&#39;s) @&#39;cycle&#39; sub@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   For non-empty @pat@ and @sub@ a strict &#39;S.ByteString&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;L.fromChunks&#39; . &#39;Data.List.intersperse&#39; sub . &#39;split&#39; pat = &#39;replace&#39; pat sub</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   and analogous relations hold for other types of @sub@.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_207_1_207_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_1_207_8&#39;)"><span class="mpre">replace</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_207_1_207_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_1_207_8&#39;)"><span class="mpre">replace</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/stringsearch-0.3.6.5/Data/ByteString/Search.hs&quot;, srcSpanStartLine = 202, srcSpanStartColumn = 12, srcSpanEndLine = 203, srcSpanEndColumn = 11}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/stringsearch-0.3.6.5/Data/ByteString/Search.hs&quot;, srcSpanStartLine = 203, srcSpanStartColumn = 9, srcSpanEndLine = 203, srcSpanEndColumn = 11}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/n"><span class="mpre">Substitution rep
+        =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">     </span><span class="hl_comment"><span class="mpre">-- ^ Substring to replace</span></span><span class="mpre">
+        -&gt; </span><span class="hl_tyvar"><span class="mpre">rep</span></span><span class="mpre">              </span><span class="hl_comment"><span class="mpre">-- ^ Replacement string</span></span><span class="mpre">
+        -&gt; </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">     </span><span class="hl_comment"><span class="mpre">-- ^ String to modify</span></span><span class="mpre">
+        -&gt; </span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre">     </span><span class="hl_comment"><span class="mpre">-- ^ Lazy result</span></span><span class="mpre">
+</span><a name="loc_207_1_207_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_1_207_8&#39;)"><span class="hl_vardecl"><span class="mpre">replace</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Search.Internal.BoyerMoore.html#loc_246_1_246_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.BoyerMoore.html#loc_246_1_246_12&#39;)"><span class="hl_varref"><span class="mpre">BM.replaceAllS</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;split&#39; pattern target@ splits @target@ at each (non-overlapping)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   occurrence of @pattern@, removing @pattern@. If @pattern@ is empty,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   the result is an infinite list of empty &#39;S.ByteString&#39;s, if @target@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   is empty but not @pattern@, the result is an empty list, otherwise</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   the following relations hold:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;S.concat&#39; . &#39;Data.List.intersperse&#39; pat . &#39;split&#39; pat = &#39;id&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;length&#39; (&#39;split&#39; pattern target) ==</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--               &#39;length&#39; (&#39;nonOverlappingIndices&#39; pattern target) + 1,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   no fragment in the result contains an occurrence of @pattern@.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_226_1_226_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_226_1_226_6&#39;)"><span class="mpre">split</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_226_1_226_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_226_1_226_6&#39;)"><span class="mpre">split</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- ^ Pattern to split on</span></span><span class="mpre">
+      -&gt; </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- ^ String to split</span></span><span class="mpre">
+      -&gt; [</span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">] </span><span class="hl_comment"><span class="mpre">-- ^ Fragments of string</span></span><span class="mpre">
+</span><a name="loc_226_1_226_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_226_1_226_6&#39;)"><span class="hl_vardecl"><span class="mpre">split</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Search.Internal.BoyerMoore.html#loc_334_1_334_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.BoyerMoore.html#loc_334_1_334_11&#39;)"><span class="hl_varref"><span class="mpre">BM.splitDropS</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;splitKeepEnd&#39; pattern target@ splits @target@ after each (non-overlapping)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   occurrence of @pattern@. If @pattern@ is empty, the result is an</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   infinite list of empty &#39;S.ByteString&#39;s, otherwise the following</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   relations hold:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;S.concat&#39; . &#39;splitKeepEnd&#39; pattern = &#39;id&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   all fragments in the result except possibly the last end with</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   @pattern@, no fragment contains more than one occurrence of @pattern@.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_243_1_243_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_243_1_243_13&#39;)"><span class="mpre">splitKeepEnd</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_243_1_243_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_243_1_243_13&#39;)"><span class="mpre">splitKeepEnd</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">    </span><span class="hl_comment"><span class="mpre">-- ^ Pattern to split on</span></span><span class="mpre">
+             -&gt; </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">    </span><span class="hl_comment"><span class="mpre">-- ^ String to split</span></span><span class="mpre">
+             -&gt; [</span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">]  </span><span class="hl_comment"><span class="mpre">-- ^ Fragments of string</span></span><span class="mpre">
+</span><a name="loc_243_1_243_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_243_1_243_13&#39;)"><span class="hl_vardecl"><span class="mpre">splitKeepEnd</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Search.Internal.BoyerMoore.html#loc_322_1_322_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.BoyerMoore.html#loc_322_1_322_14&#39;)"><span class="hl_varref"><span class="mpre">BM.splitKeepEndS</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;splitKeepFront&#39;@ is like &#39;splitKeepEnd&#39;, except that @target@ is split</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   before each occurrence of @pattern@ and hence all fragments</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   with the possible exception of the first begin with @pattern@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   No fragment contains more than one non-overlapping occurrence</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   of @pattern@.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_254_1_254_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_254_1_254_15&#39;)"><span class="mpre">splitKeepFront</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_254_1_254_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_254_1_254_15&#39;)"><span class="mpre">splitKeepFront</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">    </span><span class="hl_comment"><span class="mpre">-- ^ Pattern to split on</span></span><span class="mpre">
+               -&gt; </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">    </span><span class="hl_comment"><span class="mpre">-- ^ String to split</span></span><span class="mpre">
+               -&gt; [</span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">]  </span><span class="hl_comment"><span class="mpre">-- ^ Fragments of string</span></span><span class="mpre">
+</span><a name="loc_254_1_254_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_254_1_254_15&#39;)"><span class="hl_vardecl"><span class="mpre">splitKeepFront</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Search.Internal.BoyerMoore.html#loc_328_1_328_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.BoyerMoore.html#loc_328_1_328_16&#39;)"><span class="hl_varref"><span class="mpre">BM.splitKeepFrontS</span></span></a><span class="mpre">
+</span></div></body></html>

@@ -1,0 +1,73 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">module Data.Vault.ST.LAZINESS (
+    </span><span class="hl_comment"><span class="mpre">-- * Vault</span></span><span class="mpre">
+    Vault, Key,
+    empty, newKey, lookup, insert, adjust, delete, union,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Locker</span></span><span class="mpre">
+    Locker,
+    lock, unlock,
+    ) where
+
+import Data.Monoid (</span><a href="Data.Monoid.html#loc_79_7_79_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_79_7_79_13&#39;)"><span class="mpre">Monoid</span></a><span class="mpre">(..))
+import Prelude hiding (lookup)
+import Control.Applicative hiding (</span><a href="Control.Applicative.html#loc_140_5_140_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Applicative.html#loc_140_5_140_10&#39;)"><span class="mpre">empty</span></a><span class="mpre">)
+import Control.Monad.ST
+import Control.Monad.ST.Unsafe as STUnsafe
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/vault-0.3.0.3/src/Data/Vault/ST/ST.hs&quot;, srcSpanStartLine = 17, srcSpanStartColumn = 8, srcSpanEndLine = 17, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;Data.Unique.Really&quot;"><span class="mpre">Data.Unique.Really</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-
+    The GHC-specific implementation uses  unsafeCoerce
+    for reasons of efficiency.
+
+    See  http://apfelmus.nfshost.com/blog/2011/09/04-vault.html
+    for the second implementation that doesn&#39;t need to
+    bypass the type checker.
+-}</span></span><span class="mpre">
+#if UseGHC
+#include &quot;backends/GHC.hs&quot;
+#else
+#include &quot;backends/IORef.hs&quot;
+#endif
+
+</span><span class="hl_comment"><span class="mpre">{-----------------------------------------------------------------------------
+    Vault
+------------------------------------------------------------------------------}</span></span><span class="mpre">
+
+instance </span><a href="Data.Monoid.html#loc_79_7_79_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_79_7_79_13&#39;)"><span class="hl_classref"><span class="mpre">Monoid</span></span></a><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre">) where
+    </span><a href="Data.Monoid.html#loc_80_9_80_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_80_9_80_15&#39;)"><span class="hl_vardecl"><span class="mpre">mempty</span></span></a><span class="mpre"> = </span><a href="#loc_43_1_43_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_6&#39;)"><span class="hl_varref"><span class="mpre">empty</span></span></a><span class="mpre">
+    </span><a href="Data.Monoid.html#loc_82_9_82_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Monoid.html#loc_82_9_82_16&#39;)"><span class="hl_vardecl"><span class="mpre">mappend</span></span></a><span class="mpre"> = </span><a href="#loc_62_1_62_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_1_62_6&#39;)"><span class="hl_varref"><span class="mpre">union</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The empty vault.</span></span><span class="mpre">
+</span><a href="#loc_43_1_43_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_6&#39;)"><span class="mpre">empty</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre">
+</span><a name="loc_43_1_43_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_6&#39;)"><span class="hl_vardecl"><span class="mpre">empty</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Map.empty</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Create a new key for use with a vault.</span></span><span class="mpre">
+newKey :: </span><span class="hl_tyconref"><span class="mpre">ST</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | Lookup the value of a key in the vault.</span></span><span class="mpre">
+lookup :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> -&gt; </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Insert a value for a given key. Overwrites any previous value.</span></span><span class="mpre">
+insert :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Adjust the value for a given key if it&#39;s present in the vault.</span></span><span class="mpre">
+adjust :: (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Delete a key from the vault.</span></span><span class="mpre">
+delete :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Merge two vaults (left-biased).</span></span><span class="mpre">
+</span><a href="#loc_62_1_62_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_1_62_6&#39;)"><span class="mpre">union</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre">
+</span><a name="loc_62_1_62_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_1_62_6&#39;)"><span class="hl_fundecl"><span class="mpre">union</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Vault</span></span><span class="mpre"> </span><a name="loc_62_14_62_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_14_62_15&#39;)"><span class="hl_vardecl"><span class="mpre">m</span></span></a><span class="mpre">) (</span><span class="hl_conref"><span class="mpre">Vault</span></span><span class="mpre"> </span><a name="loc_62_24_62_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_24_62_26&#39;)"><span class="hl_vardecl"><span class="mpre">m&#39;</span></span></a><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">Vault</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Map.union</span></span><span class="mpre"> </span><a href="#loc_62_14_62_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_14_62_15&#39;)"><span class="hl_varref"><span class="mpre">m</span></span></a><span class="mpre"> </span><a href="#loc_62_24_62_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_24_62_26&#39;)"><span class="hl_varref"><span class="mpre">m&#39;</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-----------------------------------------------------------------------------
+    Locker
+------------------------------------------------------------------------------}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Put a single value into a &#39;Locker&#39;.</span></span><span class="mpre">
+lock :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Locker</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Retrieve the value from the &#39;Locker&#39;.</span></span><span class="mpre">
+unlock :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Locker</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> -&gt; </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span></div></body></html>

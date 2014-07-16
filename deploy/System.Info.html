@@ -1,0 +1,53 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Safe #-}
+{-# LANGUAGE CPP #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  System.Info</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Information about the characteristics of the host </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- system lucky enough to run your program.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module System.Info
+   (
+       os,
+       arch,
+       compilerName,
+       compilerVersion
+   ) where
+
+import Prelude
+import Data.Version
+
+</span><span class="hl_comment"><span class="mpre">-- | The version of &#39;compilerName&#39; with which the program was compiled</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- or is being interpreted.</span></span><span class="mpre">
+</span><a href="#loc_33_1_33_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_33_1_33_16&#39;)"><span class="mpre">compilerVersion</span></a><span class="mpre"> :: </span><a href="Data.Version.html#loc_68_6_68_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_68_6_68_13&#39;)"><span class="hl_tyconref"><span class="mpre">Version</span></span></a><span class="mpre">
+</span><a name="loc_33_1_33_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_33_1_33_16&#39;)"><span class="hl_vardecl"><span class="mpre">compilerVersion</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Info.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 19, srcSpanEndLine = 33, srcSpanEndColumn = 73}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Info.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 27, srcSpanEndLine = 33, srcSpanEndColumn = 28},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Info.hs&quot;, srcSpanStartLine = 33, srcSpanStartCol"><span class="mpre">Version {versionBranch=[major, minor], versionTags=[]}</span></span><span class="mpre">
+  where (</span><span class="hl_vardecl"><span class="mpre">major</span></span><span class="mpre">, </span><span class="hl_vardecl"><span class="mpre">minor</span></span><span class="mpre">) = </span><a href="#loc_52_1_52_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_1_52_19&#39;)"><span class="hl_varref"><span class="mpre">compilerVersionRaw</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`divMod`</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">100</span></span><span class="mpre">
+
+#include &quot;ghcplatform.h&quot;
+
+</span><span class="hl_comment"><span class="mpre">-- | The operating system on which the program is running.</span></span><span class="mpre">
+</span><a href="#loc_40_1_40_3" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_40_1_40_3&#39;)"><span class="mpre">os</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_40_1_40_3" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_40_1_40_3&#39;)"><span class="hl_vardecl"><span class="mpre">os</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">HOST_OS</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The machine architecture on which the program is running.</span></span><span class="mpre">
+</span><a href="#loc_44_1_44_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_5&#39;)"><span class="mpre">arch</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_44_1_44_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_5&#39;)"><span class="hl_vardecl"><span class="mpre">arch</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">HOST_ARCH</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The Haskell implementation with which the program was compiled</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- or is being interpreted.</span></span><span class="mpre">
+</span><a href="#loc_49_1_49_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_49_1_49_13&#39;)"><span class="mpre">compilerName</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_49_1_49_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_49_1_49_13&#39;)"><span class="hl_vardecl"><span class="mpre">compilerName</span></span></a><span class="mpre"> = </span><span class="hl_string"><span class="mpre">&quot;ghc&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_52_1_52_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_1_52_19&#39;)"><span class="mpre">compilerVersionRaw</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+</span><a name="loc_52_1_52_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_1_52_19&#39;)"><span class="hl_vardecl"><span class="mpre">compilerVersionRaw</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">__GLASGOW_HASKELL__</span></span><span class="mpre">
+</span></div></body></html>

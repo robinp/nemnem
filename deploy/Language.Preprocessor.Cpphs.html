@@ -1,0 +1,32 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Language.Preprocessor.Cpphs</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  2000-2006 Malcolm Wallace</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Licence     :  LGPL</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Malcolm Wallace &lt;Malcolm.Wallace@cs.york.ac.uk&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  All</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Include the interface that is exported</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Language.Preprocessor.Cpphs
+  ( runCpphs, runCpphsReturningSymTab
+  , cppIfdef
+  , macroPass, macroPassReturningSymTab
+  , CpphsOptions(..), BoolOptions(..)
+  , parseOptions, defaultCpphsOptions, defaultBoolOptions
+  , module Language.Preprocessor.Cpphs.Position
+  ) where
+
+import Language.Preprocessor.Cpphs.CppIfdef(</span><a href="Language.Preprocessor.Cpphs.CppIfdef.html#loc_46_1_46_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Language.Preprocessor.Cpphs.CppIfdef.html#loc_46_1_46_9&#39;)"><span class="mpre">cppIfdef</span></a><span class="mpre">)
+import Language.Preprocessor.Cpphs.MacroPass(</span><a href="Language.Preprocessor.Cpphs.MacroPass.html#loc_43_1_43_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Language.Preprocessor.Cpphs.MacroPass.html#loc_43_1_43_10&#39;)"><span class="mpre">macroPass</span></a><span class="mpre">
+                                            ,</span><a href="Language.Preprocessor.Cpphs.MacroPass.html#loc_68_1_68_25" onmouseover="nemnem.highlightLocalToRemote(&#39;Language.Preprocessor.Cpphs.MacroPass.html#loc_68_1_68_25&#39;)"><span class="mpre">macroPassReturningSymTab</span></a><span class="mpre">)
+import Language.Preprocessor.Cpphs.RunCpphs(</span><a href="Language.Preprocessor.Cpphs.RunCpphs.html#loc_21_1_21_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Language.Preprocessor.Cpphs.RunCpphs.html#loc_21_1_21_9&#39;)"><span class="mpre">runCpphs</span></a><span class="mpre">
+                                           ,</span><a href="Language.Preprocessor.Cpphs.RunCpphs.html#loc_45_1_45_24" onmouseover="nemnem.highlightLocalToRemote(&#39;Language.Preprocessor.Cpphs.RunCpphs.html#loc_45_1_45_24&#39;)"><span class="mpre">runCpphsReturningSymTab</span></a><span class="mpre">)
+import Language.Preprocessor.Cpphs.Options
+       (</span><a href="Language.Preprocessor.Cpphs.Options.html#loc_27_6_27_18" onmouseover="nemnem.highlightLocalToRemote(&#39;Language.Preprocessor.Cpphs.Options.html#loc_27_6_27_18&#39;)"><span class="mpre">CpphsOptions</span></a><span class="mpre">(..), </span><a href="Language.Preprocessor.Cpphs.Options.html#loc_44_6_44_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Language.Preprocessor.Cpphs.Options.html#loc_44_6_44_17&#39;)"><span class="mpre">BoolOptions</span></a><span class="mpre">(..), </span><a href="Language.Preprocessor.Cpphs.Options.html#loc_139_1_139_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Language.Preprocessor.Cpphs.Options.html#loc_139_1_139_13&#39;)"><span class="mpre">parseOptions</span></a><span class="mpre">
+       ,</span><a href="Language.Preprocessor.Cpphs.Options.html#loc_38_1_38_20" onmouseover="nemnem.highlightLocalToRemote(&#39;Language.Preprocessor.Cpphs.Options.html#loc_38_1_38_20&#39;)"><span class="mpre">defaultCpphsOptions</span></a><span class="mpre">,</span><a href="Language.Preprocessor.Cpphs.Options.html#loc_60_1_60_19" onmouseover="nemnem.highlightLocalToRemote(&#39;Language.Preprocessor.Cpphs.Options.html#loc_60_1_60_19&#39;)"><span class="mpre">defaultBoolOptions</span></a><span class="mpre">)
+import Language.Preprocessor.Cpphs.Position
+</span></div></body></html>

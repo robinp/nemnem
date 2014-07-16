@@ -1,0 +1,29 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Safe #-}
+</span><span class="hl_comment"><span class="mpre">-- This module deliberately declares orphan instances:</span></span><span class="mpre">
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.Show.Functions</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Optional instance of &#39;Text.Show.Show&#39; for functions:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance Show (a -&gt; b) where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;         showsPrec _ _ = showString \&quot;\&lt;function\&gt;\&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Text.Show.Functions () where
+
+import Prelude
+
+instance </span><span class="hl_classref"><span class="mpre">Show</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) where
+        </span><span class="hl_fundecl"><span class="mpre">showsPrec</span></span><span class="mpre"> _ _ = </span><span class="hl_varref"><span class="mpre">showString</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;&lt;function&gt;&quot;</span></span><span class="mpre">
+
+</span></div></body></html>

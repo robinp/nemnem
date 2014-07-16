@@ -1,0 +1,42 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.ParserCombinators.Parsec</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Paolo Martini 2007</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the LICENSE file)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  derek.a.elkins@gmail.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Parsec compatibility module</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Text.ParserCombinators.Parsec
+    ( </span><span class="hl_comment"><span class="mpre">-- complete modules</span></span><span class="mpre">
+      module Text.ParserCombinators.Parsec.Prim
+    , module Text.ParserCombinators.Parsec.Combinator
+    , module Text.ParserCombinators.Parsec.Char
+
+    </span><span class="hl_comment"><span class="mpre">-- module Text.ParserCombinators.Parsec.Error</span></span><span class="mpre">
+    , ParseError
+    , errorPos
+
+    </span><span class="hl_comment"><span class="mpre">-- module Text.ParserCombinators.Parsec.Pos</span></span><span class="mpre">
+    , SourcePos
+    , SourceName, Line, Column
+    , sourceName, sourceLine, sourceColumn
+    , incSourceLine, incSourceColumn
+    , setSourceLine, setSourceColumn, setSourceName
+
+    ) where
+
+import Text.Parsec.String()
+
+import Text.ParserCombinators.Parsec.Prim
+import Text.ParserCombinators.Parsec.Combinator
+import Text.ParserCombinators.Parsec.Char
+
+import Text.ParserCombinators.Parsec.Error
+import Text.ParserCombinators.Parsec.Pos
+</span></div></body></html>

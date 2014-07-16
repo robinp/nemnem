@@ -1,0 +1,165 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE TypeSynonymInstances #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Network.BufferType</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Description :  Abstract representation of request and response buffer types.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  See LICENSE file</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Ganesh Sittampalam &lt;ganesh@earth.li&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (not tested)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In order to give the user freedom in how request and response content</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is represented, a sufficiently abstract representation is needed of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- these internally. The &quot;Network.BufferType&quot; module provides this, defining</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the &#39;BufferType&#39; class and its ad-hoc representation of buffer operations</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- via the &#39;BufferOp&#39; record.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module provides definitions for the standard buffer types that the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- package supports, i.e., for @String@ and @ByteString@ (strict and lazy.)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+module Network.BufferType
+       ( 
+         BufferType(..)
+
+       , BufferOp(..)
+       , strictBufferOp
+       , lazyBufferOp
+       , stringBufferOp
+       ) where
+
+
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 18, srcSpanEndLine = 34, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre">       as Strict hiding ( unpack, pack, span )
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLine = 35, srcSpanStartColumn = 18, srcSpanEndLine = 35, srcSpanEndColumn = 39}, srcInfoPoints = []}) &quot;Data.ByteString.Char8&quot;"><span class="mpre">Data.ByteString.Char8</span></span><span class="mpre"> as Strict ( unpack, pack, span )
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLine = 36, srcSpanStartColumn = 18, srcSpanEndLine = 36, srcSpanEndColumn = 38}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy&quot;"><span class="mpre">Data.ByteString.Lazy</span></span><span class="mpre"> as Lazy hiding ( pack, unpack,span )
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLine = 37, srcSpanStartColumn = 18, srcSpanEndLine = 37, srcSpanEndColumn = 44}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy.Char8&quot;"><span class="mpre">Data.ByteString.Lazy.Char8</span></span><span class="mpre"> as Lazy ( pack, unpack, span )
+import System.IO ( </span><a href="GHC.IO.Handle.Types.html#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.Types.html#loc_100_6_100_12&#39;)"><span class="mpre">Handle</span></a><span class="mpre"> )
+import Data.Word ( Word8 )
+
+import Network.HTTP.Utils ( </span><a href="Network.HTTP.Utils.html#loc_38_1_38_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.HTTP.Utils.html#loc_38_1_38_5&#39;)"><span class="mpre">crlf</span></a><span class="mpre">, </span><a href="Network.HTTP.Utils.html#loc_42_1_42_3" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.HTTP.Utils.html#loc_42_1_42_3&#39;)"><span class="mpre">lf</span></a><span class="mpre"> )
+
+</span><span class="hl_comment"><span class="mpre">-- | The @BufferType@ class encodes, in a mixed-mode way, the interface</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that the library requires to operate over data embedded in HTTP</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- requests and responses. That is, we use explicit dictionaries</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for the operations, but overload the name of the dicts themselves.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+class </span><a name="loc_48_7_48_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_7_48_17&#39;)"><span class="hl_classdecl"><span class="mpre">BufferType</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">bufType</span></span><span class="mpre"> where
+   </span><a name="loc_49_4_49_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_49_4_49_13&#39;)"><span class="mpre">bufferOps</span></a><span class="mpre"> :: </span><a href="#loc_71_6_71_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_71_6_71_14&#39;)"><span class="hl_tyconref"><span class="mpre">BufferOp</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">bufType</span></span><span class="mpre">
+
+instance </span><a href="#loc_48_7_48_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_7_48_17&#39;)"><span class="hl_classref"><span class="mpre">BufferType</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Lazy.ByteString</span></span><span class="mpre"> where
+   </span><a href="#loc_49_4_49_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_49_4_49_13&#39;)"><span class="hl_vardecl"><span class="mpre">bufferOps</span></span></a><span class="mpre"> = </span><a href="#loc_120_1_120_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_1_120_13&#39;)"><span class="hl_varref"><span class="mpre">lazyBufferOp</span></span></a><span class="mpre">
+
+instance </span><a href="#loc_48_7_48_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_7_48_17&#39;)"><span class="hl_classref"><span class="mpre">BufferType</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Strict.ByteString</span></span><span class="mpre"> where
+   </span><a href="#loc_49_4_49_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_49_4_49_13&#39;)"><span class="hl_vardecl"><span class="mpre">bufferOps</span></span></a><span class="mpre"> = </span><a href="#loc_95_1_95_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_15&#39;)"><span class="hl_varref"><span class="mpre">strictBufferOp</span></span></a><span class="mpre">
+
+instance </span><a href="#loc_48_7_48_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_7_48_17&#39;)"><span class="hl_classref"><span class="mpre">BufferType</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> where
+   </span><a href="#loc_49_4_49_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_49_4_49_13&#39;)"><span class="hl_vardecl"><span class="mpre">bufferOps</span></span></a><span class="mpre"> = </span><a href="#loc_146_1_146_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_146_1_146_15&#39;)"><span class="hl_varref"><span class="mpre">stringBufferOp</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @BufferOp@ encodes the I/O operations of the underlying buffer over </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a Handle in an (explicit) dictionary type. May not be needed, but gives</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- us flexibility in explicit overriding and wrapping up of these methods.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Along with IO operations is an ad-hoc collection of functions for working</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- with these abstract buffers, as needed by the internals of the code</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that processes requests and responses.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We supply three default @BufferOp@ values, for @String@ along with the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- strict and lazy versions of @ByteString@. To add others, provide @BufferOp@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- definitions for </span></span><span class="mpre">
+data </span><a name="loc_71_6_71_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_71_6_71_14&#39;)"><span class="hl_tycondecl"><span class="mpre">BufferOp</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+ = </span><span class="hl_condecl"><span class="mpre">BufferOp</span></span><span class="mpre">
+     { </span><a name="loc_73_8_73_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_8_73_16&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_hGet</span></span></a><span class="mpre">         :: </span><a href="GHC.IO.Handle.Types.html#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.Types.html#loc_100_6_100_12&#39;)"><span class="hl_tyconref"><span class="mpre">Handle</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+     , </span><a name="loc_74_8_74_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_8_74_24&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_hGetContents</span></span></a><span class="mpre"> :: </span><a href="GHC.IO.Handle.Types.html#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.Types.html#loc_100_6_100_12&#39;)"><span class="hl_tyconref"><span class="mpre">Handle</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+     , </span><a name="loc_75_8_75_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_8_75_16&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_hPut</span></span></a><span class="mpre">         :: </span><a href="GHC.IO.Handle.Types.html#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.Types.html#loc_100_6_100_12&#39;)"><span class="hl_tyconref"><span class="mpre">Handle</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">   -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+     , </span><a name="loc_76_8_76_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_8_76_20&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_hGetLine</span></span></a><span class="mpre">     :: </span><a href="GHC.IO.Handle.Types.html#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Handle.Types.html#loc_100_6_100_12&#39;)"><span class="hl_tyconref"><span class="mpre">Handle</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+     , </span><a name="loc_77_8_77_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_8_77_17&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_empty</span></span></a><span class="mpre">        :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+     , </span><a name="loc_78_8_78_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_8_78_18&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_append</span></span></a><span class="mpre">       :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+     , </span><a name="loc_79_8_79_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_8_79_18&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_concat</span></span></a><span class="mpre">       :: [</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">] -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+     , </span><a name="loc_80_8_80_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_8_80_19&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_fromStr</span></span></a><span class="mpre">      :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+     , </span><a name="loc_81_8_81_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_8_81_17&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_toStr</span></span></a><span class="mpre">        :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+     , </span><a name="loc_82_8_82_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_82_8_82_16&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_snoc</span></span></a><span class="mpre">         :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+     , </span><a name="loc_83_8_83_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_8_83_19&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_splitAt</span></span></a><span class="mpre">      :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">,</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+     , </span><a name="loc_84_8_84_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_8_84_16&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_span</span></span></a><span class="mpre">         :: (</span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre">  -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">,</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+     , </span><a name="loc_85_8_85_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_85_8_85_22&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_isLineTerm</span></span></a><span class="mpre">   :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+     , </span><a name="loc_86_8_86_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_8_86_19&#39;)"><span class="hl_fielddecl"><span class="mpre">buf_isEmpty</span></span></a><span class="mpre">      :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+     }
+
+instance </span><span class="hl_classref"><span class="mpre">Eq</span></span><span class="mpre"> (</span><a href="#loc_71_6_71_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_71_6_71_14&#39;)"><span class="hl_tyconref"><span class="mpre">BufferOp</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) where
+  _ </span><span class="hl_fundecl"><span class="mpre">==</span></span><span class="mpre"> _ = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @strictBufferOp@ is the &#39;BufferOp&#39; definition over @ByteString@s,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the non-lazy kind.</span></span><span class="mpre">
+</span><a href="#loc_95_1_95_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_15&#39;)"><span class="mpre">strictBufferOp</span></a><span class="mpre"> :: </span><a href="#loc_71_6_71_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_71_6_71_14&#39;)"><span class="hl_tyconref"><span class="mpre">BufferOp</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Strict.ByteString</span></span><span class="mpre">
+</span><a name="loc_95_1_95_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_15&#39;)"><span class="hl_vardecl"><span class="mpre">strictBufferOp</span></span></a><span class="mpre"> = 
+    </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLine = 96, srcSpanStartColumn = 5, srcSpanEndLine = 112, srcSpanEndColumn = 8}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLine = 97, srcSpanStartColumn = 7, srcSpanEndLine = 97, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLi"><span class="mpre">BufferOp 
+      { buf_hGet         = Strict.hGet
+      , buf_hGetContents = Strict.hGetContents
+      , buf_hPut         = Strict.hPut
+      , buf_hGetLine     = Strict.hGetLine
+      , buf_append       = Strict.append
+      , buf_concat       = Strict.concat
+      , buf_fromStr      = Strict.pack
+      , buf_toStr        = Strict.unpack
+      , buf_snoc         = Strict.snoc
+      , buf_splitAt      = Strict.splitAt
+      , buf_span         = Strict.span
+      , buf_empty        = Strict.empty
+      , buf_isLineTerm   = \ b -&gt; Strict.length b == 2 &amp;&amp; p_crlf == b ||
+                                  Strict.length b == 1 &amp;&amp; p_lf   == b
+      , buf_isEmpty      = Strict.null 
+      }</span></span><span class="mpre">
+   where
+    </span><span class="hl_vardecl"><span class="mpre">p_crlf</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">Strict.pack</span></span><span class="mpre"> </span><a href="Network.HTTP.Utils.html#loc_38_1_38_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.HTTP.Utils.html#loc_38_1_38_5&#39;)"><span class="hl_varref"><span class="mpre">crlf</span></span></a><span class="mpre">
+    </span><span class="hl_vardecl"><span class="mpre">p_lf</span></span><span class="mpre">   = </span><span class="hl_varref"><span class="mpre">Strict.pack</span></span><span class="mpre"> </span><a href="Network.HTTP.Utils.html#loc_42_1_42_3" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.HTTP.Utils.html#loc_42_1_42_3&#39;)"><span class="hl_varref"><span class="mpre">lf</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @lazyBufferOp@ is the &#39;BufferOp&#39; definition over @ByteString@s,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the non-strict kind.</span></span><span class="mpre">
+</span><a href="#loc_120_1_120_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_1_120_13&#39;)"><span class="mpre">lazyBufferOp</span></a><span class="mpre"> :: </span><a href="#loc_71_6_71_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_71_6_71_14&#39;)"><span class="hl_tyconref"><span class="mpre">BufferOp</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Lazy.ByteString</span></span><span class="mpre">
+</span><a name="loc_120_1_120_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_1_120_13&#39;)"><span class="hl_vardecl"><span class="mpre">lazyBufferOp</span></span></a><span class="mpre"> = 
+    </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLine = 121, srcSpanStartColumn = 5, srcSpanEndLine = 137, srcSpanEndColumn = 8}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLine = 122, srcSpanStartColumn = 7, srcSpanEndLine = 122, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStar"><span class="mpre">BufferOp 
+      { buf_hGet         = Lazy.hGet
+      , buf_hGetContents = Lazy.hGetContents
+      , buf_hPut         = Lazy.hPut
+      , buf_hGetLine     = \ h -&gt; Strict.hGetLine h &gt;&gt;= \ l -&gt; return (Lazy.fromChunks [l])
+      , buf_append       = Lazy.append
+      , buf_concat       = Lazy.concat
+      , buf_fromStr      = Lazy.pack
+      , buf_toStr        = Lazy.unpack
+      , buf_snoc         = Lazy.snoc
+      , buf_splitAt      = \ i x -&gt; Lazy.splitAt (fromIntegral i) x
+      , buf_span         = Lazy.span
+      , buf_empty        = Lazy.empty
+      , buf_isLineTerm   = \ b -&gt; Lazy.length b == 2 &amp;&amp; p_crlf == b ||
+                                  Lazy.length b == 1 &amp;&amp; p_lf   == b
+      , buf_isEmpty      = Lazy.null 
+      }</span></span><span class="mpre">
+   where
+    </span><span class="hl_vardecl"><span class="mpre">p_crlf</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">Lazy.pack</span></span><span class="mpre"> </span><a href="Network.HTTP.Utils.html#loc_38_1_38_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.HTTP.Utils.html#loc_38_1_38_5&#39;)"><span class="hl_varref"><span class="mpre">crlf</span></span></a><span class="mpre">
+    </span><span class="hl_vardecl"><span class="mpre">p_lf</span></span><span class="mpre">   = </span><span class="hl_varref"><span class="mpre">Lazy.pack</span></span><span class="mpre"> </span><a href="Network.HTTP.Utils.html#loc_42_1_42_3" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.HTTP.Utils.html#loc_42_1_42_3&#39;)"><span class="hl_varref"><span class="mpre">lf</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @stringBufferOp@ is the &#39;BufferOp&#39; definition over @String@s.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- It is defined in terms of @strictBufferOp@ operations,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- unpacking/converting to @String@ when needed.</span></span><span class="mpre">
+</span><a href="#loc_146_1_146_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_146_1_146_15&#39;)"><span class="mpre">stringBufferOp</span></a><span class="mpre"> :: </span><a href="#loc_71_6_71_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_71_6_71_14&#39;)"><span class="hl_tyconref"><span class="mpre">BufferOp</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_146_1_146_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_146_1_146_15&#39;)"><span class="hl_vardecl"><span class="mpre">stringBufferOp</span></span></a><span class="mpre"> =</span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLine = 146, srcSpanStartColumn = 17, srcSpanEndLine = 163, srcSpanEndColumn = 8}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanStartLine = 147, srcSpanStartColumn = 7, srcSpanEndLine = 147, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/HTTP-4000.2.17/Network/BufferType.hs&quot;, srcSpanSta"><span class="mpre">BufferOp 
+      { buf_hGet         = \ h n -&gt; buf_hGet strictBufferOp h n &gt;&gt;= return . Strict.unpack
+      , buf_hGetContents = \ h -&gt; buf_hGetContents strictBufferOp h &gt;&gt;= return . Strict.unpack
+      , buf_hPut         = \ h s -&gt; buf_hPut strictBufferOp h (Strict.pack s)
+      , buf_hGetLine     = \ h   -&gt; buf_hGetLine strictBufferOp h &gt;&gt;= return . Strict.unpack
+      , buf_append       = (++)
+      , buf_concat       = concat
+      , buf_fromStr      = id
+      , buf_toStr        = id
+      , buf_snoc         = \ a x -&gt; a ++ [toEnum (fromIntegral x)]
+      , buf_splitAt      = splitAt
+      , buf_span         = \ p a -&gt; 
+                             case Strict.span p (Strict.pack a) of
+                               (x,y) -&gt; (Strict.unpack x, Strict.unpack y)
+      , buf_empty        = []
+      , buf_isLineTerm   = \ b -&gt; b == crlf || b == lf
+      , buf_isEmpty      = null 
+      }</span></span><span class="mpre">
+
+</span></div></body></html>

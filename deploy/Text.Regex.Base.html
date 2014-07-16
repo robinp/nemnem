@@ -1,0 +1,57 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.Regex.Base</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Chris Kuklewicz 2006</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org, textregexlazy@personal.mightyreason.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (MPTC+FD)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Classes and instances for Regex matching.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module merely imports and re-exports the common part of the new</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- api: &quot;Text.Regex.Base.RegexLike&quot; and &quot;Text.Regex.Base.Context&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To see what result types the instances of RegexContext can produce,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- please read the &quot;Text.Regex.Base.Context&quot; haddock documentation.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This does not provide any of the backends, just the common interface</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- they all use.  The modules which provide the backends and their cabal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- packages are:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * @Text.Regex.Posix@ from regex-posix</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * @Text.Regex@ from regex-compat (uses regex-posix)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * @Text.Regex.Parsec@ from regex-parsec</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * @Text.Regex.DFA@ from regex-dfa</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * @Text.Regex.PCRE@ from regex-pcre</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * @Test.Regex.TRE@ from regex-tre</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In fact, just importing one of the backends is adequate, you do not</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- also need to import this module.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- TODO: Copy Example*hs files into this haddock comment</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Text.Regex.Base (getVersion_Text_Regex_Base
+  </span><span class="hl_comment"><span class="mpre">-- | RegexLike defines classes and type, and &#39;Extract&#39; instances</span></span><span class="mpre">
+  ,module Text.Regex.Base.RegexLike) where
+
+import Data.Version(</span><a href="Data.Version.html#loc_68_6_68_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_68_6_68_13&#39;)"><span class="mpre">Version</span></a><span class="mpre">(..))
+import Text.Regex.Base.RegexLike
+import Text.Regex.Base.Context()
+
+</span><a href="#loc_53_1_53_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_1_53_27&#39;)"><span class="mpre">getVersion_Text_Regex_Base</span></a><span class="mpre"> :: </span><a href="Data.Version.html#loc_68_6_68_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_68_6_68_13&#39;)"><span class="hl_tyconref"><span class="mpre">Version</span></span></a><span class="mpre">
+</span><a name="loc_53_1_53_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_1_53_27&#39;)"><span class="hl_vardecl"><span class="mpre">getVersion_Text_Regex_Base</span></span></a><span class="mpre"> =
+  </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-base-0.93.2/Text/Regex/Base.hs&quot;, srcSpanStartLine = 54, srcSpanStartColumn = 3, srcSpanEndLine = 56, srcSpanEndColumn = 12}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-base-0.93.2/Text/Regex/Base.hs&quot;, srcSpanStartLine = 54, srcSpanStartColumn = 11, srcSpanEndLine = 54, srcSpanEndColumn = 12},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-base-0.93.2/Text/Regex/Base.hs&quot;, srcSpanStart"><span class="mpre">Version { versionBranch = [0,93,2]
+          , versionTags = [&quot;unstable&quot;]
+          }</span></span><span class="mpre">
+</span></div></body></html>

@@ -1,0 +1,112 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+module Data.Streaming.Network.Internal
+    ( ServerSettings (..)
+    , ClientSettings (..)
+    , HostPreference (..)
+    , Message (..)
+    , AppData (..)
+#if !WINDOWS
+    , ServerSettingsUnix (..)
+    , ClientSettingsUnix (..)
+    , AppDataUnix (..)
+#endif
+    ) where
+
+import Data.String (</span><a href="Data.String.html#loc_34_7_34_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.String.html#loc_34_7_34_15&#39;)"><span class="mpre">IsString</span></a><span class="mpre"> (..))
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/streaming-commons-0.1.3/Data/Streaming/Network/Internal.hs&quot;, srcSpanStartLine = 16, srcSpanStartColumn = 8, srcSpanEndLine = 16, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> (ByteString)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/streaming-commons-0.1.3/Data/Streaming/Network/Internal.hs&quot;, srcSpanStartLine = 17, srcSpanStartColumn = 8, srcSpanEndLine = 17, srcSpanEndColumn = 22}, srcInfoPoints = []}) &quot;Network.Socket&quot;"><span class="mpre">Network.Socket</span></span><span class="mpre"> (Socket, SockAddr, Family)
+
+</span><span class="hl_comment"><span class="mpre">-- | Settings for a TCP server. It takes a port to listen on, and an optional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- hostname to bind to.</span></span><span class="mpre">
+data </span><a name="loc_21_6_21_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_6_21_20&#39;)"><span class="hl_tycondecl"><span class="mpre">ServerSettings</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">ServerSettings</span></span><span class="mpre">
+    { </span><a name="loc_22_7_22_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_22_7_22_17&#39;)"><span class="hl_fielddecl"><span class="mpre">serverPort</span></span></a><span class="mpre"> :: !</span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+    , </span><a name="loc_23_7_23_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_23_7_23_17&#39;)"><span class="hl_fielddecl"><span class="mpre">serverHost</span></span></a><span class="mpre"> :: !</span><a href="#loc_49_6_49_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_49_6_49_20&#39;)"><span class="hl_tyconref"><span class="mpre">HostPreference</span></span></a><span class="mpre">
+    , </span><a name="loc_24_7_24_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_24_7_24_19&#39;)"><span class="hl_fielddecl"><span class="mpre">serverSocket</span></span></a><span class="mpre"> :: !(</span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Socket</span></span><span class="mpre">) </span><span class="hl_comment"><span class="mpre">-- ^ listening socket</span></span><span class="mpre">
+    , </span><a name="loc_25_7_25_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_25_7_25_22&#39;)"><span class="hl_fielddecl"><span class="mpre">serverAfterBind</span></span></a><span class="mpre"> :: !(</span><span class="hl_tyconref"><span class="mpre">Socket</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">)
+    , </span><a name="loc_26_7_26_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_26_7_26_26&#39;)"><span class="hl_fielddecl"><span class="mpre">serverNeedLocalAddr</span></span></a><span class="mpre"> :: !</span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+    }
+
+</span><span class="hl_comment"><span class="mpre">-- | Settings for a TCP client, specifying how to connect to the server.</span></span><span class="mpre">
+data </span><a name="loc_30_6_30_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_6_30_20&#39;)"><span class="hl_tycondecl"><span class="mpre">ClientSettings</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">ClientSettings</span></span><span class="mpre">
+    { </span><a name="loc_31_7_31_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_31_7_31_17&#39;)"><span class="hl_fielddecl"><span class="mpre">clientPort</span></span></a><span class="mpre"> :: !</span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+    , </span><a name="loc_32_7_32_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_7_32_17&#39;)"><span class="hl_fielddecl"><span class="mpre">clientHost</span></span></a><span class="mpre"> :: !</span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+    , </span><a name="loc_33_7_33_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_33_7_33_23&#39;)"><span class="hl_fielddecl"><span class="mpre">clientAddrFamily</span></span></a><span class="mpre"> :: !</span><span class="hl_tyconref"><span class="mpre">Family</span></span><span class="mpre">
+    }
+
+</span><span class="hl_comment"><span class="mpre">-- | Which host to bind.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note: The @IsString@ instance recognizes the following special values:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @*@ means @HostAny@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @*4@ means @HostIPv4@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @!4@ means @HostIPv4Only@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @*6@ means @HostIPv6@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @!6@ means @HostIPv6Only@</span></span><span class="mpre">
+data </span><a name="loc_49_6_49_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_49_6_49_20&#39;)"><span class="hl_tycondecl"><span class="mpre">HostPreference</span></span></a><span class="mpre"> =
+    </span><a name="loc_50_5_50_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_50_5_50_12&#39;)"><span class="hl_condecl"><span class="mpre">HostAny</span></span></a><span class="mpre">
+  | </span><a name="loc_51_5_51_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_51_5_51_13&#39;)"><span class="hl_condecl"><span class="mpre">HostIPv4</span></span></a><span class="mpre">
+  | </span><a name="loc_52_5_52_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_5_52_17&#39;)"><span class="hl_condecl"><span class="mpre">HostIPv4Only</span></span></a><span class="mpre">
+  | </span><a name="loc_53_5_53_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_5_53_13&#39;)"><span class="hl_condecl"><span class="mpre">HostIPv6</span></span></a><span class="mpre">
+  | </span><a name="loc_54_5_54_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_5_54_17&#39;)"><span class="hl_condecl"><span class="mpre">HostIPv6Only</span></span></a><span class="mpre">
+  | </span><a name="loc_55_5_55_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_5_55_9&#39;)"><span class="hl_condecl"><span class="mpre">Host</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+    </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/streaming-commons-0.1.3/Data/Streaming/Network/Internal.hs&quot;, srcSpanStartLine = 56, srcSpanStartColumn = 5, srcSpanEndLine = 56, srcSpanEndColumn = 35}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/streaming-commons-0.1.3/Data/Streaming/Network/Internal.hs&quot;, srcSpanStartLine = 56, srcSpanStartColumn = 5, srcSpanEndLine = 56, srcSpanEndColumn = 13},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/streaming"><span class="mpre">deriving (Eq, Ord, Show, Read)</span></span><span class="mpre">
+
+instance </span><a href="Data.String.html#loc_34_7_34_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.String.html#loc_34_7_34_15&#39;)"><span class="hl_classref"><span class="mpre">IsString</span></span></a><span class="mpre"> </span><a href="#loc_49_6_49_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_49_6_49_20&#39;)"><span class="hl_tyconref"><span class="mpre">HostPreference</span></span></a><span class="mpre"> where
+    </span><span class="hl_comment"><span class="mpre">-- The funny code coming up is to get around some irritating warnings from</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- GHC. I should be able to just write:</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">{-
+    fromString &quot;*&quot; = HostAny
+    fromString &quot;*4&quot; = HostIPv4
+    fromString &quot;!4&quot; = HostIPv4Only
+    fromString &quot;*6&quot; = HostIPv6
+    fromString &quot;!6&quot; = HostIPv6Only
+    -}</span></span><span class="mpre">
+    </span><a href="Data.String.html#loc_35_5_35_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.String.html#loc_35_5_35_15&#39;)"><span class="hl_fundecl"><span class="mpre">fromString</span></span></a><span class="mpre"> </span><a name="loc_68_16_68_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_16_68_18&#39;)"><span class="hl_specname"><span class="mpre">s&#39;</span></span></a><span class="mpre">@(</span><span class="hl_char"><span class="mpre">&#39;*&#39;</span></span><span class="hl_infix"><span class="mpre">:</span></span><a name="loc_68_24_68_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_24_68_25&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre">) =
+        case </span><a href="#loc_68_24_68_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_24_68_25&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> of
+            [] -&gt; </span><a href="#loc_50_5_50_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_50_5_50_12&#39;)"><span class="hl_conref"><span class="mpre">HostAny</span></span></a><span class="mpre">
+            [</span><span class="hl_char"><span class="mpre">&#39;4&#39;</span></span><span class="mpre">] -&gt; </span><a href="#loc_51_5_51_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_51_5_51_13&#39;)"><span class="hl_conref"><span class="mpre">HostIPv4</span></span></a><span class="mpre">
+            [</span><span class="hl_char"><span class="mpre">&#39;6&#39;</span></span><span class="mpre">] -&gt; </span><a href="#loc_53_5_53_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_5_53_13&#39;)"><span class="hl_conref"><span class="mpre">HostIPv6</span></span></a><span class="mpre">
+            _ -&gt; </span><a href="#loc_55_5_55_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_5_55_9&#39;)"><span class="hl_conref"><span class="mpre">Host</span></span></a><span class="mpre"> </span><a href="#loc_68_16_68_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_16_68_18&#39;)"><span class="hl_varref"><span class="mpre">s&#39;</span></span></a><span class="mpre">
+    </span><a href="Data.String.html#loc_35_5_35_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.String.html#loc_35_5_35_15&#39;)"><span class="hl_fundecl"><span class="mpre">fromString</span></span></a><span class="mpre"> </span><a name="loc_74_16_74_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_16_74_18&#39;)"><span class="hl_specname"><span class="mpre">s&#39;</span></span></a><span class="mpre">@(</span><span class="hl_char"><span class="mpre">&#39;!&#39;</span></span><span class="hl_infix"><span class="mpre">:</span></span><a name="loc_74_24_74_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_24_74_25&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre">) =
+        case </span><a href="#loc_74_24_74_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_24_74_25&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> of
+            [</span><span class="hl_char"><span class="mpre">&#39;4&#39;</span></span><span class="mpre">] -&gt; </span><a href="#loc_52_5_52_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_5_52_17&#39;)"><span class="hl_conref"><span class="mpre">HostIPv4Only</span></span></a><span class="mpre">
+            [</span><span class="hl_char"><span class="mpre">&#39;6&#39;</span></span><span class="mpre">] -&gt; </span><a href="#loc_54_5_54_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_5_54_17&#39;)"><span class="hl_conref"><span class="mpre">HostIPv6Only</span></span></a><span class="mpre">
+            _ -&gt; </span><a href="#loc_55_5_55_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_5_55_9&#39;)"><span class="hl_conref"><span class="mpre">Host</span></span></a><span class="mpre"> </span><a href="#loc_74_16_74_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_16_74_18&#39;)"><span class="hl_varref"><span class="mpre">s&#39;</span></span></a><span class="mpre">
+    </span><a href="Data.String.html#loc_35_5_35_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.String.html#loc_35_5_35_15&#39;)"><span class="hl_fundecl"><span class="mpre">fromString</span></span></a><span class="mpre"> </span><a name="loc_79_16_79_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_16_79_17&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> = </span><a href="#loc_55_5_55_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_5_55_9&#39;)"><span class="hl_conref"><span class="mpre">Host</span></span></a><span class="mpre"> </span><a href="#loc_79_16_79_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_16_79_17&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre">
+
+#if !WINDOWS
+</span><span class="hl_comment"><span class="mpre">-- | Settings for a Unix domain sockets server.</span></span><span class="mpre">
+data </span><a name="loc_83_6_83_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_6_83_24&#39;)"><span class="hl_tycondecl"><span class="mpre">ServerSettingsUnix</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">ServerSettingsUnix</span></span><span class="mpre">
+    { </span><a name="loc_84_7_84_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_7_84_17&#39;)"><span class="hl_fielddecl"><span class="mpre">serverPath</span></span></a><span class="mpre"> :: !</span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+    , </span><a name="loc_85_7_85_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_85_7_85_26&#39;)"><span class="hl_fielddecl"><span class="mpre">serverAfterBindUnix</span></span></a><span class="mpre"> :: !(</span><span class="hl_tyconref"><span class="mpre">Socket</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">)
+    }
+
+</span><span class="hl_comment"><span class="mpre">-- | Settings for a Unix domain sockets client.</span></span><span class="mpre">
+data </span><a name="loc_89_6_89_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_6_89_24&#39;)"><span class="hl_tycondecl"><span class="mpre">ClientSettingsUnix</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">ClientSettingsUnix</span></span><span class="mpre">
+    { </span><a name="loc_90_7_90_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_90_7_90_17&#39;)"><span class="hl_fielddecl"><span class="mpre">clientPath</span></span></a><span class="mpre"> :: !</span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+    }
+
+</span><span class="hl_comment"><span class="mpre">-- | The data passed to a Unix domain sockets @Application@.</span></span><span class="mpre">
+data </span><a name="loc_94_6_94_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_94_6_94_17&#39;)"><span class="hl_tycondecl"><span class="mpre">AppDataUnix</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">AppDataUnix</span></span><span class="mpre">
+    { </span><a name="loc_95_7_95_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_7_95_18&#39;)"><span class="hl_fielddecl"><span class="mpre">appReadUnix</span></span></a><span class="mpre"> :: !(</span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">)
+    , </span><a name="loc_96_7_96_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_7_96_19&#39;)"><span class="hl_fielddecl"><span class="mpre">appWriteUnix</span></span></a><span class="mpre"> :: !(</span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">)
+    }
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | Representation of a single UDP message</span></span><span class="mpre">
+data </span><a name="loc_101_6_101_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_6_101_13&#39;)"><span class="hl_tycondecl"><span class="mpre">Message</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">Message</span></span><span class="mpre"> { </span><a name="loc_101_26_101_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_26_101_33&#39;)"><span class="hl_fielddecl"><span class="mpre">msgData</span></span></a><span class="mpre"> :: {-# UNPACK #-} !</span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+                       , </span><a name="loc_102_26_102_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_102_26_102_35&#39;)"><span class="hl_fielddecl"><span class="mpre">msgSender</span></span></a><span class="mpre"> :: !</span><span class="hl_tyconref"><span class="mpre">SockAddr</span></span><span class="mpre">
+                       }
+
+</span><span class="hl_comment"><span class="mpre">-- | The data passed to an @Application@.</span></span><span class="mpre">
+data </span><a name="loc_106_6_106_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_6_106_13&#39;)"><span class="hl_tycondecl"><span class="mpre">AppData</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">AppData</span></span><span class="mpre">
+    { </span><a name="loc_107_7_107_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_7_107_15&#39;)"><span class="hl_fielddecl"><span class="mpre">appRead&#39;</span></span></a><span class="mpre"> :: !(</span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">)
+    , </span><a name="loc_108_7_108_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_7_108_16&#39;)"><span class="hl_fielddecl"><span class="mpre">appWrite&#39;</span></span></a><span class="mpre"> :: !(</span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">)
+    , </span><a name="loc_109_7_109_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_109_7_109_19&#39;)"><span class="hl_fielddecl"><span class="mpre">appSockAddr&#39;</span></span></a><span class="mpre"> :: !</span><span class="hl_tyconref"><span class="mpre">SockAddr</span></span><span class="mpre">
+    , </span><a name="loc_110_7_110_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_7_110_20&#39;)"><span class="hl_fielddecl"><span class="mpre">appLocalAddr&#39;</span></span></a><span class="mpre"> :: !(</span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">SockAddr</span></span><span class="mpre">)
+    }
+</span></div></body></html>

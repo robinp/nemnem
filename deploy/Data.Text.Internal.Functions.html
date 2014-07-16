@@ -1,0 +1,32 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, DeriveDataTypeable #-}
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.Text.Internal.Functions</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : 2010 Bryan O&#39;Sullivan</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : bos@serpentine.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : GHC</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Warning/: this is an internal module, and does not have a stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- API or name. Functions in this module may not check or enforce</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- preconditions expected by public modules. Use at your own risk!</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Useful functions.</span></span><span class="mpre">
+
+module Data.Text.Internal.Functions
+    (
+      intersperse
+    ) where
+
+</span><span class="hl_comment"><span class="mpre">-- | A lazier version of Data.List.intersperse.  The other version</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- causes space leaks!</span></span><span class="mpre">
+</span><a href="#loc_26_1_26_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_26_1_26_12&#39;)"><span class="mpre">intersperse</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; [</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">] -&gt; [</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">]
+</span><a name="loc_26_1_26_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_26_1_26_12&#39;)"><span class="hl_fundecl"><span class="mpre">intersperse</span></span></a><span class="mpre"> _   []     = []
+</span><a href="#loc_26_1_26_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_26_1_26_12&#39;)"><span class="hl_fundecl"><span class="mpre">intersperse</span></span></a><span class="mpre"> </span><a name="loc_27_13_27_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_27_13_27_16&#39;)"><span class="hl_vardecl"><span class="mpre">sep</span></span></a><span class="mpre"> (</span><a name="loc_27_18_27_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_27_18_27_19&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="hl_infix"><span class="mpre">:</span></span><a name="loc_27_20_27_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_27_20_27_22&#39;)"><span class="hl_vardecl"><span class="mpre">xs</span></span></a><span class="mpre">) = </span><a href="#loc_27_18_27_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_27_18_27_19&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">:</span></span><span class="mpre"> </span><a href="#loc_29_5_29_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_29_5_29_7&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre"> </span><a href="#loc_27_20_27_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_27_20_27_22&#39;)"><span class="hl_varref"><span class="mpre">xs</span></span></a><span class="mpre">
+  where
+    </span><a name="loc_29_5_29_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_29_5_29_7&#39;)"><span class="hl_fundecl"><span class="mpre">go</span></span></a><span class="mpre"> []     = []
+    </span><a href="#loc_29_5_29_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_29_5_29_7&#39;)"><span class="hl_fundecl"><span class="mpre">go</span></span></a><span class="mpre"> (</span><a name="loc_30_9_30_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_9_30_10&#39;)"><span class="hl_vardecl"><span class="mpre">y</span></span></a><span class="hl_infix"><span class="mpre">:</span></span><a name="loc_30_11_30_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_11_30_13&#39;)"><span class="hl_vardecl"><span class="mpre">ys</span></span></a><span class="mpre">) = </span><a href="#loc_27_13_27_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_27_13_27_16&#39;)"><span class="hl_varref"><span class="mpre">sep</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">:</span></span><span class="mpre"> </span><a href="#loc_30_9_30_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_9_30_10&#39;)"><span class="hl_varref"><span class="mpre">y</span></span></a><span class="hl_infix"><span class="mpre">:</span></span><span class="mpre"> </span><a href="#loc_29_5_29_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_29_5_29_7&#39;)"><span class="hl_varref"><span class="mpre">go</span></span></a><span class="mpre"> </span><a href="#loc_30_11_30_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_11_30_13&#39;)"><span class="hl_varref"><span class="mpre">ys</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_26_1_26_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_26_1_26_12&#39;)"><span class="mpre">intersperse</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span></div></body></html>

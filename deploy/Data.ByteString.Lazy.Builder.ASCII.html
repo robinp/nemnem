@@ -1,0 +1,25 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | We decided to rename the Builder modules. Sorry about that.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In additon, the ASCII module has been merged into the main</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;Data.ByteString.Builder&quot; module.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The old names will hang about for at least once release cycle before we</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- deprecate them and then later remove them.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Data.ByteString.Lazy.Builder.ASCII (
+  module Data.ByteString.Builder
+, byteStringHexFixed
+, lazyByteStringHexFixed
+) where
+
+import Data.ByteString.Builder
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/bytestring-0.10.4.0/Data/ByteString/Lazy/Builder/ASCII.hs&quot;, srcSpanStartLine = 17, srcSpanStartColumn = 18, srcSpanEndLine = 17, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre">      as S
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/bytestring-0.10.4.0/Data/ByteString/Lazy/Builder/ASCII.hs&quot;, srcSpanStartLine = 18, srcSpanStartColumn = 18, srcSpanEndLine = 18, srcSpanEndColumn = 38}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy&quot;"><span class="mpre">Data.ByteString.Lazy</span></span><span class="mpre"> as L
+
+</span><a href="#loc_21_1_21_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_1_21_19&#39;)"><span class="mpre">byteStringHexFixed</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_21_1_21_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_1_21_19&#39;)"><span class="hl_vardecl"><span class="mpre">byteStringHexFixed</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.ASCII.html#loc_284_1_284_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.ASCII.html#loc_284_1_284_14&#39;)"><span class="hl_varref"><span class="mpre">byteStringHex</span></span></a><span class="mpre">
+
+</span><a href="#loc_24_1_24_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_24_1_24_23&#39;)"><span class="mpre">lazyByteStringHexFixed</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre"> -&gt; </span><a href="Data.ByteString.Builder.Internal.html#loc_344_9_344_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.Internal.html#loc_344_9_344_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_24_1_24_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_24_1_24_23&#39;)"><span class="hl_vardecl"><span class="mpre">lazyByteStringHexFixed</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Builder.ASCII.html#loc_289_1_289_18" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Builder.ASCII.html#loc_289_1_289_18&#39;)"><span class="hl_varref"><span class="mpre">lazyByteStringHex</span></span></a><span class="mpre">
+</span></div></body></html>

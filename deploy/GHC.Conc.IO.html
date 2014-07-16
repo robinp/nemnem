@@ -1,0 +1,204 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE CPP
+           , NoImplicitPrelude
+           , MagicHash
+           , UnboxedTuples
+  #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_HADDOCK not-home #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  GHC.Conc.IO</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow, 1994-2002</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  see libraries/base/LICENSE</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  cvs-ghc@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  internal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (GHC extensions)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Basic concurrency stuff.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- No: #hide, because bits of this module are exposed by the stm package.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- However, we don&#39;t want this module to be the home location for the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- bits it exports, we&#39;d rather have Control.Concurrent and the other</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- higher level modules be the home.  Hence: #not-home</span></span><span class="mpre">
+
+module GHC.Conc.IO
+        ( ensureIOManagerIsRunning
+        , ioManagerCapabilitiesChanged
+
+        </span><span class="hl_comment"><span class="mpre">-- * Waiting</span></span><span class="mpre">
+        , threadDelay
+        , registerDelay
+        , threadWaitRead
+        , threadWaitWrite
+        , threadWaitReadSTM
+        , threadWaitWriteSTM
+        , closeFdWith
+
+#ifdef mingw32_HOST_OS
+        , asyncRead
+        , asyncWrite
+        , asyncDoProc
+
+        , asyncReadBA
+        , asyncWriteBA
+
+        , ConsoleEvent(..)
+        , win32ConsoleHandler
+        , toWin32ConsoleEvent
+#endif
+        ) where
+
+import Foreign
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Conc/IO.hs&quot;, srcSpanStartLine = 57, srcSpanStartColumn = 8, srcSpanEndLine = 57, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Conc/IO.hs&quot;, srcSpanStartLine = 58, srcSpanStartColumn = 8, srcSpanEndLine = 58, srcSpanEndColumn = 21}, srcInfoPoints = []}) &quot;GHC.Conc.Sync&quot;"><span class="mpre">GHC.Conc.Sync</span></span><span class="mpre"> as Sync
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Conc/IO.hs&quot;, srcSpanStartLine = 59, srcSpanStartColumn = 8, srcSpanEndLine = 59, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Real&quot;"><span class="mpre">GHC.Real</span></span><span class="mpre"> ( fromIntegral )
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Conc/IO.hs&quot;, srcSpanStartLine = 60, srcSpanStartColumn = 8, srcSpanEndLine = 60, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;System.Posix.Types&quot;"><span class="mpre">System.Posix.Types</span></span><span class="mpre">
+
+#ifdef mingw32_HOST_OS
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Conc/IO.hs&quot;, srcSpanStartLine = 63, srcSpanStartColumn = 18, srcSpanEndLine = 63, srcSpanEndColumn = 34}, srcInfoPoints = []}) &quot;GHC.Conc.Windows&quot;"><span class="mpre">GHC.Conc.Windows</span></span><span class="mpre"> as Windows
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Conc/IO.hs&quot;, srcSpanStartLine = 64, srcSpanStartColumn = 8, srcSpanEndLine = 64, srcSpanEndColumn = 24}, srcInfoPoints = []}) &quot;GHC.Conc.Windows&quot;"><span class="mpre">GHC.Conc.Windows</span></span><span class="mpre"> (asyncRead, asyncWrite, asyncDoProc, asyncReadBA,
+                         asyncWriteBA, ConsoleEvent(..), win32ConsoleHandler,
+                         toWin32ConsoleEvent)
+#else
+import qualified GHC.Event.Thread as Event
+#endif
+
+</span><a href="#loc_73_1_73_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_1_73_25&#39;)"><span class="mpre">ensureIOManagerIsRunning</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+#ifndef mingw32_HOST_OS
+</span><a name="loc_73_1_73_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_1_73_25&#39;)"><span class="hl_vardecl"><span class="mpre">ensureIOManagerIsRunning</span></span></a><span class="mpre"> = </span><a href="GHC.Event.Thread.html#loc_229_1_229_25" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_229_1_229_25&#39;)"><span class="hl_varref"><span class="mpre">Event.ensureIOManagerIsRunning</span></span></a><span class="mpre">
+#else
+</span><span class="hl_vardecl"><span class="mpre">ensureIOManagerIsRunning</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">Windows.ensureIOManagerIsRunning</span></span><span class="mpre">
+#endif
+
+</span><a href="#loc_80_1_80_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_29&#39;)"><span class="mpre">ioManagerCapabilitiesChanged</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+#ifndef mingw32_HOST_OS
+</span><a name="loc_80_1_80_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_29&#39;)"><span class="hl_vardecl"><span class="mpre">ioManagerCapabilitiesChanged</span></span></a><span class="mpre"> = </span><a href="GHC.Event.Thread.html#loc_317_1_317_29" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_317_1_317_29&#39;)"><span class="hl_varref"><span class="mpre">Event.ioManagerCapabilitiesChanged</span></span></a><span class="mpre">
+#else
+</span><span class="hl_vardecl"><span class="mpre">ioManagerCapabilitiesChanged</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | Block the current thread until data is available to read on the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- given file descriptor (GHC only).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This will throw an &#39;IOError&#39; if the file descriptor was closed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- while this thread was blocked.  To safely close a file descriptor</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that has been used with &#39;threadWaitRead&#39;, use &#39;closeFdWith&#39;.</span></span><span class="mpre">
+</span><a href="#loc_92_1_92_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_15&#39;)"><span class="mpre">threadWaitRead</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Fd</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_92_1_92_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_15&#39;)"><span class="hl_fundecl"><span class="mpre">threadWaitRead</span></span></a><span class="mpre"> </span><a name="loc_92_16_92_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_16_92_18&#39;)"><span class="hl_vardecl"><span class="mpre">fd</span></span></a><span class="mpre">
+#ifndef mingw32_HOST_OS
+  | </span><span class="hl_varref"><span class="mpre">threaded</span></span><span class="mpre">  = </span><a href="GHC.Event.Thread.html#loc_74_1_74_15" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_74_1_74_15&#39;)"><span class="hl_varref"><span class="mpre">Event.threadWaitRead</span></span></a><span class="mpre"> </span><a href="#loc_92_16_92_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_16_92_18&#39;)"><span class="hl_varref"><span class="mpre">fd</span></span></a><span class="mpre">
+#endif
+  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_96_23_96_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_23_96_24&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt;
+        case </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><a href="#loc_92_16_92_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_16_92_18&#39;)"><span class="hl_varref"><span class="mpre">fd</span></span></a><span class="mpre"> of { </span><span class="hl_conref"><span class="mpre">I#</span></span><span class="mpre"> </span><a name="loc_97_38_97_41" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_38_97_41&#39;)"><span class="hl_vardecl"><span class="mpre">fd#</span></span></a><span class="mpre"> -&gt;
+        case </span><span class="hl_varref"><span class="mpre">waitRead#</span></span><span class="mpre"> </span><a href="#loc_97_38_97_41" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_38_97_41&#39;)"><span class="hl_varref"><span class="mpre">fd#</span></span></a><span class="mpre"> </span><a href="#loc_96_23_96_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_23_96_24&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> of { </span><a name="loc_98_35_98_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_35_98_37&#39;)"><span class="hl_vardecl"><span class="mpre">s&#39;</span></span></a><span class="mpre"> -&gt; (# </span><a href="#loc_98_35_98_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_35_98_37&#39;)"><span class="hl_varref"><span class="mpre">s&#39;</span></span></a><span class="mpre">, </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre"> #)
+        }}
+
+</span><span class="hl_comment"><span class="mpre">-- | Block the current thread until data can be written to the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- given file descriptor (GHC only).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This will throw an &#39;IOError&#39; if the file descriptor was closed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- while this thread was blocked.  To safely close a file descriptor</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that has been used with &#39;threadWaitWrite&#39;, use &#39;closeFdWith&#39;.</span></span><span class="mpre">
+</span><a href="#loc_108_1_108_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_16&#39;)"><span class="mpre">threadWaitWrite</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Fd</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_108_1_108_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_16&#39;)"><span class="hl_fundecl"><span class="mpre">threadWaitWrite</span></span></a><span class="mpre"> </span><a name="loc_108_17_108_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_17_108_19&#39;)"><span class="hl_vardecl"><span class="mpre">fd</span></span></a><span class="mpre">
+#ifndef mingw32_HOST_OS
+  | </span><span class="hl_varref"><span class="mpre">threaded</span></span><span class="mpre">  = </span><a href="GHC.Event.Thread.html#loc_84_1_84_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_84_1_84_16&#39;)"><span class="hl_varref"><span class="mpre">Event.threadWaitWrite</span></span></a><span class="mpre"> </span><a href="#loc_108_17_108_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_17_108_19&#39;)"><span class="hl_varref"><span class="mpre">fd</span></span></a><span class="mpre">
+#endif
+  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_112_23_112_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_23_112_24&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt;
+        case </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><a href="#loc_108_17_108_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_17_108_19&#39;)"><span class="hl_varref"><span class="mpre">fd</span></span></a><span class="mpre"> of { </span><span class="hl_conref"><span class="mpre">I#</span></span><span class="mpre"> </span><a name="loc_113_38_113_41" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_38_113_41&#39;)"><span class="hl_vardecl"><span class="mpre">fd#</span></span></a><span class="mpre"> -&gt;
+        case </span><span class="hl_varref"><span class="mpre">waitWrite#</span></span><span class="mpre"> </span><a href="#loc_113_38_113_41" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_38_113_41&#39;)"><span class="hl_varref"><span class="mpre">fd#</span></span></a><span class="mpre"> </span><a href="#loc_112_23_112_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_23_112_24&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> of { </span><a name="loc_114_36_114_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_114_36_114_38&#39;)"><span class="hl_vardecl"><span class="mpre">s&#39;</span></span></a><span class="mpre"> -&gt; (# </span><a href="#loc_114_36_114_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_114_36_114_38&#39;)"><span class="hl_varref"><span class="mpre">s&#39;</span></span></a><span class="mpre">, </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre"> #)
+        }}
+
+</span><span class="hl_comment"><span class="mpre">-- | Returns an STM action that can be used to wait for data</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to read from a file descriptor. The second returned value</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is an IO action that can be used to deregister interest</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in the file descriptor.</span></span><span class="mpre">
+</span><a href="#loc_122_1_122_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_1_122_18&#39;)"><span class="mpre">threadWaitReadSTM</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Fd</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Sync.STM</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">)
+</span><a name="loc_122_1_122_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_1_122_18&#39;)"><span class="hl_fundecl"><span class="mpre">threadWaitReadSTM</span></span></a><span class="mpre"> </span><a name="loc_122_19_122_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_19_122_21&#39;)"><span class="hl_vardecl"><span class="mpre">fd</span></span></a><span class="mpre"> 
+#ifndef mingw32_HOST_OS
+  | </span><span class="hl_varref"><span class="mpre">threaded</span></span><span class="mpre">  = </span><a href="GHC.Event.Thread.html#loc_143_1_143_18" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_143_1_143_18&#39;)"><span class="hl_varref"><span class="mpre">Event.threadWaitReadSTM</span></span></a><span class="mpre"> </span><a href="#loc_122_19_122_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_19_122_21&#39;)"><span class="hl_varref"><span class="mpre">fd</span></span></a><span class="mpre">
+#endif
+  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> = do
+      </span><a name="loc_127_7_127_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_7_127_8&#39;)"><span class="hl_vardecl"><span class="mpre">m</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">Sync.newTVarIO</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+      _ &lt;- </span><span class="hl_varref"><span class="mpre">Sync.forkIO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+        </span><a href="#loc_92_1_92_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_15&#39;)"><span class="hl_varref"><span class="mpre">threadWaitRead</span></span></a><span class="mpre"> </span><a href="#loc_122_19_122_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_19_122_21&#39;)"><span class="hl_varref"><span class="mpre">fd</span></span></a><span class="mpre">
+        </span><span class="hl_varref"><span class="mpre">Sync.atomically</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Sync.writeTVar</span></span><span class="mpre"> </span><a href="#loc_127_7_127_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_7_127_8&#39;)"><span class="hl_varref"><span class="mpre">m</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+      let </span><a name="loc_131_11_131_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_11_131_21&#39;)"><span class="hl_vardecl"><span class="mpre">waitAction</span></span></a><span class="mpre"> = do </span><a name="loc_131_27_131_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_27_131_28&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">Sync.readTVar</span></span><span class="mpre"> </span><a href="#loc_127_7_127_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_7_127_8&#39;)"><span class="hl_varref"><span class="mpre">m</span></span></a><span class="mpre">
+                          if </span><a href="#loc_131_27_131_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_27_131_28&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre"> then </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre"> else </span><span class="hl_varref"><span class="mpre">retry</span></span><span class="mpre">
+      let </span><a name="loc_133_11_133_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_133_11_133_21&#39;)"><span class="hl_vardecl"><span class="mpre">killAction</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+      </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><a href="#loc_131_11_131_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_11_131_21&#39;)"><span class="hl_varref"><span class="mpre">waitAction</span></span></a><span class="mpre">, </span><a href="#loc_133_11_133_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_133_11_133_21&#39;)"><span class="hl_varref"><span class="mpre">killAction</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | Returns an STM action that can be used to wait until data</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- can be written to a file descriptor. The second returned value</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is an IO action that can be used to deregister interest</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in the file descriptor.</span></span><span class="mpre">
+</span><a href="#loc_141_1_141_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_1_141_19&#39;)"><span class="mpre">threadWaitWriteSTM</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Fd</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Sync.STM</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">)
+</span><a name="loc_141_1_141_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_1_141_19&#39;)"><span class="hl_fundecl"><span class="mpre">threadWaitWriteSTM</span></span></a><span class="mpre"> </span><a name="loc_141_20_141_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_20_141_22&#39;)"><span class="hl_vardecl"><span class="mpre">fd</span></span></a><span class="mpre"> 
+#ifndef mingw32_HOST_OS
+  | </span><span class="hl_varref"><span class="mpre">threaded</span></span><span class="mpre">  = </span><a href="GHC.Event.Thread.html#loc_155_1_155_19" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_155_1_155_19&#39;)"><span class="hl_varref"><span class="mpre">Event.threadWaitWriteSTM</span></span></a><span class="mpre"> </span><a href="#loc_141_20_141_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_20_141_22&#39;)"><span class="hl_varref"><span class="mpre">fd</span></span></a><span class="mpre">
+#endif
+  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> = do
+      </span><a name="loc_146_7_146_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_146_7_146_8&#39;)"><span class="hl_vardecl"><span class="mpre">m</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">Sync.newTVarIO</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+      _ &lt;- </span><span class="hl_varref"><span class="mpre">Sync.forkIO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+        </span><a href="#loc_108_1_108_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_16&#39;)"><span class="hl_varref"><span class="mpre">threadWaitWrite</span></span></a><span class="mpre"> </span><a href="#loc_141_20_141_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_20_141_22&#39;)"><span class="hl_varref"><span class="mpre">fd</span></span></a><span class="mpre">
+        </span><span class="hl_varref"><span class="mpre">Sync.atomically</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Sync.writeTVar</span></span><span class="mpre"> </span><a href="#loc_146_7_146_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_146_7_146_8&#39;)"><span class="hl_varref"><span class="mpre">m</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+      let </span><a name="loc_150_11_150_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_150_11_150_21&#39;)"><span class="hl_vardecl"><span class="mpre">waitAction</span></span></a><span class="mpre"> = do </span><a name="loc_150_27_150_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_150_27_150_28&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">Sync.readTVar</span></span><span class="mpre"> </span><a href="#loc_146_7_146_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_146_7_146_8&#39;)"><span class="hl_varref"><span class="mpre">m</span></span></a><span class="mpre">
+                          if </span><a href="#loc_150_27_150_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_150_27_150_28&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre"> then </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre"> else </span><span class="hl_varref"><span class="mpre">retry</span></span><span class="mpre">
+      let </span><a name="loc_152_11_152_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_152_11_152_21&#39;)"><span class="hl_vardecl"><span class="mpre">killAction</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+      </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><a href="#loc_150_11_150_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_150_11_150_21&#39;)"><span class="hl_varref"><span class="mpre">waitAction</span></span></a><span class="mpre">, </span><a href="#loc_152_11_152_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_152_11_152_21&#39;)"><span class="hl_varref"><span class="mpre">killAction</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | Close a file descriptor in a concurrency-safe way (GHC only).  If</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- you are using &#39;threadWaitRead&#39; or &#39;threadWaitWrite&#39; to perform</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- blocking I\/O, you /must/ use this function to close file</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- descriptors, or blocked threads may not be woken.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Any threads that are blocked on the file descriptor via</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;threadWaitRead&#39; or &#39;threadWaitWrite&#39; will be unblocked by having</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- IO exceptions thrown.</span></span><span class="mpre">
+</span><a href="#loc_166_1_166_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_1_166_12&#39;)"><span class="mpre">closeFdWith</span></a><span class="mpre"> :: (</span><span class="hl_tyconref"><span class="mpre">Fd</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">) </span><span class="hl_comment"><span class="mpre">-- ^ Low-level action that performs the real close.</span></span><span class="mpre">
+            -&gt; </span><span class="hl_tyconref"><span class="mpre">Fd</span></span><span class="mpre">            </span><span class="hl_comment"><span class="mpre">-- ^ File descriptor to close.</span></span><span class="mpre">
+            -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_166_1_166_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_1_166_12&#39;)"><span class="hl_fundecl"><span class="mpre">closeFdWith</span></span></a><span class="mpre"> </span><a name="loc_166_13_166_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_13_166_18&#39;)"><span class="hl_vardecl"><span class="mpre">close</span></span></a><span class="mpre"> </span><a name="loc_166_19_166_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_19_166_21&#39;)"><span class="hl_vardecl"><span class="mpre">fd</span></span></a><span class="mpre">
+#ifndef mingw32_HOST_OS
+  | </span><span class="hl_varref"><span class="mpre">threaded</span></span><span class="mpre">  = </span><a href="GHC.Event.Thread.html#loc_95_1_95_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_95_1_95_12&#39;)"><span class="hl_varref"><span class="mpre">Event.closeFdWith</span></span></a><span class="mpre"> </span><a href="#loc_166_13_166_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_13_166_18&#39;)"><span class="hl_varref"><span class="mpre">close</span></span></a><span class="mpre"> </span><a href="#loc_166_19_166_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_19_166_21&#39;)"><span class="hl_varref"><span class="mpre">fd</span></span></a><span class="mpre">
+#endif
+  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> = </span><a href="#loc_166_13_166_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_13_166_18&#39;)"><span class="hl_varref"><span class="mpre">close</span></span></a><span class="mpre"> </span><a href="#loc_166_19_166_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_166_19_166_21&#39;)"><span class="hl_varref"><span class="mpre">fd</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Suspends the current thread for a given number of microseconds</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (GHC only).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- There is no guarantee that the thread will be rescheduled promptly</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- when the delay has expired, but the thread will never continue to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- run /earlier/ than specified.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_180_1_180_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_1_180_12&#39;)"><span class="mpre">threadDelay</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_180_1_180_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_1_180_12&#39;)"><span class="hl_fundecl"><span class="mpre">threadDelay</span></span></a><span class="mpre"> </span><a name="loc_180_13_180_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_13_180_17&#39;)"><span class="hl_vardecl"><span class="mpre">time</span></span></a><span class="mpre">
+#ifdef mingw32_HOST_OS
+  | </span><span class="hl_varref"><span class="mpre">threaded</span></span><span class="mpre">  = </span><span class="hl_varref"><span class="mpre">Windows.threadDelay</span></span><span class="mpre"> </span><a href="#loc_180_13_180_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_13_180_17&#39;)"><span class="hl_varref"><span class="mpre">time</span></span></a><span class="mpre">
+#else
+  | </span><span class="hl_varref"><span class="mpre">threaded</span></span><span class="mpre">  = </span><a href="GHC.Event.Thread.html#loc_51_1_51_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_51_1_51_12&#39;)"><span class="hl_varref"><span class="mpre">Event.threadDelay</span></span></a><span class="mpre"> </span><a href="#loc_180_13_180_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_13_180_17&#39;)"><span class="hl_varref"><span class="mpre">time</span></span></a><span class="mpre">
+#endif
+  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_186_23_186_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_186_23_186_24&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt;
+        case </span><a href="#loc_180_13_180_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_13_180_17&#39;)"><span class="hl_varref"><span class="mpre">time</span></span></a><span class="mpre"> of { </span><span class="hl_conref"><span class="mpre">I#</span></span><span class="mpre"> </span><a name="loc_187_27_187_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_187_27_187_32&#39;)"><span class="hl_vardecl"><span class="mpre">time#</span></span></a><span class="mpre"> -&gt;
+        case </span><span class="hl_varref"><span class="mpre">delay#</span></span><span class="mpre"> </span><a href="#loc_187_27_187_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_187_27_187_32&#39;)"><span class="hl_varref"><span class="mpre">time#</span></span></a><span class="mpre"> </span><a href="#loc_186_23_186_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_186_23_186_24&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> of { </span><a name="loc_188_34_188_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_188_34_188_36&#39;)"><span class="hl_vardecl"><span class="mpre">s&#39;</span></span></a><span class="mpre"> -&gt; (# </span><a href="#loc_188_34_188_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_188_34_188_36&#39;)"><span class="hl_varref"><span class="mpre">s&#39;</span></span></a><span class="mpre">, </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre"> #)
+        }}
+
+</span><span class="hl_comment"><span class="mpre">-- | Set the value of returned TVar to True after a given number of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- microseconds. The caveats associated with threadDelay also apply.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_195_1_195_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_195_1_195_14&#39;)"><span class="mpre">registerDelay</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">TVar</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">)
+</span><a name="loc_195_1_195_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_195_1_195_14&#39;)"><span class="hl_fundecl"><span class="mpre">registerDelay</span></span></a><span class="mpre"> </span><a name="loc_195_15_195_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_195_15_195_20&#39;)"><span class="hl_vardecl"><span class="mpre">usecs</span></span></a><span class="mpre">
+#ifdef mingw32_HOST_OS
+  | </span><span class="hl_varref"><span class="mpre">threaded</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">Windows.registerDelay</span></span><span class="mpre"> </span><a href="#loc_195_15_195_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_195_15_195_20&#39;)"><span class="hl_varref"><span class="mpre">usecs</span></span></a><span class="mpre">
+#else
+  | </span><span class="hl_varref"><span class="mpre">threaded</span></span><span class="mpre"> = </span><a href="GHC.Event.Thread.html#loc_61_1_61_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_61_1_61_14&#39;)"><span class="hl_varref"><span class="mpre">Event.registerDelay</span></span></a><span class="mpre"> </span><a href="#loc_195_15_195_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_195_15_195_20&#39;)"><span class="hl_varref"><span class="mpre">usecs</span></span></a><span class="mpre">
+#endif
+  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;registerDelay: requires -threaded&quot;</span></span><span class="mpre">
+
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Conc/IO.hs&quot;, srcSpanStartLine = 203, srcSpanStartColumn = 1, srcSpanEndLine = 203, srcSpanEndColumn = 71}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Conc/IO.hs&quot;, srcSpanStartLine = 203, srcSpanStartColumn = 1, srcSpanEndLine = 203, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Conc/IO.hs&quot;, srcSpanStartLine = 203, srcSpanStartColu"><span class="mpre">foreign import ccall unsafe &quot;rtsSupportsBoundThreads&quot; threaded :: Bool</span></span><span class="mpre">
+</span></div></body></html>

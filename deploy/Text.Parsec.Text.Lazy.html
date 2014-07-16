@@ -1,0 +1,32 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.Parsec.String</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Antoine Latter 2011</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/parsec/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  aslatter@gmail.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Make Text an instance of &#39;Stream&#39; with &#39;Char&#39; token type.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+{-# LANGUAGE FlexibleInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
+module Text.Parsec.Text.Lazy
+    ( Parser, GenParser
+    ) where
+
+import qualified Data.Text.Lazy as Text
+import Text.Parsec.Error
+import Text.Parsec.Prim
+
+instance </span><span class="warning" data-warning="InstDecl ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Text/Lazy.hs&quot;, srcSpanStartLine = 26, srcSpanStartColumn = 10, srcSpanEndLine = 26, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Text/Lazy.hs&quot;, srcSpanStartLine = 26, srcSpanStartColumn = 10, srcSpanEndLine = 26, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Text/Lazy.hs&quot;, srcSpanSta"><span class="mpre">(Monad m) =&gt;</span></span><span class="mpre"> </span><a href="Text.Parsec.Prim.html#loc_363_20_363_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Prim.html#loc_363_20_363_26&#39;)"><span class="hl_classref"><span class="mpre">Stream</span></span></a><span class="mpre"> </span><a href="Data.Text.Internal.Lazy.html#loc_47_6_47_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.Lazy.html#loc_47_6_47_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text.Text</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre"> where
+    </span><a href="Text.Parsec.Prim.html#loc_364_5_364_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Prim.html#loc_364_5_364_11&#39;)"><span class="hl_vardecl"><span class="mpre">uncons</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Data.Text.Lazy.html#loc_448_1_448_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Lazy.html#loc_448_1_448_7&#39;)"><span class="hl_varref"><span class="mpre">Text.uncons</span></span></a><span class="mpre">
+    </span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="Text.Parsec.Prim.html#loc_364_5_364_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Prim.html#loc_364_5_364_11&#39;)"><span class="mpre">uncons</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Text/Lazy.hs&quot;, srcSpanStartLine = 30, srcSpanStartColumn = 1, srcSpanEndLine = 30, srcSpanEndColumn = 34}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Text/Lazy.hs&quot;, srcSpanStartLine = 30, srcSpanStartColumn = 1, srcSpanEndLine = 30, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Text/Lazy.hs&quot;, srcSpanStart"><span class="mpre">type Parser = Parsec Text.Text ()</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Text/Lazy.hs&quot;, srcSpanStartLine = 31, srcSpanStartColumn = 1, srcSpanEndLine = 31, srcSpanEndColumn = 40}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Text/Lazy.hs&quot;, srcSpanStartLine = 31, srcSpanStartColumn = 1, srcSpanEndLine = 31, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Text/Lazy.hs&quot;, srcSpanStart"><span class="mpre">type GenParser st = Parsec Text.Text st</span></span><span class="mpre">
+</span></div></body></html>

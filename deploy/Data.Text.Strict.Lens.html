@@ -1,0 +1,113 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleContexts #-}
+#ifdef TRUSTWORTHY
+{-# LANGUAGE Trustworthy #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Text.Strict.Lens</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2012-2014 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Data.Text.Strict.Lens
+  ( packed, unpacked
+  , builder
+  , text
+  , utf8
+  , _Text
+  ) where
+
+import Control.Lens
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Data/Text/Strict/Lens.hs&quot;, srcSpanStartLine = 25, srcSpanStartColumn = 8, srcSpanEndLine = 25, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> (ByteString)
+import Data.Text
+import Data.Text.Encoding
+import Data.Text.Lazy (</span><a href="Data.Text.Lazy.html#loc_393_1_393_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Lazy.html#loc_393_1_393_9&#39;)"><span class="mpre">toStrict</span></a><span class="mpre">)
+import Data.Text.Lazy.Builder
+
+</span><span class="hl_comment"><span class="mpre">-- $setup</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; :set -XOverloadedStrings</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | This isomorphism can be used to &#39;pack&#39; (or &#39;unpack&#39;) strict &#39;Text&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; &quot;hello&quot;^.packed -- :: Text</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;hello&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;pack&#39; x ≡ x &#39;^.&#39; &#39;packed&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;unpack&#39; x ≡ x &#39;^.&#39; &#39;from&#39; &#39;packed&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;packed&#39; ≡ &#39;from&#39; &#39;unpacked&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;packed&#39; ≡ &#39;iso&#39; &#39;pack&#39; &#39;unpack&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><a href="#loc_47_1_47_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_7&#39;)"><span class="mpre">packed</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Iso&#39;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre">
+</span><a name="loc_47_1_47_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_7&#39;)"><span class="hl_vardecl"><span class="mpre">packed</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Iso.html#loc_122_1_122_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Iso.html#loc_122_1_122_4&#39;)"><span class="hl_varref"><span class="mpre">iso</span></span></a><span class="mpre"> </span><a href="Data.Text.html#loc_387_1_387_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.html#loc_387_1_387_5&#39;)"><span class="hl_varref"><span class="mpre">pack</span></span></a><span class="mpre"> </span><a href="Data.Text.html#loc_392_1_392_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.html#loc_392_1_392_7&#39;)"><span class="hl_varref"><span class="mpre">unpack</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_47_1_47_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_7&#39;)"><span class="mpre">packed</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | This isomorphism can be used to &#39;unpack&#39; (or &#39;pack&#39;) lazy &#39;Text&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; &quot;hello&quot;^.unpacked -- :: String</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;hello&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This &#39;Iso&#39; is provided for notational convenience rather than out of great need, since</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;unpacked&#39; ≡ &#39;from&#39; &#39;packed&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;pack&#39; x ≡ x &#39;^.&#39; &#39;from&#39; &#39;unpacked&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;unpack&#39; x ≡ x &#39;^.&#39; &#39;packed&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;unpacked&#39; ≡ &#39;iso&#39; &#39;unpack&#39; &#39;pack&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><a href="#loc_67_1_67_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_67_1_67_9&#39;)"><span class="mpre">unpacked</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Iso&#39;</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_67_1_67_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_67_1_67_9&#39;)"><span class="hl_vardecl"><span class="mpre">unpacked</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Iso.html#loc_122_1_122_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Iso.html#loc_122_1_122_4&#39;)"><span class="hl_varref"><span class="mpre">iso</span></span></a><span class="mpre"> </span><a href="Data.Text.html#loc_392_1_392_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.html#loc_392_1_392_7&#39;)"><span class="hl_varref"><span class="mpre">unpack</span></span></a><span class="mpre"> </span><a href="Data.Text.html#loc_387_1_387_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.html#loc_387_1_387_5&#39;)"><span class="hl_varref"><span class="mpre">pack</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_67_1_67_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_67_1_67_9&#39;)"><span class="mpre">unpacked</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | This is an alias for &#39;unpacked&#39; that makes it more obvious how to use it with &#39;#&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt; _Text # &quot;hello&quot; -- :: Text</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;hello&quot;</span></span><span class="mpre">
+</span><a href="#loc_75_1_75_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_6&#39;)"><span class="mpre">_Text</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Iso&#39;</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_75_1_75_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_6&#39;)"><span class="hl_vardecl"><span class="mpre">_Text</span></span></a><span class="mpre"> = </span><a href="#loc_67_1_67_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_67_1_67_9&#39;)"><span class="hl_varref"><span class="mpre">unpacked</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_75_1_75_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_6&#39;)"><span class="mpre">_Text</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Convert between strict &#39;Text&#39; and &#39;Builder&#39; .</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;fromText&#39; x ≡ x &#39;^.&#39; &#39;builder&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;toStrict&#39; (&#39;toLazyText&#39; x) ≡ x &#39;^.&#39; &#39;from&#39; &#39;builder&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><a href="#loc_85_1_85_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_85_1_85_8&#39;)"><span class="mpre">builder</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Iso&#39;</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><a href="Data.Text.Internal.Builder.html#loc_86_9_86_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.Builder.html#loc_86_9_86_16&#39;)"><span class="hl_tyconref"><span class="mpre">Builder</span></span></a><span class="mpre">
+</span><a name="loc_85_1_85_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_85_1_85_8&#39;)"><span class="hl_vardecl"><span class="mpre">builder</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Iso.html#loc_122_1_122_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Iso.html#loc_122_1_122_4&#39;)"><span class="hl_varref"><span class="mpre">iso</span></span></a><span class="mpre"> </span><a href="Data.Text.Internal.Builder.html#loc_166_1_166_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.Builder.html#loc_166_1_166_9&#39;)"><span class="hl_varref"><span class="mpre">fromText</span></span></a><span class="mpre"> (</span><a href="Data.Text.Lazy.html#loc_393_1_393_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Lazy.html#loc_393_1_393_9&#39;)"><span class="hl_varref"><span class="mpre">toStrict</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Data.Text.Internal.Builder.html#loc_221_1_221_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.Builder.html#loc_221_1_221_11&#39;)"><span class="hl_varref"><span class="mpre">toLazyText</span></span></a><span class="mpre">)
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_85_1_85_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_85_1_85_8&#39;)"><span class="mpre">builder</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Traverse the individual characters in strict &#39;Text&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; anyOf text (==&#39;o&#39;) &quot;hello&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- True</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- When the type is unambiguous, you can also use the more general &#39;each&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;text&#39; ≡ &#39;unpacked&#39; . &#39;traversed&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;text&#39; ≡ &#39;each&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that when just using this as a &#39;Setter&#39;, @&#39;setting&#39; &#39;Data.Text.map&#39;@ can</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- be more efficient.</span></span><span class="mpre">
+</span><a href="#loc_103_1_103_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_5&#39;)"><span class="mpre">text</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IndexedTraversal&#39;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre">
+</span><a name="loc_103_1_103_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_5&#39;)"><span class="hl_vardecl"><span class="mpre">text</span></span></a><span class="mpre"> = </span><a href="#loc_67_1_67_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_67_1_67_9&#39;)"><span class="hl_varref"><span class="mpre">unpacked</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Control.Lens.Traversal.html#loc_1003_1_1003_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Traversal.html#loc_1003_1_1003_10&#39;)"><span class="hl_varref"><span class="mpre">traversed</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_103_1_103_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_5&#39;)"><span class="mpre">text</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode/Decode a strict &#39;Text&#39; to/from strict &#39;ByteString&#39;, via UTF-8.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; utf8 # &quot;☃&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;\226\152\131&quot;</span></span><span class="mpre">
+</span><a href="#loc_111_1_111_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_1_111_5&#39;)"><span class="mpre">utf8</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Prism&#39;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">Text</span></span></a><span class="mpre">
+</span><a name="loc_111_1_111_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_1_111_5&#39;)"><span class="hl_vardecl"><span class="mpre">utf8</span></span></a><span class="mpre"> = </span><a href="Control.Lens.Prism.html#loc_122_1_122_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Prism.html#loc_122_1_122_7&#39;)"><span class="hl_varref"><span class="mpre">prism&#39;</span></span></a><span class="mpre"> </span><a href="Data.Text.Encoding.html#loc_386_1_386_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Encoding.html#loc_386_1_386_11&#39;)"><span class="hl_varref"><span class="mpre">encodeUtf8</span></span></a><span class="mpre"> (</span><a href="Control.Lens.Fold.html#loc_1740_1_1740_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Fold.html#loc_1740_1_1740_8&#39;)"><span class="hl_varref"><span class="mpre">preview</span></span></a><span class="mpre"> </span><a href="Control.Lens.Prism.html#loc_252_1_252_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Prism.html#loc_252_1_252_7&#39;)"><span class="hl_varref"><span class="mpre">_Right</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Data.Text.Encoding.html#loc_317_1_317_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Encoding.html#loc_317_1_317_12&#39;)"><span class="hl_varref"><span class="mpre">decodeUtf8&#39;</span></span></a><span class="mpre">)
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_111_1_111_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_1_111_5&#39;)"><span class="mpre">utf8</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span></div></body></html>

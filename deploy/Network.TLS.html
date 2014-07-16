@@ -1,0 +1,129 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Network.TLS</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : unknown</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Network.TLS
+    (
+    </span><span class="hl_comment"><span class="mpre">-- * Context configuration</span></span><span class="mpre">
+      ClientParams(..)
+    , ServerParams(..)
+    , ClientHooks(..)
+    , ServerHooks(..)
+    , Supported(..)
+    , Shared(..)
+    , Hooks(..)
+    , Logging(..)
+    , Measurement(..)
+    , CertificateUsage(..)
+    , CertificateRejectReason(..)
+    , defaultParamsClient
+    , MaxFragmentEnum(..)
+    , HashAndSignatureAlgorithm
+    , HashAlgorithm(..)
+    , SignatureAlgorithm(..)
+    , CertificateType(..)
+
+    </span><span class="hl_comment"><span class="mpre">-- * raw types</span></span><span class="mpre">
+    , ProtocolType(..)
+    , Header(..)
+
+    </span><span class="hl_comment"><span class="mpre">-- * Session</span></span><span class="mpre">
+    , SessionID
+    , SessionData(..)
+    , SessionManager(..)
+    , noSessionManager
+
+    </span><span class="hl_comment"><span class="mpre">-- * Backend abstraction</span></span><span class="mpre">
+    , Backend(..)
+
+    </span><span class="hl_comment"><span class="mpre">-- * Context object</span></span><span class="mpre">
+    , Context
+    , ctxConnection
+
+    </span><span class="hl_comment"><span class="mpre">-- * Creating a context</span></span><span class="mpre">
+    , contextNew
+    , contextNewOnHandle
+    , contextNewOnSocket
+    , contextFlush
+    , contextClose
+    , contextHookSetHandshakeRecv
+    , contextHookSetCertificateRecv
+    , contextHookSetLogging
+    , contextModifyHooks
+
+    </span><span class="hl_comment"><span class="mpre">-- * Information gathering</span></span><span class="mpre">
+    , Information(..)
+    , contextGetInformation
+
+    </span><span class="hl_comment"><span class="mpre">-- * Credentials</span></span><span class="mpre">
+    , Credentials(..)
+    , Credential
+    , credentialLoadX509
+    , credentialLoadX509FromMemory
+
+    </span><span class="hl_comment"><span class="mpre">-- * Initialisation and Termination of context</span></span><span class="mpre">
+    , bye
+    , handshake
+
+    </span><span class="hl_comment"><span class="mpre">-- * Next Protocol Negotiation</span></span><span class="mpre">
+    , getNegotiatedProtocol
+
+    </span><span class="hl_comment"><span class="mpre">-- * High level API</span></span><span class="mpre">
+    , sendData
+    , recvData
+    , recvData&#39;
+
+    </span><span class="hl_comment"><span class="mpre">-- * Crypto Key</span></span><span class="mpre">
+    , PubKey(..)
+    , PrivKey(..)
+
+    </span><span class="hl_comment"><span class="mpre">-- * Compressions &amp; Predefined compressions</span></span><span class="mpre">
+    , module Network.TLS.Compression
+
+    </span><span class="hl_comment"><span class="mpre">-- * Ciphers &amp; Predefined ciphers</span></span><span class="mpre">
+    , module Network.TLS.Cipher
+
+    </span><span class="hl_comment"><span class="mpre">-- * Versions</span></span><span class="mpre">
+    , Version(..)
+
+    </span><span class="hl_comment"><span class="mpre">-- * Errors</span></span><span class="mpre">
+    , TLSError(..)
+    , KxError(..)
+    , AlertDescription(..)
+
+    </span><span class="hl_comment"><span class="mpre">-- * Exceptions</span></span><span class="mpre">
+    , TLSException(..)
+
+    </span><span class="hl_comment"><span class="mpre">-- * X509 Validation</span></span><span class="mpre">
+    , ValidationChecks(..)
+    , ValidationHooks(..)
+
+    </span><span class="hl_comment"><span class="mpre">-- * X509 Validation Cache</span></span><span class="mpre">
+    , ValidationCache(..)
+    , ValidationCacheResult(..)
+    , exceptionValidationCache
+    ) where
+
+import Network.TLS.Backend (</span><a href="Network.TLS.Backend.html#loc_31_6_31_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Backend.html#loc_31_6_31_13&#39;)"><span class="mpre">Backend</span></a><span class="mpre">(..))
+import Network.TLS.Struct ( </span><a href="Network.TLS.Struct.html#loc_121_6_121_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Struct.html#loc_121_6_121_14&#39;)"><span class="mpre">TLSError</span></a><span class="mpre">(..), </span><a href="Network.TLS.Struct.html#loc_140_6_140_18" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Struct.html#loc_140_6_140_18&#39;)"><span class="mpre">TLSException</span></a><span class="mpre">(..)
+                          , HashAndSignatureAlgorithm, </span><a href="Network.TLS.Struct.html#loc_86_6_86_19" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Struct.html#loc_86_6_86_19&#39;)"><span class="mpre">HashAlgorithm</span></a><span class="mpre">(..), </span><a href="Network.TLS.Struct.html#loc_97_6_97_24" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Struct.html#loc_97_6_97_24&#39;)"><span class="mpre">SignatureAlgorithm</span></a><span class="mpre">(..)
+                          , </span><a href="Network.TLS.Struct.html#loc_157_6_157_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Struct.html#loc_157_6_157_12&#39;)"><span class="mpre">Header</span></a><span class="mpre">(..), </span><a href="Network.TLS.Struct.html#loc_112_6_112_18" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Struct.html#loc_112_6_112_18&#39;)"><span class="mpre">ProtocolType</span></a><span class="mpre">(..), </span><a href="Network.TLS.Struct.html#loc_75_6_75_21" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Struct.html#loc_75_6_75_21&#39;)"><span class="mpre">CertificateType</span></a><span class="mpre">(..)
+                          , </span><a href="Network.TLS.Struct.html#loc_181_6_181_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Struct.html#loc_181_6_181_22&#39;)"><span class="mpre">AlertDescription</span></a><span class="mpre">(..))
+import Network.TLS.Crypto (</span><a href="Network.TLS.Crypto.html#loc_54_6_54_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Crypto.html#loc_54_6_54_13&#39;)"><span class="mpre">KxError</span></a><span class="mpre">(..))
+import Network.TLS.Cipher
+import Network.TLS.Hooks
+import Network.TLS.Measurement
+import Network.TLS.Credentials
+import Network.TLS.Compression (</span><a href="Network.TLS.Compression.html#loc_32_7_32_19" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Compression.html#loc_32_7_32_19&#39;)"><span class="mpre">CompressionC</span></a><span class="mpre">(..), </span><a href="Network.TLS.Compression.html#loc_38_6_38_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Compression.html#loc_38_6_38_17&#39;)"><span class="mpre">Compression</span></a><span class="mpre">(..), </span><a href="Network.TLS.Compression.html#loc_75_1_75_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Compression.html#loc_75_1_75_16&#39;)"><span class="mpre">nullCompression</span></a><span class="mpre">)
+import Network.TLS.Context
+import Network.TLS.Parameters
+import Network.TLS.Core
+import Network.TLS.Session
+import Network.TLS.X509
+import Network.TLS.Types
+import Data.X509 (</span><a href="Data.X509.PublicKey.html#loc_31_6_31_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.PublicKey.html#loc_31_6_31_12&#39;)"><span class="mpre">PubKey</span></a><span class="mpre">(..), </span><a href="Data.X509.PrivateKey.html#loc_20_6_20_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.PrivateKey.html#loc_20_6_20_13&#39;)"><span class="mpre">PrivKey</span></a><span class="mpre">(..))
+import Data.X509.Validation
+</span></div></body></html>

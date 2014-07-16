@@ -1,0 +1,35 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if defined(__GLASGOW_HASKELL__) &amp;&amp; __GLASGOW_HASKELL__ &gt;= 702
+{-# LANGUAGE Safe #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Functor.Apply</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2011 Edward Kmett,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Data.Functor.Apply (
+  </span><span class="hl_comment"><span class="mpre">-- * Functors</span></span><span class="mpre">
+    Functor(..)
+  , (&lt;$&gt;)     </span><span class="hl_comment"><span class="mpre">-- :: Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b</span></span><span class="mpre">
+  , ( $&gt;)     </span><span class="hl_comment"><span class="mpre">-- :: Functor f =&gt; f a -&gt; b -&gt; f b</span></span><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- * Apply - a strong lax semimonoidal endofunctor</span></span><span class="mpre">
+
+  , Apply(..)
+  , (&lt;..&gt;)    </span><span class="hl_comment"><span class="mpre">-- :: Apply w =&gt; w a -&gt; w (a -&gt; b) -&gt; w b</span></span><span class="mpre">
+  , liftF2    </span><span class="hl_comment"><span class="mpre">-- :: Apply w =&gt; (a -&gt; b -&gt; c) -&gt; w a -&gt; w b -&gt; w c</span></span><span class="mpre">
+  , liftF3    </span><span class="hl_comment"><span class="mpre">-- :: Apply w =&gt; (a -&gt; b -&gt; c -&gt; d) -&gt; w a -&gt; w b -&gt; w c -&gt; w d</span></span><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- * Wrappers</span></span><span class="mpre">
+  , WrappedApplicative(..)
+  , MaybeApply(..)
+  ) where
+
+import Data.Functor.Bind
+</span></div></body></html>

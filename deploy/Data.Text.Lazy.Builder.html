@@ -1,0 +1,59 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE BangPatterns, CPP, Rank2Types #-}
+#if __GLASGOW_HASKELL__ &gt;= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.Text.Lazy.Builder</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) 2013 Bryan O&#39;Sullivan</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--               (c) 2010 Johan Tibell</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD3-style (see LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Johan Tibell &lt;johan.tibell@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : portable to Hugs and GHC</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Efficient construction of lazy @Text@ values.  The principal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- operations on a @Builder@ are @singleton@, @fromText@, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @fromLazyText@, which construct new builders, and &#39;mappend&#39;, which</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- concatenates two builders.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To get maximum performance when building lazy @Text@ values using a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- builder, associate @mappend@ calls to the right.  For example,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- prefer</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; singleton &#39;a&#39; `mappend` (singleton &#39;b&#39; `mappend` singleton &#39;c&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; singleton &#39;a&#39; `mappend` singleton &#39;b&#39; `mappend` singleton &#39;c&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- as the latter associates @mappend@ to the left. Or, equivalently,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- prefer</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  &gt; singleton &#39;a&#39; &lt;&gt; singleton &#39;b&#39; &lt;&gt; singleton &#39;c&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- since the &#39;&lt;&gt;&#39; from recent versions of &#39;Data.Monoid&#39; associates</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to the right.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Text.Lazy.Builder
+   ( </span><span class="hl_comment"><span class="mpre">-- * The Builder type</span></span><span class="mpre">
+     Builder
+   , toLazyText
+   , toLazyTextWith
+
+     </span><span class="hl_comment"><span class="mpre">-- * Constructing Builders</span></span><span class="mpre">
+   , singleton
+   , fromText
+   , fromLazyText
+   , fromString
+
+     </span><span class="hl_comment"><span class="mpre">-- * Flushing the buffer state</span></span><span class="mpre">
+   , flush
+   ) where
+
+import Data.Text.Internal.Builder
+</span></div></body></html>

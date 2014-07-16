@@ -1,0 +1,244 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Network.TLS.Parameters</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : unknown</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Network.TLS.Parameters
+    (
+      ClientParams(..)
+    , ServerParams(..)
+    , CommonParams
+    , ClientHooks(..)
+    , ServerHooks(..)
+    , Supported(..)
+    , Shared(..)
+    </span><span class="hl_comment"><span class="mpre">-- * special default</span></span><span class="mpre">
+    , defaultParamsClient
+    </span><span class="hl_comment"><span class="mpre">-- * Parameters</span></span><span class="mpre">
+    , MaxFragmentEnum(..)
+    , CertificateUsage(..)
+    , CertificateRejectReason(..)
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 25, srcSpanStartColumn = 8, srcSpanEndLine = 25, srcSpanEndColumn = 19}, srcInfoPoints = []}) &quot;Network.BSD&quot;"><span class="mpre">Network.BSD</span></span><span class="mpre"> (HostName)
+
+import Network.TLS.Extension
+import Network.TLS.Struct
+import qualified Network.TLS.Struct as Struct
+import Network.TLS.Session
+import Network.TLS.Cipher
+import Network.TLS.Measurement
+import Network.TLS.Compression
+import Network.TLS.Crypto
+import Network.TLS.Credentials
+import Network.TLS.X509
+import Data.Monoid
+import Data.Default.Class
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 39, srcSpanStartColumn = 18, srcSpanEndLine = 39, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> as B
+
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 41, srcSpanStartColumn = 1, srcSpanEndLine = 41, srcSpanEndColumn = 40}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 41, srcSpanStartColumn = 1, srcSpanEndLine = 41, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine ="><span class="mpre">type CommonParams = (Supported, Shared)</span></span><span class="mpre">
+
+data </span><a name="loc_43_6_43_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_6_43_18&#39;)"><span class="hl_tycondecl"><span class="mpre">ClientParams</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">ClientParams</span></span><span class="mpre">
+    { </span><a name="loc_44_7_44_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_7_44_33&#39;)"><span class="hl_fielddecl"><span class="mpre">clientUseMaxFragmentLength</span></span></a><span class="mpre">    :: </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><a href="Network.TLS.Extension.html#loc_88_6_88_21" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Extension.html#loc_88_6_88_21&#39;)"><span class="hl_tyconref"><span class="mpre">MaxFragmentEnum</span></span></a><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- | Define the name of the server, along with an extra service identification blob.</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- this is important that the hostname part is properly filled for security reason,</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- as it allow to properly associate the remote side with the given certificate</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- during a handshake.</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- The extra blob is useful to differentiate services running on the same host, but that</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- might have different certificates given. It&#39;s only used as part of the X509 validation</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- infrastructure.</span></span><span class="mpre">
+    , </span><a name="loc_53_7_53_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_7_53_33&#39;)"><span class="hl_fielddecl"><span class="mpre">clientServerIdentification</span></span></a><span class="mpre">      :: (</span><span class="hl_tyconref"><span class="mpre">HostName</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">Bytes</span></span><span class="mpre">)
+      </span><span class="hl_comment"><span class="mpre">-- | Allow the use of the Server Name Indication TLS extension during handshake, which allow</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- the client to specify which host name, it&#39;s trying to access. This is useful to distinguish</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- CNAME aliasing (e.g. web virtual host).</span></span><span class="mpre">
+    , </span><a name="loc_57_7_57_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_7_57_36&#39;)"><span class="hl_fielddecl"><span class="mpre">clientUseServerNameIndication</span></span></a><span class="mpre">   :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- | try to establish a connection using this session.</span></span><span class="mpre">
+    , </span><a name="loc_59_7_59_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_7_59_30&#39;)"><span class="hl_fielddecl"><span class="mpre">clientWantSessionResume</span></span></a><span class="mpre">         :: </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">SessionID</span></span><span class="mpre">, </span><a href="Network.TLS.Types.html#loc_31_6_31_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Types.html#loc_31_6_31_17&#39;)"><span class="hl_tyconref"><span class="mpre">SessionData</span></span></a><span class="mpre">)
+    , </span><a name="loc_60_7_60_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_7_60_19&#39;)"><span class="hl_fielddecl"><span class="mpre">clientShared</span></span></a><span class="mpre">                    :: </span><a href="#loc_145_6_145_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_145_6_145_12&#39;)"><span class="hl_tyconref"><span class="mpre">Shared</span></span></a><span class="mpre">
+    , </span><a name="loc_61_7_61_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_7_61_18&#39;)"><span class="hl_fielddecl"><span class="mpre">clientHooks</span></span></a><span class="mpre">                     :: </span><a href="#loc_163_6_163_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_6_163_17&#39;)"><span class="hl_tyconref"><span class="mpre">ClientHooks</span></span></a><span class="mpre">
+    , </span><a name="loc_62_7_62_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_7_62_22&#39;)"><span class="hl_fielddecl"><span class="mpre">clientSupported</span></span></a><span class="mpre">                 :: </span><a href="#loc_108_6_108_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_6_108_15&#39;)"><span class="hl_tyconref"><span class="mpre">Supported</span></span></a><span class="mpre">
+    } </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 63, srcSpanStartColumn = 7, srcSpanEndLine = 63, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 63, srcSpanStartColumn = 7, srcSpanEndLine = 63, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine "><span class="mpre">deriving (Show)</span></span><span class="mpre">
+
+</span><a href="#loc_66_1_66_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_20&#39;)"><span class="mpre">defaultParamsClient</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">HostName</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bytes</span></span><span class="mpre"> -&gt; </span><a href="#loc_43_6_43_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_6_43_18&#39;)"><span class="hl_tyconref"><span class="mpre">ClientParams</span></span></a><span class="mpre">
+</span><a name="loc_66_1_66_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_20&#39;)"><span class="hl_fundecl"><span class="mpre">defaultParamsClient</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">serverName</span></span><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">serverId</span></span><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 66, srcSpanStartColumn = 43, srcSpanEndLine = 74, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 67, srcSpanStartColumn = 5, srcSpanEndLine = 67, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine "><span class="mpre">ClientParams
+    { clientWantSessionResume    = Nothing
+    , clientUseMaxFragmentLength = Nothing
+    , clientServerIdentification = (serverName, serverId)
+    , clientUseServerNameIndication = True
+    , clientShared               = def
+    , clientHooks                = def
+    , clientSupported            = def
+    }</span></span><span class="mpre">
+
+data </span><a name="loc_76_6_76_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_6_76_18&#39;)"><span class="hl_tycondecl"><span class="mpre">ServerParams</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">ServerParams</span></span><span class="mpre">
+    { </span><span class="hl_comment"><span class="mpre">-- | request a certificate from client.</span></span><span class="mpre">
+      </span><a name="loc_78_7_78_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_7_78_27&#39;)"><span class="hl_fielddecl"><span class="mpre">serverWantClientCert</span></span></a><span class="mpre">    :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- | This is a list of certificates from which the</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- disinguished names are sent in certificate request</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- messages.  For TLS1.0, it should not be empty.</span></span><span class="mpre">
+    , </span><a name="loc_83_7_83_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_7_83_27&#39;)"><span class="hl_fielddecl"><span class="mpre">serverCACertificates</span></span></a><span class="mpre"> :: [</span><span class="hl_tyconref"><span class="mpre">SignedCertificate</span></span><span class="mpre">]
+
+      </span><span class="hl_comment"><span class="mpre">-- | Server Optional Diffie Hellman parameters. If this value is not</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- properly set, no Diffie Hellman key exchange will take place.</span></span><span class="mpre">
+    , </span><a name="loc_87_7_87_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_7_87_22&#39;)"><span class="hl_fielddecl"><span class="mpre">serverDHEParams</span></span></a><span class="mpre">         :: </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">DHParams</span></span><span class="mpre">
+
+    , </span><a name="loc_89_7_89_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_7_89_19&#39;)"><span class="hl_fielddecl"><span class="mpre">serverShared</span></span></a><span class="mpre">            :: </span><a href="#loc_145_6_145_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_145_6_145_12&#39;)"><span class="hl_tyconref"><span class="mpre">Shared</span></span></a><span class="mpre">
+    , </span><a name="loc_90_7_90_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_90_7_90_18&#39;)"><span class="hl_fielddecl"><span class="mpre">serverHooks</span></span></a><span class="mpre">             :: </span><a href="#loc_203_6_203_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_6_203_17&#39;)"><span class="hl_tyconref"><span class="mpre">ServerHooks</span></span></a><span class="mpre">
+    , </span><a name="loc_91_7_91_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_7_91_22&#39;)"><span class="hl_fielddecl"><span class="mpre">serverSupported</span></span></a><span class="mpre">         :: </span><a href="#loc_108_6_108_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_6_108_15&#39;)"><span class="hl_tyconref"><span class="mpre">Supported</span></span></a><span class="mpre">
+    } </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 92, srcSpanStartColumn = 7, srcSpanEndLine = 92, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 92, srcSpanStartColumn = 7, srcSpanEndLine = 92, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine "><span class="mpre">deriving (Show)</span></span><span class="mpre">
+
+</span><a href="#loc_95_1_95_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_20&#39;)"><span class="mpre">defaultParamsServer</span></a><span class="mpre"> :: </span><a href="#loc_76_6_76_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_6_76_18&#39;)"><span class="hl_tyconref"><span class="mpre">ServerParams</span></span></a><span class="mpre">
+</span><a name="loc_95_1_95_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_20&#39;)"><span class="hl_vardecl"><span class="mpre">defaultParamsServer</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 95, srcSpanStartColumn = 23, srcSpanEndLine = 102, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 96, srcSpanStartColumn = 5, srcSpanEndLine = 96, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine"><span class="mpre">ServerParams
+    { serverWantClientCert   = False
+    , serverCACertificates   = []
+    , serverDHEParams        = Nothing
+    , serverHooks            = def
+    , serverShared           = def
+    , serverSupported        = def
+    }</span></span><span class="mpre">
+
+instance </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> </span><a href="#loc_76_6_76_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_6_76_18&#39;)"><span class="hl_tyconref"><span class="mpre">ServerParams</span></span></a><span class="mpre"> where
+    </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><a href="#loc_95_1_95_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_20&#39;)"><span class="hl_varref"><span class="mpre">defaultParamsServer</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | List all the supported algorithms, versions, ciphers, etc supported.</span></span><span class="mpre">
+data </span><a name="loc_108_6_108_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_6_108_15&#39;)"><span class="hl_tycondecl"><span class="mpre">Supported</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">Supported</span></span><span class="mpre">
+    {
+      </span><span class="hl_comment"><span class="mpre">-- | Supported Versions by this context</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- On the client side, the highest version will be used to establish the connection.</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- On the server side, the highest version that is less or equal than the client version will be chosed.</span></span><span class="mpre">
+      </span><a name="loc_113_7_113_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_7_113_24&#39;)"><span class="hl_fielddecl"><span class="mpre">supportedVersions</span></span></a><span class="mpre">       :: [</span><a href="Network.TLS.Types.html#loc_25_6_25_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Types.html#loc_25_6_25_13&#39;)"><span class="hl_tyconref"><span class="mpre">Version</span></span></a><span class="mpre">]
+      </span><span class="hl_comment"><span class="mpre">-- | Supported cipher methods</span></span><span class="mpre">
+    , </span><a name="loc_115_7_115_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_7_115_23&#39;)"><span class="hl_fielddecl"><span class="mpre">supportedCiphers</span></span></a><span class="mpre">        :: [</span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">]
+      </span><span class="hl_comment"><span class="mpre">-- | supported compressions methods</span></span><span class="mpre">
+    , </span><a name="loc_117_7_117_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_7_117_28&#39;)"><span class="hl_fielddecl"><span class="mpre">supportedCompressions</span></span></a><span class="mpre">   :: [</span><a href="Network.TLS.Compression.html#loc_38_6_38_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Compression.html#loc_38_6_38_17&#39;)"><span class="hl_tyconref"><span class="mpre">Compression</span></span></a><span class="mpre">]
+      </span><span class="hl_comment"><span class="mpre">-- | All supported hash/signature algorithms pair for client</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- certificate verification, ordered by decreasing priority.</span></span><span class="mpre">
+    , </span><a name="loc_120_7_120_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_7_120_30&#39;)"><span class="hl_fielddecl"><span class="mpre">supportedHashSignatures</span></span></a><span class="mpre"> :: [</span><span class="hl_tyconref"><span class="mpre">HashAndSignatureAlgorithm</span></span><span class="mpre">]
+      </span><span class="hl_comment"><span class="mpre">-- | Set if we support secure renegotiation.</span></span><span class="mpre">
+    , </span><a name="loc_122_7_122_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_7_122_35&#39;)"><span class="hl_fielddecl"><span class="mpre">supportedSecureRenegotiation</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- | Set if we support session.</span></span><span class="mpre">
+    , </span><a name="loc_124_7_124_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_124_7_124_23&#39;)"><span class="hl_fielddecl"><span class="mpre">supportedSession</span></span></a><span class="mpre">             :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+    } </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 125, srcSpanStartColumn = 7, srcSpanEndLine = 125, srcSpanEndColumn = 25}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 125, srcSpanStartColumn = 7, srcSpanEndLine = 125, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartL"><span class="mpre">deriving (Show,Eq)</span></span><span class="mpre">
+
+</span><a href="#loc_128_1_128_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_17&#39;)"><span class="mpre">defaultSupported</span></a><span class="mpre"> :: </span><a href="#loc_108_6_108_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_6_108_15&#39;)"><span class="hl_tyconref"><span class="mpre">Supported</span></span></a><span class="mpre">
+</span><a name="loc_128_1_128_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_17&#39;)"><span class="hl_vardecl"><span class="mpre">defaultSupported</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 128, srcSpanStartColumn = 20, srcSpanEndLine = 140, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 129, srcSpanStartColumn = 5, srcSpanEndLine = 129, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartL"><span class="mpre">Supported
+    { supportedVersions       = [TLS12,TLS11,TLS10,SSL3]
+    , supportedCiphers        = []
+    , supportedCompressions   = [nullCompression]
+    , supportedHashSignatures = [ (Struct.HashSHA512, SignatureRSA)
+                                , (Struct.HashSHA384, SignatureRSA)
+                                , (Struct.HashSHA256, SignatureRSA)
+                                , (Struct.HashSHA224, SignatureRSA)
+                                , (Struct.HashSHA1,   SignatureDSS)
+                                ]
+    , supportedSecureRenegotiation = True
+    , supportedSession             = True
+    }</span></span><span class="mpre">
+
+instance </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> </span><a href="#loc_108_6_108_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_6_108_15&#39;)"><span class="hl_tyconref"><span class="mpre">Supported</span></span></a><span class="mpre"> where
+    </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><a href="#loc_128_1_128_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_17&#39;)"><span class="hl_varref"><span class="mpre">defaultSupported</span></span></a><span class="mpre">
+
+data </span><a name="loc_145_6_145_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_145_6_145_12&#39;)"><span class="hl_tycondecl"><span class="mpre">Shared</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">Shared</span></span><span class="mpre">
+    { </span><a name="loc_146_7_146_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_146_7_146_24&#39;)"><span class="hl_fielddecl"><span class="mpre">sharedCredentials</span></span></a><span class="mpre">     :: </span><a href="Network.TLS.Credentials.html#loc_29_9_29_20" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Credentials.html#loc_29_9_29_20&#39;)"><span class="hl_tyconref"><span class="mpre">Credentials</span></span></a><span class="mpre">
+    , </span><a name="loc_147_7_147_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_147_7_147_27&#39;)"><span class="hl_fielddecl"><span class="mpre">sharedSessionManager</span></span></a><span class="mpre">  :: </span><a href="Network.TLS.Session.html#loc_16_6_16_20" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Session.html#loc_16_6_16_20&#39;)"><span class="hl_tyconref"><span class="mpre">SessionManager</span></span></a><span class="mpre">
+    , </span><a name="loc_148_7_148_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_148_7_148_20&#39;)"><span class="hl_fielddecl"><span class="mpre">sharedCAStore</span></span></a><span class="mpre">         :: </span><a href="Data.X509.CertificateStore.html#loc_16_6_16_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.CertificateStore.html#loc_16_6_16_22&#39;)"><span class="hl_tyconref"><span class="mpre">CertificateStore</span></span></a><span class="mpre">
+    , </span><a name="loc_149_7_149_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_149_7_149_28&#39;)"><span class="hl_fielddecl"><span class="mpre">sharedValidationCache</span></span></a><span class="mpre"> :: </span><a href="Data.X509.Validation.Cache.html#loc_50_6_50_21" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.Validation.Cache.html#loc_50_6_50_21&#39;)"><span class="hl_tyconref"><span class="mpre">ValidationCache</span></span></a><span class="mpre">
+    }
+
+instance </span><span class="hl_classref"><span class="mpre">Show</span></span><span class="mpre"> </span><a href="#loc_145_6_145_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_145_6_145_12&#39;)"><span class="hl_tyconref"><span class="mpre">Shared</span></span></a><span class="mpre"> where
+    </span><span class="hl_fundecl"><span class="mpre">show</span></span><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;Shared&quot;</span></span><span class="mpre">
+instance </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> </span><a href="#loc_145_6_145_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_145_6_145_12&#39;)"><span class="hl_tyconref"><span class="mpre">Shared</span></span></a><span class="mpre"> where
+    </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 155, srcSpanStartColumn = 11, srcSpanEndLine = 160, srcSpanEndColumn = 14}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 156, srcSpanStartColumn = 13, srcSpanEndLine = 156, srcSpanEndColumn = 14},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanSta"><span class="mpre">Shared
+            { sharedCAStore         = mempty
+            , sharedCredentials     = mempty
+            , sharedSessionManager  = noSessionManager
+            , sharedValidationCache = def
+            }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A set of callbacks run by the clients for various corners of TLS establishment</span></span><span class="mpre">
+data </span><a name="loc_163_6_163_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_6_163_17&#39;)"><span class="hl_tycondecl"><span class="mpre">ClientHooks</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">ClientHooks</span></span><span class="mpre">
+    { </span><span class="hl_comment"><span class="mpre">-- | This action is called when the server sends a</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- certificate request.  The parameter is the information</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- from the request.  The action should select a certificate</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- chain of one of the given certificate types where the</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- last certificate in the chain should be signed by one of</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- the given distinguished names.  Each certificate should</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- be signed by the following one, except for the last.  At</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- least the first of the certificates in the chain must</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- have a corresponding private key, because that is used</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- for signing the certificate verify message.</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- Note that is is the responsibility of this action to</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- select a certificate matching one of the requested</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- certificate types.  Returning a non-matching one will</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- lead to handshake failure later.</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- Returning a certificate chain not matching the</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- distinguished names may lead to problems or not,</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- depending whether the server accepts it.</span></span><span class="mpre">
+      </span><a name="loc_183_7_183_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_183_7_183_27&#39;)"><span class="hl_fielddecl"><span class="mpre">onCertificateRequest</span></span></a><span class="mpre"> :: ([</span><a href="Network.TLS.Struct.html#loc_75_6_75_21" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Struct.html#loc_75_6_75_21&#39;)"><span class="hl_tyconref"><span class="mpre">CertificateType</span></span></a><span class="mpre">],
+                               </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">HashAndSignatureAlgorithm</span></span><span class="mpre">],
+                               [</span><a href="Data.X509.DistinguishedName.html#loc_25_9_25_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.DistinguishedName.html#loc_25_9_25_26&#39;)"><span class="hl_tyconref"><span class="mpre">DistinguishedName</span></span></a><span class="mpre">]) -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> (</span><a href="Data.X509.CertificateChain.html#loc_21_9_21_25" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.CertificateChain.html#loc_21_9_21_25&#39;)"><span class="hl_tyconref"><span class="mpre">CertificateChain</span></span></a><span class="mpre">, </span><a href="Data.X509.PrivateKey.html#loc_20_6_20_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.PrivateKey.html#loc_20_6_20_13&#39;)"><span class="hl_tyconref"><span class="mpre">PrivKey</span></span></a><span class="mpre">))
+    , </span><a name="loc_186_7_186_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_186_7_186_25&#39;)"><span class="hl_fielddecl"><span class="mpre">onNPNServerSuggest</span></span></a><span class="mpre">   :: </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> ([</span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">] -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">)
+    , </span><a name="loc_187_7_187_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_187_7_187_26&#39;)"><span class="hl_fielddecl"><span class="mpre">onServerCertificate</span></span></a><span class="mpre">  :: </span><a href="Data.X509.CertificateStore.html#loc_16_6_16_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.CertificateStore.html#loc_16_6_16_22&#39;)"><span class="hl_tyconref"><span class="mpre">CertificateStore</span></span></a><span class="mpre"> -&gt; </span><a href="Data.X509.Validation.Cache.html#loc_50_6_50_21" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.Validation.Cache.html#loc_50_6_50_21&#39;)"><span class="hl_tyconref"><span class="mpre">ValidationCache</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ServiceID</span></span><span class="mpre"> -&gt; </span><a href="Data.X509.CertificateChain.html#loc_21_9_21_25" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.CertificateChain.html#loc_21_9_21_25&#39;)"><span class="hl_tyconref"><span class="mpre">CertificateChain</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> [</span><a href="Data.X509.Validation.html#loc_47_6_47_18" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.Validation.html#loc_47_6_47_18&#39;)"><span class="hl_tyconref"><span class="mpre">FailedReason</span></span></a><span class="mpre">]
+    }
+
+</span><a href="#loc_191_1_191_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_191_1_191_19&#39;)"><span class="mpre">defaultClientHooks</span></a><span class="mpre"> :: </span><a href="#loc_163_6_163_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_6_163_17&#39;)"><span class="hl_tyconref"><span class="mpre">ClientHooks</span></span></a><span class="mpre">
+</span><a name="loc_191_1_191_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_191_1_191_19&#39;)"><span class="hl_vardecl"><span class="mpre">defaultClientHooks</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 191, srcSpanStartColumn = 22, srcSpanEndLine = 195, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 192, srcSpanStartColumn = 5, srcSpanEndLine = 192, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartL"><span class="mpre">ClientHooks
+    { onCertificateRequest = \ _ -&gt; return Nothing
+    , onNPNServerSuggest   = Nothing
+    , onServerCertificate  = validateDefault
+    }</span></span><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Show</span></span><span class="mpre"> </span><a href="#loc_163_6_163_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_6_163_17&#39;)"><span class="hl_tyconref"><span class="mpre">ClientHooks</span></span></a><span class="mpre"> where
+    </span><span class="hl_fundecl"><span class="mpre">show</span></span><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;ClientHooks&quot;</span></span><span class="mpre">
+instance </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> </span><a href="#loc_163_6_163_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_6_163_17&#39;)"><span class="hl_tyconref"><span class="mpre">ClientHooks</span></span></a><span class="mpre"> where
+    </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><a href="#loc_191_1_191_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_191_1_191_19&#39;)"><span class="hl_varref"><span class="mpre">defaultClientHooks</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A set of callbacks run by the server for various corners of the TLS establishment</span></span><span class="mpre">
+data </span><a name="loc_203_6_203_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_6_203_17&#39;)"><span class="hl_tycondecl"><span class="mpre">ServerHooks</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">ServerHooks</span></span><span class="mpre">
+    {
+      </span><span class="hl_comment"><span class="mpre">-- | This action is called when a client certificate chain</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- is received from the client.  When it returns a</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- CertificateUsageReject value, the handshake is aborted.</span></span><span class="mpre">
+      </span><a name="loc_208_7_208_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_7_208_26&#39;)"><span class="hl_fielddecl"><span class="mpre">onClientCertificate</span></span></a><span class="mpre"> :: </span><a href="Data.X509.CertificateChain.html#loc_21_9_21_25" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.X509.CertificateChain.html#loc_21_9_21_25&#39;)"><span class="hl_tyconref"><span class="mpre">CertificateChain</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><a href="Network.TLS.X509.html#loc_48_6_48_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.X509.html#loc_48_6_48_22&#39;)"><span class="hl_tyconref"><span class="mpre">CertificateUsage</span></span></a><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- | This action is called when the client certificate</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- cannot be verified.  A &#39;Nothing&#39; argument indicates a</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- wrong signature, a &#39;Just e&#39; message signals a crypto</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- error.</span></span><span class="mpre">
+    , </span><a name="loc_214_7_214_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_214_7_214_29&#39;)"><span class="hl_fielddecl"><span class="mpre">onUnverifiedClientCert</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- | Allow the server to choose the cipher relative to the</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- the client version and the client list of ciphers.</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- This could be useful with old clients and as a workaround</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- to the BEAST (where RC4 is sometimes prefered with TLS &lt; 1.1)</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- The client cipher list cannot be empty.</span></span><span class="mpre">
+    , </span><a name="loc_223_7_223_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_7_223_23&#39;)"><span class="hl_fielddecl"><span class="mpre">onCipherChoosing</span></span></a><span class="mpre">        :: </span><a href="Network.TLS.Types.html#loc_25_6_25_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Types.html#loc_25_6_25_13&#39;)"><span class="hl_tyconref"><span class="mpre">Version</span></span></a><span class="mpre"> -&gt; [</span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">] -&gt; </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- | suggested next protocols accoring to the next protocol negotiation extension.</span></span><span class="mpre">
+    , </span><a name="loc_226_7_226_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_226_7_226_29&#39;)"><span class="hl_fielddecl"><span class="mpre">onSuggestNextProtocols</span></span></a><span class="mpre">  :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">])
+      </span><span class="hl_comment"><span class="mpre">-- | at each new handshake, we call this hook to see if we allow handshake to happens.</span></span><span class="mpre">
+    , </span><a name="loc_228_7_228_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_228_7_228_21&#39;)"><span class="hl_fielddecl"><span class="mpre">onNewHandshake</span></span></a><span class="mpre">          :: </span><a href="Network.TLS.Measurement.html#loc_20_6_20_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Measurement.html#loc_20_6_20_17&#39;)"><span class="hl_tyconref"><span class="mpre">Measurement</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+    }
+
+</span><a href="#loc_232_1_232_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_232_1_232_19&#39;)"><span class="mpre">defaultServerHooks</span></a><span class="mpre"> :: </span><a href="#loc_203_6_203_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_6_203_17&#39;)"><span class="hl_tyconref"><span class="mpre">ServerHooks</span></span></a><span class="mpre">
+</span><a name="loc_232_1_232_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_232_1_232_19&#39;)"><span class="hl_vardecl"><span class="mpre">defaultServerHooks</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 232, srcSpanStartColumn = 22, srcSpanEndLine = 238, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartLine = 233, srcSpanStartColumn = 5, srcSpanEndLine = 233, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Parameters.hs&quot;, srcSpanStartL"><span class="mpre">ServerHooks
+    { onCipherChoosing       = \_ -&gt; head
+    , onClientCertificate    = \_ -&gt; return $ CertificateUsageReject $ CertificateRejectOther &quot;no client certificates expected&quot;
+    , onUnverifiedClientCert = return False
+    , onSuggestNextProtocols = return Nothing
+    , onNewHandshake         = \_ -&gt; return True
+    }</span></span><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Show</span></span><span class="mpre"> </span><a href="#loc_203_6_203_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_6_203_17&#39;)"><span class="hl_tyconref"><span class="mpre">ServerHooks</span></span></a><span class="mpre"> where
+    </span><span class="hl_fundecl"><span class="mpre">show</span></span><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;ClientHooks&quot;</span></span><span class="mpre">
+instance </span><a href="Data.Default.Class.html#loc_38_7_38_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_38_7_38_14&#39;)"><span class="hl_classref"><span class="mpre">Default</span></span></a><span class="mpre"> </span><a href="#loc_203_6_203_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_6_203_17&#39;)"><span class="hl_tyconref"><span class="mpre">ServerHooks</span></span></a><span class="mpre"> where
+    </span><a href="Data.Default.Class.html#loc_40_5_40_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Default.Class.html#loc_40_5_40_8&#39;)"><span class="hl_vardecl"><span class="mpre">def</span></span></a><span class="mpre"> = </span><a href="#loc_232_1_232_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_232_1_232_19&#39;)"><span class="hl_varref"><span class="mpre">defaultServerHooks</span></span></a><span class="mpre">
+</span></div></body></html>

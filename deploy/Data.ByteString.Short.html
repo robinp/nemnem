@@ -1,0 +1,86 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Trustworthy #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.ByteString.Short</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) Duncan Coutts 2012-2013</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : duncan@community.haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : ghc only</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A compact representation suitable for storing short byte strings in memory.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In typical use cases it can be imported alongside &quot;Data.ByteString&quot;, e.g.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import qualified Data.ByteString       as B</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import qualified Data.ByteString.Short as B</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;          (ShortByteString, toShort, fromShort)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Other &#39;ShortByteString&#39; operations clash with &quot;Data.ByteString&quot; or &quot;Prelude&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- functions however, so they should be imported @qualified@ with a different</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- alias e.g.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import qualified Data.ByteString.Short as B.Short</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Data.ByteString.Short (
+
+    </span><span class="hl_comment"><span class="mpre">-- * The @ShortByteString@ type</span></span><span class="mpre">
+
+    ShortByteString,
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Memory overhead</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- | With GHC, the memory overheads are as follows, expressed in words and</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- in bytes (words are 4 and 8 bytes on 32 or 64bit machines respectively).</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- * &#39;ByteString&#39; unshared: 9 words; 36 or 72 bytes.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- * &#39;ByteString&#39; shared substring: 5 words; 20 or 40 bytes.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- * &#39;ShortByteString&#39;: 4 words; 16 or 32 bytes.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- For the string data itself, both &#39;ShortByteString&#39; and &#39;ByteString&#39; use</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- one byte per element, rounded up to the nearest word. For example,</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- including the overheads, a length 10 &#39;ShortByteString&#39; would take</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- @16 + 12 = 28@ bytes on a 32bit platform and @32 + 16 = 48@ bytes on a</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- 64bit platform.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- These overheads can all be reduced by 1 word (4 or 8 bytes) when the</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &#39;ShortByteString&#39; or &#39;ByteString&#39; is unpacked into another constructor.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- For example:</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &gt; data ThingId = ThingId {-# UNPACK #-} !Int</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &gt;                        {-# UNPACK #-} !ShortByteString</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- This will take @1 + 1 + 3@ words (the @ThingId@ constructor +</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- unpacked @Int@ + unpacked @ShortByteString@), plus the words for the</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- string data.</span></span><span class="mpre">
+    
+    </span><span class="hl_comment"><span class="mpre">-- ** Heap fragmentation</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- | With GHC, the &#39;ByteString&#39; representation uses /pinned/ memory,</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- meaning it cannot be moved by the GC. This is usually the right thing to</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- do for larger strings, but for small strings using pinned memory can</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- lead to heap fragmentation which wastes space. The &#39;ShortByteString&#39;</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- type (and the @Text@ type from the @text@ package) use /unpinned/ memory</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- so they do not contribute to heap fragmentation. In addition, with GHC,</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- small unpinned strings are allocated in the same way as normal heap</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- allocations, rather than in a separate pinned area.</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Conversions</span></span><span class="mpre">
+    toShort,
+    fromShort,
+    pack,
+    unpack,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Other operations</span></span><span class="mpre">
+    empty, null, length, index,
+  ) where
+
+import Data.ByteString.Short.Internal
+import Prelude ()
+
+</span></div></body></html>

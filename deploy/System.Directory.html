@@ -1,0 +1,914 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE ForeignFunctionInterface, NondecreasingIndentation #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  System.Directory</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- System-independent interface to directory manipulation.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module System.Directory 
+   ( 
+    </span><span class="hl_comment"><span class="mpre">-- $intro</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Actions on directories</span></span><span class="mpre">
+      createDirectory       </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; IO ()</span></span><span class="mpre">
+    , createDirectoryIfMissing  </span><span class="hl_comment"><span class="mpre">-- :: Bool -&gt; FilePath -&gt; IO ()</span></span><span class="mpre">
+    , removeDirectory       </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; IO ()</span></span><span class="mpre">
+    , removeDirectoryRecursive  </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; IO ()</span></span><span class="mpre">
+    , renameDirectory       </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; FilePath -&gt; IO ()</span></span><span class="mpre">
+
+    , getDirectoryContents      </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; IO [FilePath]</span></span><span class="mpre">
+    , getCurrentDirectory       </span><span class="hl_comment"><span class="mpre">-- :: IO FilePath</span></span><span class="mpre">
+    , setCurrentDirectory       </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; IO ()</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Pre-defined directories</span></span><span class="mpre">
+    , getHomeDirectory
+    , getAppUserDataDirectory
+    , getUserDocumentsDirectory
+    , getTemporaryDirectory
+
+    </span><span class="hl_comment"><span class="mpre">-- * Actions on files</span></span><span class="mpre">
+    , removeFile        </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; IO ()</span></span><span class="mpre">
+    , renameFile                </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; FilePath -&gt; IO ()</span></span><span class="mpre">
+    , copyFile                  </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; FilePath -&gt; IO ()</span></span><span class="mpre">
+    
+    , canonicalizePath
+    , makeRelativeToCurrentDirectory
+    , findExecutable
+
+    </span><span class="hl_comment"><span class="mpre">-- * Existence tests</span></span><span class="mpre">
+    , doesFileExist     </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; IO Bool</span></span><span class="mpre">
+    , doesDirectoryExist        </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; IO Bool</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Permissions</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- $permissions</span></span><span class="mpre">
+
+    , Permissions(
+    Permissions,
+    readable,       </span><span class="hl_comment"><span class="mpre">-- :: Permissions -&gt; Bool</span></span><span class="mpre">
+    writable,       </span><span class="hl_comment"><span class="mpre">-- :: Permissions -&gt; Bool</span></span><span class="mpre">
+    executable,     </span><span class="hl_comment"><span class="mpre">-- :: Permissions -&gt; Bool</span></span><span class="mpre">
+    searchable      </span><span class="hl_comment"><span class="mpre">-- :: Permissions -&gt; Bool</span></span><span class="mpre">
+      )
+
+    , getPermissions            </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; IO Permissions</span></span><span class="mpre">
+    , setPermissions            </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; Permissions -&gt; IO ()</span></span><span class="mpre">
+    , copyPermissions
+
+    </span><span class="hl_comment"><span class="mpre">-- * Timestamps</span></span><span class="mpre">
+
+    , getModificationTime       </span><span class="hl_comment"><span class="mpre">-- :: FilePath -&gt; IO ClockTime</span></span><span class="mpre">
+   ) where
+
+import Prelude hiding ( catch )
+import qualified Prelude
+
+import Control.Monad (</span><a href="Control.Monad.html#loc_148_1_148_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_148_1_148_6&#39;)"><span class="mpre">guard</span></a><span class="mpre">)
+import System.Environment      ( getEnv )
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 77, srcSpanStartColumn = 8, srcSpanEndLine = 77, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;System.FilePath&quot;"><span class="mpre">System.FilePath</span></span><span class="mpre">
+import System.IO
+import System.IO.Error hiding ( catch, try )
+import Control.Monad           ( </span><a href="Control.Monad.html#loc_265_1_265_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_265_1_265_5&#39;)"><span class="mpre">when</span></a><span class="mpre">, </span><a href="Control.Monad.html#loc_270_1_270_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_270_1_270_7&#39;)"><span class="mpre">unless</span></a><span class="mpre"> )
+import Control.Exception.Base
+
+import Foreign
+import Foreign.C
+
+</span><span class="hl_comment"><span class="mpre">{-# CFILES cbits/directory.c #-}</span></span><span class="mpre">
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 88, srcSpanStartColumn = 8, srcSpanEndLine = 88, srcSpanEndColumn = 19}, srcInfoPoints = []}) &quot;System.Time&quot;"><span class="mpre">System.Time</span></span><span class="mpre">             ( ClockTime(..) )
+
+import GHC.IO.Exception ( </span><a href="GHC.IO.Exception.html#loc_238_6_238_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_238_6_238_17&#39;)"><span class="mpre">IOException</span></a><span class="mpre">(..), </span><a href="GHC.IO.Exception.html#loc_257_6_257_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_257_6_257_17&#39;)"><span class="mpre">IOErrorType</span></a><span class="mpre">(..), </span><a href="GHC.IO.Exception.html#loc_217_1_217_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_217_1_217_12&#39;)"><span class="mpre">ioException</span></a><span class="mpre"> )
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 92, srcSpanStartColumn = 8, srcSpanEndLine = 92, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;System.Posix.Types&quot;"><span class="mpre">System.Posix.Types</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 93, srcSpanStartColumn = 8, srcSpanEndLine = 93, srcSpanEndColumn = 30}, srcInfoPoints = []}) &quot;System.Posix.Internals&quot;"><span class="mpre">System.Posix.Internals</span></span><span class="mpre">
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 94, srcSpanStartColumn = 18, srcSpanEndLine = 94, srcSpanEndColumn = 30}, srcInfoPoints = []}) &quot;System.Win32&quot;"><span class="mpre">System.Win32</span></span><span class="mpre"> as Win32
+
+</span><span class="hl_comment"><span class="mpre">{- $intro
+A directory contains a series of entries, each of which is a named
+reference to a file system object (file, directory etc.).  Some
+entries may be hidden, inaccessible, or have some administrative
+function (e.g. `.&#39; or `..&#39; under POSIX
+&lt;http://www.opengroup.org/onlinepubs/009695399/&gt;), but in 
+this standard all such entries are considered to form part of the
+directory contents. Entries in sub-directories are not, however,
+considered to form part of the directory contents.
+
+Each file system object is referenced by a /path/.  There is
+normally at least one absolute path to each file system object.  In
+some operating systems, it may also be possible to have paths which
+are relative to the current directory.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Permissions</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $permissions
+
+ The &#39;Permissions&#39; type is used to record whether certain operations are
+ permissible on a file\/directory. &#39;getPermissions&#39; and &#39;setPermissions&#39;
+ get and set these permissions, respectively. Permissions apply both to
+ files and directories. For directories, the executable field will be
+ &#39;False&#39;, and for files the searchable field will be &#39;False&#39;. Note that
+ directories may be searchable without being readable, if permission has
+ been given to use them as part of a path, but not to examine the 
+ directory contents.
+
+Note that to change some, but not all permissions, a construct on the following lines must be used. 
+
+&gt;  makeReadable f = do
+&gt;     p &lt;- getPermissions f
+&gt;     setPermissions f (p {readable = True})
+
+-}</span></span><span class="mpre">
+
+data </span><a name="loc_134_6_134_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_134_6_134_17&#39;)"><span class="hl_tycondecl"><span class="mpre">Permissions</span></span></a><span class="mpre">
+ = </span><a name="loc_135_4_135_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_135_4_135_15&#39;)"><span class="hl_condecl"><span class="mpre">Permissions</span></span></a><span class="mpre"> {
+    </span><a name="loc_136_5_136_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_136_5_136_13&#39;)"><span class="hl_fielddecl"><span class="mpre">readable</span></span></a><span class="mpre">,   </span><a name="loc_136_17_136_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_136_17_136_25&#39;)"><span class="hl_fielddecl"><span class="mpre">writable</span></span></a><span class="mpre">, 
+    </span><a name="loc_137_5_137_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_5_137_15&#39;)"><span class="hl_fielddecl"><span class="mpre">executable</span></span></a><span class="mpre">, </span><a name="loc_137_17_137_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_17_137_27&#39;)"><span class="hl_fielddecl"><span class="mpre">searchable</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre"> 
+   } </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 138, srcSpanStartColumn = 6, srcSpanEndLine = 138, srcSpanEndColumn = 36}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 138, srcSpanStartColumn = 6, srcSpanEndLine = 138, srcSpanEndColumn = 14},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-"><span class="mpre">deriving (Eq, Ord, Read, Show)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- |The &#39;getPermissions&#39; operation returns the
+permissions for the file or directory.
+
+The operation may fail with:
+
+* &#39;isPermissionError&#39; if the user is not permitted to access
+  the permissions; or
+
+* &#39;isDoesNotExistError&#39; if the file or directory does not exist.
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_153_1_153_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_1_153_15&#39;)"><span class="mpre">getPermissions</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><a href="#loc_134_6_134_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_134_6_134_17&#39;)"><span class="hl_tyconref"><span class="mpre">Permissions</span></span></a><span class="mpre">
+</span><a name="loc_153_1_153_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_1_153_15&#39;)"><span class="hl_fundecl"><span class="mpre">getPermissions</span></span></a><span class="mpre"> </span><a name="loc_153_16_153_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_16_153_20&#39;)"><span class="hl_vardecl"><span class="mpre">name</span></span></a><span class="mpre"> = do
+  </span><span class="hl_varref"><span class="mpre">withFilePath</span></span><span class="mpre"> </span><a href="#loc_153_16_153_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_16_153_20&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_154_24_154_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_154_24_154_25&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt; do
+  </span><span class="hl_comment"><span class="mpre">-- stat() does a better job of guessing the permissions on Windows</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- than access() does.  e.g. for execute permission, it looks at the</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- filename extension :-)</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- I tried for a while to do this properly, using the Windows security API,</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- and eventually gave up.  getPermissions is a flawed API anyway. -- SimonM</span></span><span class="mpre">
+  </span><span class="hl_varref"><span class="mpre">allocaBytes</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">sizeof_stat</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \ </span><a name="loc_161_31_161_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_161_31_161_37&#39;)"><span class="hl_vardecl"><span class="mpre">p_stat</span></span></a><span class="mpre"> -&gt; do
+  </span><span class="hl_varref"><span class="mpre">throwErrnoIfMinus1_</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;getPermissions&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">c_stat</span></span><span class="mpre"> </span><a href="#loc_154_24_154_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_154_24_154_25&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> </span><a href="#loc_161_31_161_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_161_31_161_37&#39;)"><span class="hl_varref"><span class="mpre">p_stat</span></span></a><span class="mpre">
+  </span><a name="loc_163_3_163_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_3_163_7&#39;)"><span class="hl_vardecl"><span class="mpre">mode</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">st_mode</span></span><span class="mpre"> </span><a href="#loc_161_31_161_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_161_31_161_37&#39;)"><span class="hl_varref"><span class="mpre">p_stat</span></span></a><span class="mpre">
+  let </span><span class="hl_vardecl"><span class="mpre">usr_read</span></span><span class="mpre">   = </span><a href="#loc_163_3_163_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_3_163_7&#39;)"><span class="hl_varref"><span class="mpre">mode</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">s_IRUSR</span></span><span class="mpre">
+  let </span><span class="hl_vardecl"><span class="mpre">usr_write</span></span><span class="mpre">  = </span><a href="#loc_163_3_163_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_3_163_7&#39;)"><span class="hl_varref"><span class="mpre">mode</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">s_IWUSR</span></span><span class="mpre">
+  let </span><span class="hl_vardecl"><span class="mpre">usr_exec</span></span><span class="mpre">   = </span><a href="#loc_163_3_163_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_3_163_7&#39;)"><span class="hl_varref"><span class="mpre">mode</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">s_IXUSR</span></span><span class="mpre">
+  let </span><span class="hl_vardecl"><span class="mpre">is_dir</span></span><span class="mpre"> = </span><a href="#loc_163_3_163_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_3_163_7&#39;)"><span class="hl_varref"><span class="mpre">mode</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">s_IFDIR</span></span><span class="mpre">
+  </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (
+    </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 169, srcSpanStartColumn = 5, srcSpanEndLine = 174, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 169, srcSpanStartColumn = 17, srcSpanEndLine = 169, srcSpanEndColumn = 18},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts"><span class="mpre">Permissions {
+      readable   = usr_read  /= 0,
+      writable   = usr_write /= 0,
+      executable = is_dir == 0 &amp;&amp; usr_exec /= 0,
+      searchable = is_dir /= 0 &amp;&amp; usr_exec /= 0
+    }</span></span><span class="mpre">
+   )
+
+</span><span class="hl_comment"><span class="mpre">{- |The &#39;setPermissions&#39; operation sets the
+permissions for the file or directory.
+
+The operation may fail with:
+
+* &#39;isPermissionError&#39; if the user is not permitted to set
+  the permissions; or
+
+* &#39;isDoesNotExistError&#39; if the file or directory does not exist.
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_190_1_190_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_1_190_15&#39;)"><span class="mpre">setPermissions</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><a href="#loc_134_6_134_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_134_6_134_17&#39;)"><span class="hl_tyconref"><span class="mpre">Permissions</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_190_1_190_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_1_190_15&#39;)"><span class="hl_fundecl"><span class="mpre">setPermissions</span></span></a><span class="mpre"> </span><a name="loc_190_16_190_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_16_190_20&#39;)"><span class="hl_vardecl"><span class="mpre">name</span></span></a><span class="mpre"> (</span><a href="#loc_135_4_135_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_135_4_135_15&#39;)"><span class="hl_conref"><span class="mpre">Permissions</span></span></a><span class="mpre"> </span><a name="loc_190_34_190_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_34_190_35&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre"> </span><a name="loc_190_36_190_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_36_190_37&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre"> </span><a name="loc_190_38_190_39" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_38_190_39&#39;)"><span class="hl_vardecl"><span class="mpre">e</span></span></a><span class="mpre"> </span><a name="loc_190_40_190_41" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_40_190_41&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre">) = do
+  </span><span class="hl_varref"><span class="mpre">allocaBytes</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">sizeof_stat</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \ </span><a name="loc_191_31_191_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_191_31_191_37&#39;)"><span class="hl_vardecl"><span class="mpre">p_stat</span></span></a><span class="mpre"> -&gt; do
+  </span><span class="hl_varref"><span class="mpre">withFilePath</span></span><span class="mpre"> </span><a href="#loc_190_16_190_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_16_190_20&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_192_24_192_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_192_24_192_30&#39;)"><span class="hl_vardecl"><span class="mpre">p_name</span></span></a><span class="mpre"> -&gt; do
+    </span><span class="hl_varref"><span class="mpre">throwErrnoIfMinus1_</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;setPermissions&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+      </span><span class="hl_varref"><span class="mpre">c_stat</span></span><span class="mpre"> </span><a href="#loc_192_24_192_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_192_24_192_30&#39;)"><span class="hl_varref"><span class="mpre">p_name</span></span></a><span class="mpre"> </span><a href="#loc_191_31_191_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_191_31_191_37&#39;)"><span class="hl_varref"><span class="mpre">p_stat</span></span></a><span class="mpre">
+      </span><a name="loc_195_7_195_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_195_7_195_11&#39;)"><span class="hl_vardecl"><span class="mpre">mode</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">st_mode</span></span><span class="mpre"> </span><a href="#loc_191_31_191_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_191_31_191_37&#39;)"><span class="hl_varref"><span class="mpre">p_stat</span></span></a><span class="mpre">
+      let </span><a name="loc_196_11_196_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_196_11_196_16&#39;)"><span class="hl_vardecl"><span class="mpre">mode1</span></span></a><span class="mpre"> = </span><a href="#loc_202_4_202_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_4_202_13&#39;)"><span class="hl_varref"><span class="mpre">modifyBit</span></span></a><span class="mpre"> </span><a href="#loc_190_34_190_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_34_190_35&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre"> </span><a href="#loc_195_7_195_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_195_7_195_11&#39;)"><span class="hl_varref"><span class="mpre">mode</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">s_IRUSR</span></span><span class="mpre">
+      let </span><a name="loc_197_11_197_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_197_11_197_16&#39;)"><span class="hl_vardecl"><span class="mpre">mode2</span></span></a><span class="mpre"> = </span><a href="#loc_202_4_202_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_4_202_13&#39;)"><span class="hl_varref"><span class="mpre">modifyBit</span></span></a><span class="mpre"> </span><a href="#loc_190_36_190_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_36_190_37&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> </span><a href="#loc_196_11_196_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_196_11_196_16&#39;)"><span class="hl_varref"><span class="mpre">mode1</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">s_IWUSR</span></span><span class="mpre">
+      let </span><a name="loc_198_11_198_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_198_11_198_16&#39;)"><span class="hl_vardecl"><span class="mpre">mode3</span></span></a><span class="mpre"> = </span><a href="#loc_202_4_202_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_4_202_13&#39;)"><span class="hl_varref"><span class="mpre">modifyBit</span></span></a><span class="mpre"> (</span><a href="#loc_190_38_190_39" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_38_190_39&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">||</span></span><span class="mpre"> </span><a href="#loc_190_40_190_41" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_40_190_41&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre">) </span><a href="#loc_197_11_197_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_197_11_197_16&#39;)"><span class="hl_varref"><span class="mpre">mode2</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">s_IXUSR</span></span><span class="mpre">
+      </span><span class="hl_varref"><span class="mpre">c_wchmod</span></span><span class="mpre"> </span><a href="#loc_192_24_192_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_192_24_192_30&#39;)"><span class="hl_varref"><span class="mpre">p_name</span></span></a><span class="mpre"> </span><a href="#loc_198_11_198_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_198_11_198_16&#39;)"><span class="hl_varref"><span class="mpre">mode3</span></span></a><span class="mpre">
+ where
+   </span><a href="#loc_202_4_202_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_4_202_13&#39;)"><span class="mpre">modifyBit</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">CMode</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">CMode</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">CMode</span></span><span class="mpre">
+   </span><a name="loc_202_4_202_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_4_202_13&#39;)"><span class="hl_fundecl"><span class="mpre">modifyBit</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre"> </span><a name="loc_202_20_202_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_20_202_21&#39;)"><span class="hl_vardecl"><span class="mpre">m</span></span></a><span class="mpre"> </span><a name="loc_202_22_202_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_22_202_23&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> = </span><a href="#loc_202_20_202_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_20_202_21&#39;)"><span class="hl_varref"><span class="mpre">m</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.&amp;.</span></span><span class="mpre"> (</span><a href="Data.Bits.html#loc_90_5_90_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Bits.html#loc_90_5_90_15&#39;)"><span class="hl_varref"><span class="mpre">complement</span></span></a><span class="mpre"> </span><a href="#loc_202_22_202_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_22_202_23&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">)
+   </span><a href="#loc_202_4_202_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_202_4_202_13&#39;)"><span class="hl_fundecl"><span class="mpre">modifyBit</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">  </span><a name="loc_203_20_203_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_20_203_21&#39;)"><span class="hl_vardecl"><span class="mpre">m</span></span></a><span class="mpre"> </span><a name="loc_203_22_203_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_22_203_23&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> = </span><a href="#loc_203_20_203_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_20_203_21&#39;)"><span class="hl_varref"><span class="mpre">m</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.|.</span></span><span class="mpre"> </span><a href="#loc_203_22_203_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_22_203_23&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">
+
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 205, srcSpanStartColumn = 1, srcSpanEndLine = 206, srcSpanEndColumn = 44}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 205, srcSpanStartColumn = 1, srcSpanEndLine = 205, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.1"><span class="mpre">foreign import ccall unsafe &quot;_wchmod&quot;
+   c_wchmod :: CWString -&gt; CMode -&gt; IO CInt</span></span><span class="mpre">
+
+</span><a href="#loc_209_1_209_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_1_209_16&#39;)"><span class="mpre">copyPermissions</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_209_1_209_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_1_209_16&#39;)"><span class="hl_fundecl"><span class="mpre">copyPermissions</span></span></a><span class="mpre"> </span><a name="loc_209_17_209_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_17_209_23&#39;)"><span class="hl_vardecl"><span class="mpre">source</span></span></a><span class="mpre"> </span><a name="loc_209_24_209_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_24_209_28&#39;)"><span class="hl_vardecl"><span class="mpre">dest</span></span></a><span class="mpre"> = do
+  </span><span class="hl_varref"><span class="mpre">allocaBytes</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">sizeof_stat</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \ </span><a name="loc_210_31_210_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_210_31_210_37&#39;)"><span class="hl_vardecl"><span class="mpre">p_stat</span></span></a><span class="mpre"> -&gt; do
+  </span><span class="hl_varref"><span class="mpre">withFilePath</span></span><span class="mpre"> </span><a href="#loc_209_17_209_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_17_209_23&#39;)"><span class="hl_varref"><span class="mpre">source</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_211_26_211_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_211_26_211_34&#39;)"><span class="hl_vardecl"><span class="mpre">p_source</span></span></a><span class="mpre"> -&gt; do
+  </span><span class="hl_varref"><span class="mpre">withFilePath</span></span><span class="mpre"> </span><a href="#loc_209_24_209_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_24_209_28&#39;)"><span class="hl_varref"><span class="mpre">dest</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_212_24_212_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_212_24_212_30&#39;)"><span class="hl_vardecl"><span class="mpre">p_dest</span></span></a><span class="mpre"> -&gt; do
+    </span><span class="hl_varref"><span class="mpre">throwErrnoIfMinus1_</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;copyPermissions&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">c_stat</span></span><span class="mpre"> </span><a href="#loc_211_26_211_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_211_26_211_34&#39;)"><span class="hl_varref"><span class="mpre">p_source</span></span></a><span class="mpre"> </span><a href="#loc_210_31_210_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_210_31_210_37&#39;)"><span class="hl_varref"><span class="mpre">p_stat</span></span></a><span class="mpre">
+    </span><a name="loc_214_5_214_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_214_5_214_9&#39;)"><span class="hl_vardecl"><span class="mpre">mode</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">st_mode</span></span><span class="mpre"> </span><a href="#loc_210_31_210_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_210_31_210_37&#39;)"><span class="hl_varref"><span class="mpre">p_stat</span></span></a><span class="mpre">
+    </span><span class="hl_varref"><span class="mpre">throwErrnoIfMinus1_</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;copyPermissions&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">c_wchmod</span></span><span class="mpre"> </span><a href="#loc_212_24_212_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_212_24_212_30&#39;)"><span class="hl_varref"><span class="mpre">p_dest</span></span></a><span class="mpre"> </span><a href="#loc_214_5_214_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_214_5_214_9&#39;)"><span class="hl_varref"><span class="mpre">mode</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Implementation</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- |@&#39;createDirectory&#39; dir@ creates a new directory @dir@ which is
+initially empty, or as near to empty as the operating system
+allows.
+
+The operation may fail with:
+
+* &#39;isPermissionError&#39; \/ &#39;PermissionDenied&#39;
+The process has insufficient privileges to perform the operation.
+@[EROFS, EACCES]@
+
+* &#39;isAlreadyExistsError&#39; \/ &#39;AlreadyExists&#39;
+The operand refers to a directory that already exists.  
+@ [EEXIST]@
+
+* &#39;HardwareFault&#39;
+A physical I\/O error has occurred.
+@[EIO]@
+
+* &#39;InvalidArgument&#39;
+The operand is not a valid directory name.
+@[ENAMETOOLONG, ELOOP]@
+
+* &#39;NoSuchThing&#39;
+There is no path to the directory. 
+@[ENOENT, ENOTDIR]@
+
+* &#39;ResourceExhausted&#39;
+Insufficient resources (virtual memory, process file descriptors,
+physical disk space, etc.) are available to perform the operation.
+@[EDQUOT, ENOSPC, ENOMEM, EMLINK]@
+
+* &#39;InappropriateType&#39;
+The path refers to an existing non-directory object.
+@[EEXIST]@
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_258_1_258_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_258_1_258_16&#39;)"><span class="mpre">createDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_258_1_258_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_258_1_258_16&#39;)"><span class="hl_fundecl"><span class="mpre">createDirectory</span></span></a><span class="mpre"> </span><a name="loc_258_17_258_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_258_17_258_21&#39;)"><span class="hl_vardecl"><span class="mpre">path</span></span></a><span class="mpre"> = do
+  </span><span class="hl_varref"><span class="mpre">Win32.createDirectory</span></span><span class="mpre"> </span><a href="#loc_258_17_258_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_258_17_258_21&#39;)"><span class="hl_varref"><span class="mpre">path</span></span></a><span class="mpre"> </span><a href="Data.Maybe.html#loc_49_19_49_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_19_49_26&#39;)"><span class="hl_conref"><span class="mpre">Nothing</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;createDirectoryIfMissing&#39; parents dir@ creates a new directory </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @dir@ if it doesn\&#39;t exist. If the first argument is &#39;True&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the function will also create all parent directories if they are missing.</span></span><span class="mpre">
+</span><a href="#loc_267_1_267_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_267_1_267_25&#39;)"><span class="mpre">createDirectoryIfMissing</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">     </span><span class="hl_comment"><span class="mpre">-- ^ Create its parents too?</span></span><span class="mpre">
+                 -&gt; </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- ^ The path to the directory you want to make</span></span><span class="mpre">
+                 -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_267_1_267_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_267_1_267_25&#39;)"><span class="hl_fundecl"><span class="mpre">createDirectoryIfMissing</span></span></a><span class="mpre"> </span><a name="loc_267_26_267_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_267_26_267_40&#39;)"><span class="hl_vardecl"><span class="mpre">create_parents</span></span></a><span class="mpre"> </span><a name="loc_267_41_267_46" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_267_41_267_46&#39;)"><span class="hl_vardecl"><span class="mpre">path0</span></span></a><span class="mpre">
+  | </span><a href="#loc_267_26_267_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_267_26_267_40&#39;)"><span class="hl_varref"><span class="mpre">create_parents</span></span></a><span class="mpre"> = </span><a href="#loc_273_5_273_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_273_5_273_15&#39;)"><span class="hl_varref"><span class="mpre">createDirs</span></span></a><span class="mpre"> (</span><a href="#loc_271_5_271_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_271_5_271_12&#39;)"><span class="hl_varref"><span class="mpre">parents</span></span></a><span class="mpre"> </span><a href="#loc_267_41_267_46" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_267_41_267_46&#39;)"><span class="hl_varref"><span class="mpre">path0</span></span></a><span class="mpre">)
+  | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre">      = </span><a href="#loc_273_5_273_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_273_5_273_15&#39;)"><span class="hl_varref"><span class="mpre">createDirs</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">take</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">1</span></span><span class="mpre"> (</span><a href="#loc_271_5_271_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_271_5_271_12&#39;)"><span class="hl_varref"><span class="mpre">parents</span></span></a><span class="mpre"> </span><a href="#loc_267_41_267_46" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_267_41_267_46&#39;)"><span class="hl_varref"><span class="mpre">path0</span></span></a><span class="mpre">))
+  where
+    </span><a name="loc_271_5_271_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_271_5_271_12&#39;)"><span class="hl_vardecl"><span class="mpre">parents</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">reverse</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">scanl1</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">(&lt;/&gt;)</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">splitDirectories</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">normalise</span></span><span class="mpre">
+
+    </span><a name="loc_273_5_273_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_273_5_273_15&#39;)"><span class="hl_fundecl"><span class="mpre">createDirs</span></span></a><span class="mpre"> []         = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+    </span><a href="#loc_273_5_273_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_273_5_273_15&#39;)"><span class="hl_fundecl"><span class="mpre">createDirs</span></span></a><span class="mpre"> (</span><a name="loc_274_17_274_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_274_17_274_20&#39;)"><span class="hl_vardecl"><span class="mpre">dir</span></span></a><span class="hl_infix"><span class="mpre">:</span></span><span class="mpre">[])   = </span><a href="#loc_281_5_281_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_281_5_281_14&#39;)"><span class="hl_varref"><span class="mpre">createDir</span></span></a><span class="mpre"> </span><a href="#loc_274_17_274_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_274_17_274_20&#39;)"><span class="hl_varref"><span class="mpre">dir</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">throw</span></span><span class="mpre">
+    </span><a href="#loc_273_5_273_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_273_5_273_15&#39;)"><span class="hl_fundecl"><span class="mpre">createDirs</span></span></a><span class="mpre"> (</span><a name="loc_275_17_275_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_275_17_275_20&#39;)"><span class="hl_vardecl"><span class="mpre">dir</span></span></a><span class="hl_infix"><span class="mpre">:</span></span><a name="loc_275_21_275_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_275_21_275_25&#39;)"><span class="hl_vardecl"><span class="mpre">dirs</span></span></a><span class="mpre">) =
+      </span><a href="#loc_281_5_281_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_281_5_281_14&#39;)"><span class="hl_varref"><span class="mpre">createDir</span></span></a><span class="mpre"> </span><a href="#loc_275_17_275_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_275_17_275_20&#39;)"><span class="hl_varref"><span class="mpre">dir</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \_ -&gt; do
+        </span><a href="#loc_273_5_273_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_273_5_273_15&#39;)"><span class="hl_varref"><span class="mpre">createDirs</span></span></a><span class="mpre"> </span><a href="#loc_275_21_275_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_275_21_275_25&#39;)"><span class="hl_varref"><span class="mpre">dirs</span></span></a><span class="mpre">
+        </span><a href="#loc_281_5_281_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_281_5_281_14&#39;)"><span class="hl_varref"><span class="mpre">createDir</span></span></a><span class="mpre"> </span><a href="#loc_275_17_275_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_275_17_275_20&#39;)"><span class="hl_varref"><span class="mpre">dir</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">throw</span></span><span class="mpre">
+
+    </span><a href="#loc_281_5_281_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_281_5_281_14&#39;)"><span class="mpre">createDir</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; (</span><a href="GHC.IO.Exception.html#loc_238_6_238_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_238_6_238_17&#39;)"><span class="hl_tyconref"><span class="mpre">IOException</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+    </span><a name="loc_281_5_281_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_281_5_281_14&#39;)"><span class="hl_fundecl"><span class="mpre">createDir</span></span></a><span class="mpre"> </span><a name="loc_281_15_281_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_281_15_281_18&#39;)"><span class="hl_vardecl"><span class="mpre">dir</span></span></a><span class="mpre"> </span><a name="loc_281_19_281_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_281_19_281_34&#39;)"><span class="hl_vardecl"><span class="mpre">notExistHandler</span></span></a><span class="mpre"> = do
+      </span><a name="loc_282_7_282_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_282_7_282_8&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre"> &lt;- </span><a href="Control.Exception.Base.html#loc_212_1_212_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_212_1_212_4&#39;)"><span class="hl_varref"><span class="mpre">try</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_258_1_258_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_258_1_258_16&#39;)"><span class="hl_varref"><span class="mpre">createDirectory</span></span></a><span class="mpre"> </span><a href="#loc_281_15_281_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_281_15_281_18&#39;)"><span class="hl_varref"><span class="mpre">dir</span></span></a><span class="mpre">
+      case (</span><a href="#loc_282_7_282_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_282_7_282_8&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><a href="GHC.IO.Exception.html#loc_238_6_238_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_238_6_238_17&#39;)"><span class="hl_tyconref"><span class="mpre">IOException</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">) of
+        </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">                   -&gt; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+        </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre">  </span><a name="loc_285_15_285_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_285_15_285_16&#39;)"><span class="hl_vardecl"><span class="mpre">e</span></span></a><span class="mpre">
+          | </span><a href="System.IO.Error.html#loc_135_1_135_20" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_135_1_135_20&#39;)"><span class="hl_varref"><span class="mpre">isDoesNotExistError</span></span></a><span class="mpre">  </span><a href="#loc_285_15_285_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_285_15_285_16&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_281_19_281_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_281_19_281_34&#39;)"><span class="hl_varref"><span class="mpre">notExistHandler</span></span></a><span class="mpre"> </span><a href="#loc_285_15_285_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_285_15_285_16&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- createDirectory (and indeed POSIX mkdir) does not distinguish</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- between a dir already existing and a file already existing. So we</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- check for it here. Unfortunately there is a slight race condition</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- here, but we think it is benign. It could report an exeption in</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- the case that the dir did exist but another process deletes the</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- directory and creates a file in its place before we can check</span></span><span class="mpre">
+          </span><span class="hl_comment"><span class="mpre">-- that the directory did indeed exist.</span></span><span class="mpre">
+          | </span><a href="System.IO.Error.html#loc_130_1_130_21" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_130_1_130_21&#39;)"><span class="hl_varref"><span class="mpre">isAlreadyExistsError</span></span></a><span class="mpre"> </span><a href="#loc_285_15_285_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_285_15_285_16&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre"> -&gt; (do
+              </span><a href="#loc_750_1_750_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_1_750_15&#39;)"><span class="hl_varref"><span class="mpre">withFileStatus</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;createDirectoryIfMissing&quot;</span></span><span class="mpre"> </span><a href="#loc_281_15_281_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_281_15_281_18&#39;)"><span class="hl_varref"><span class="mpre">dir</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_295_64_295_66" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_295_64_295_66&#39;)"><span class="hl_vardecl"><span class="mpre">st</span></span></a><span class="mpre"> -&gt; do
+                 </span><a name="loc_296_18_296_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_296_18_296_23&#39;)"><span class="hl_vardecl"><span class="mpre">isDir</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_770_1_770_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_1_770_12&#39;)"><span class="hl_varref"><span class="mpre">isDirectory</span></span></a><span class="mpre"> </span><a href="#loc_295_64_295_66" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_295_64_295_66&#39;)"><span class="hl_varref"><span class="mpre">st</span></span></a><span class="mpre">
+                 if </span><a href="#loc_296_18_296_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_296_18_296_23&#39;)"><span class="hl_varref"><span class="mpre">isDir</span></span></a><span class="mpre"> then </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+                          else </span><span class="hl_varref"><span class="mpre">throw</span></span><span class="mpre"> </span><a href="#loc_285_15_285_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_285_15_285_16&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre">
+              ) </span><a href="Control.Exception.Base.html#loc_150_1_150_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_150_1_150_6&#39;)"><span class="hl_infix"><span class="mpre">`catch`</span></span></a><span class="mpre"> ((\_ -&gt; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">) :: </span><a href="GHC.IO.Exception.html#loc_238_6_238_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_238_6_238_17&#39;)"><span class="hl_tyconref"><span class="mpre">IOException</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">)
+          | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre">              -&gt; </span><span class="hl_varref"><span class="mpre">throw</span></span><span class="mpre"> </span><a href="#loc_285_15_285_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_285_15_285_16&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- | @&#39;removeDirectory&#39; dir@ removes an existing directory /dir/.  The
+implementation may specify additional constraints which must be
+satisfied before a directory can be removed (e.g. the directory has to
+be empty, or may not be in use by other processes).  It is not legal
+for an implementation to partially remove a directory unless the
+entire directory is removed. A conformant implementation need not
+support directory removal in all situations (e.g. removal of the root
+directory).
+
+The operation may fail with:
+
+* &#39;HardwareFault&#39;
+A physical I\/O error has occurred.
+EIO
+
+* &#39;InvalidArgument&#39;
+The operand is not a valid directory name.
+[ENAMETOOLONG, ELOOP]
+
+* &#39;isDoesNotExistError&#39; \/ &#39;NoSuchThing&#39;
+The directory does not exist. 
+@[ENOENT, ENOTDIR]@
+
+* &#39;isPermissionError&#39; \/ &#39;PermissionDenied&#39;
+The process has insufficient privileges to perform the operation.
+@[EROFS, EACCES, EPERM]@
+
+* &#39;UnsatisfiedConstraints&#39;
+Implementation-dependent constraints are not satisfied.  
+@[EBUSY, ENOTEMPTY, EEXIST]@
+
+* &#39;UnsupportedOperation&#39;
+The implementation does not support removal in this situation.
+@[EINVAL]@
+
+* &#39;InappropriateType&#39;
+The operand refers to an existing non-directory object.
+@[ENOTDIR]@
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_344_1_344_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_344_1_344_16&#39;)"><span class="mpre">removeDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_344_1_344_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_344_1_344_16&#39;)"><span class="hl_fundecl"><span class="mpre">removeDirectory</span></span></a><span class="mpre"> </span><a name="loc_344_17_344_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_344_17_344_21&#39;)"><span class="hl_vardecl"><span class="mpre">path</span></span></a><span class="mpre"> =
+  </span><span class="hl_varref"><span class="mpre">Win32.removeDirectory</span></span><span class="mpre"> </span><a href="#loc_344_17_344_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_344_17_344_21&#39;)"><span class="hl_varref"><span class="mpre">path</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;removeDirectoryRecursive&#39; dir@  removes an existing directory /dir/</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- together with its content and all subdirectories. Be careful, </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- if the directory contains symlinks, the function will follow them.</span></span><span class="mpre">
+</span><a href="#loc_351_1_351_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_351_1_351_25&#39;)"><span class="mpre">removeDirectoryRecursive</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_351_1_351_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_351_1_351_25&#39;)"><span class="hl_fundecl"><span class="mpre">removeDirectoryRecursive</span></span></a><span class="mpre"> </span><a name="loc_351_26_351_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_351_26_351_34&#39;)"><span class="hl_vardecl"><span class="mpre">startLoc</span></span></a><span class="mpre"> = do
+  </span><a name="loc_352_3_352_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_352_3_352_7&#39;)"><span class="hl_vardecl"><span class="mpre">cont</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_628_1_628_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_628_1_628_21&#39;)"><span class="hl_varref"><span class="mpre">getDirectoryContents</span></span></a><span class="mpre"> </span><a href="#loc_351_26_351_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_351_26_351_34&#39;)"><span class="hl_varref"><span class="mpre">startLoc</span></span></a><span class="mpre">
+  </span><a href="Control.Monad.html#loc_106_1_106_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_106_1_106_10&#39;)"><span class="hl_varref"><span class="mpre">sequence_</span></span></a><span class="mpre"> [</span><a href="#loc_357_5_357_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_357_5_357_7&#39;)"><span class="hl_varref"><span class="mpre">rm</span></span></a><span class="mpre"> (</span><a href="#loc_351_26_351_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_351_26_351_34&#39;)"><span class="hl_varref"><span class="mpre">startLoc</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;/&gt;</span></span><span class="mpre"> </span><a href="#loc_353_36_353_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_353_36_353_37&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">) | </span><a name="loc_353_36_353_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_353_36_353_37&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_352_3_352_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_352_3_352_7&#39;)"><span class="hl_varref"><span class="mpre">cont</span></span></a><span class="mpre">, </span><a href="#loc_353_36_353_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_353_36_353_37&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">/=</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;.&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&amp;&amp;</span></span><span class="mpre"> </span><a href="#loc_353_36_353_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_353_36_353_37&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">/=</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;..&quot;</span></span><span class="mpre">]
+  </span><a href="#loc_344_1_344_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_344_1_344_16&#39;)"><span class="hl_varref"><span class="mpre">removeDirectory</span></span></a><span class="mpre"> </span><a href="#loc_351_26_351_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_351_26_351_34&#39;)"><span class="hl_varref"><span class="mpre">startLoc</span></span></a><span class="mpre">
+  where
+    </span><a href="#loc_357_5_357_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_357_5_357_7&#39;)"><span class="mpre">rm</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+    </span><a name="loc_357_5_357_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_357_5_357_7&#39;)"><span class="hl_fundecl"><span class="mpre">rm</span></span></a><span class="mpre"> </span><a name="loc_357_8_357_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_357_8_357_9&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = do </span><a name="loc_357_15_357_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_357_15_357_19&#39;)"><span class="hl_vardecl"><span class="mpre">temp</span></span></a><span class="mpre"> &lt;- </span><a href="Control.Exception.Base.html#loc_212_1_212_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_212_1_212_4&#39;)"><span class="hl_varref"><span class="mpre">try</span></span></a><span class="mpre"> (</span><a href="#loc_400_1_400_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_400_1_400_11&#39;)"><span class="hl_varref"><span class="mpre">removeFile</span></span></a><span class="mpre"> </span><a href="#loc_357_8_357_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_357_8_357_9&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre">)
+              case </span><a href="#loc_357_15_357_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_357_15_357_19&#39;)"><span class="hl_varref"><span class="mpre">temp</span></span></a><span class="mpre"> of
+                </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> </span><a name="loc_359_22_359_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_359_22_359_23&#39;)"><span class="hl_vardecl"><span class="mpre">e</span></span></a><span class="mpre">  -&gt; do </span><a name="loc_359_31_359_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_359_31_359_36&#39;)"><span class="hl_vardecl"><span class="mpre">isDir</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_717_1_717_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_717_1_717_19&#39;)"><span class="hl_varref"><span class="mpre">doesDirectoryExist</span></span></a><span class="mpre"> </span><a href="#loc_357_8_357_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_357_8_357_9&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre">
+                              </span><span class="hl_comment"><span class="mpre">-- If f is not a directory, re-throw the error</span></span><span class="mpre">
+                              </span><a href="Control.Monad.html#loc_270_1_270_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_270_1_270_7&#39;)"><span class="hl_varref"><span class="mpre">unless</span></span></a><span class="mpre"> </span><a href="#loc_359_31_359_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_359_31_359_36&#39;)"><span class="hl_varref"><span class="mpre">isDir</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">throw</span></span><span class="mpre"> (</span><a href="#loc_359_22_359_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_359_22_359_23&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">SomeException</span></span><span class="mpre">)
+                              </span><a href="#loc_351_1_351_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_351_1_351_25&#39;)"><span class="hl_varref"><span class="mpre">removeDirectoryRecursive</span></span></a><span class="mpre"> </span><a href="#loc_357_8_357_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_357_8_357_9&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre">
+                </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> _ -&gt; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- |&#39;removeFile&#39; /file/ removes the directory entry for an existing file
+/file/, where /file/ is not itself a directory. The
+implementation may specify additional constraints which must be
+satisfied before a file can be removed (e.g. the file may not be in
+use by other processes).
+
+The operation may fail with:
+
+* &#39;HardwareFault&#39;
+A physical I\/O error has occurred.
+@[EIO]@
+
+* &#39;InvalidArgument&#39;
+The operand is not a valid file name.
+@[ENAMETOOLONG, ELOOP]@
+
+* &#39;isDoesNotExistError&#39; \/ &#39;NoSuchThing&#39;
+The file does not exist. 
+@[ENOENT, ENOTDIR]@
+
+* &#39;isPermissionError&#39; \/ &#39;PermissionDenied&#39;
+The process has insufficient privileges to perform the operation.
+@[EROFS, EACCES, EPERM]@
+
+* &#39;UnsatisfiedConstraints&#39;
+Implementation-dependent constraints are not satisfied.  
+@[EBUSY]@
+
+* &#39;InappropriateType&#39;
+The operand refers to an existing directory.
+@[EPERM, EINVAL]@
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_400_1_400_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_400_1_400_11&#39;)"><span class="mpre">removeFile</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_400_1_400_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_400_1_400_11&#39;)"><span class="hl_fundecl"><span class="mpre">removeFile</span></span></a><span class="mpre"> </span><a name="loc_400_12_400_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_400_12_400_16&#39;)"><span class="hl_vardecl"><span class="mpre">path</span></span></a><span class="mpre"> =
+  </span><span class="hl_varref"><span class="mpre">Win32.deleteFile</span></span><span class="mpre"> </span><a href="#loc_400_12_400_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_400_12_400_16&#39;)"><span class="hl_varref"><span class="mpre">path</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- |@&#39;renameDirectory&#39; old new@ changes the name of an existing
+directory from /old/ to /new/.  If the /new/ directory
+already exists, it is atomically replaced by the /old/ directory.
+If the /new/ directory is neither the /old/ directory nor an
+alias of the /old/ directory, it is removed as if by
+&#39;removeDirectory&#39;.  A conformant implementation need not support
+renaming directories in all situations (e.g. renaming to an existing
+directory, or across different physical devices), but the constraints
+must be documented.
+
+On Win32 platforms, @renameDirectory@ fails if the /new/ directory already
+exists.
+
+The operation may fail with:
+
+* &#39;HardwareFault&#39;
+A physical I\/O error has occurred.
+@[EIO]@
+
+* &#39;InvalidArgument&#39;
+Either operand is not a valid directory name.
+@[ENAMETOOLONG, ELOOP]@
+
+* &#39;isDoesNotExistError&#39; \/ &#39;NoSuchThing&#39;
+The original directory does not exist, or there is no path to the target.
+@[ENOENT, ENOTDIR]@
+
+* &#39;isPermissionError&#39; \/ &#39;PermissionDenied&#39;
+The process has insufficient privileges to perform the operation.
+@[EROFS, EACCES, EPERM]@
+
+* &#39;ResourceExhausted&#39;
+Insufficient resources are available to perform the operation.  
+@[EDQUOT, ENOSPC, ENOMEM, EMLINK]@
+
+* &#39;UnsatisfiedConstraints&#39;
+Implementation-dependent constraints are not satisfied.
+@[EBUSY, ENOTEMPTY, EEXIST]@
+
+* &#39;UnsupportedOperation&#39;
+The implementation does not support renaming in this situation.
+@[EINVAL, EXDEV]@
+
+* &#39;InappropriateType&#39;
+Either path refers to an existing non-directory object.
+@[ENOTDIR, EISDIR]@
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_453_1_453_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_453_1_453_16&#39;)"><span class="mpre">renameDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_453_1_453_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_453_1_453_16&#39;)"><span class="hl_fundecl"><span class="mpre">renameDirectory</span></span></a><span class="mpre"> </span><a name="loc_453_17_453_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_453_17_453_22&#39;)"><span class="hl_vardecl"><span class="mpre">opath</span></span></a><span class="mpre"> </span><a name="loc_453_23_453_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_453_23_453_28&#39;)"><span class="hl_vardecl"><span class="mpre">npath</span></span></a><span class="mpre"> = do
+   </span><span class="hl_comment"><span class="mpre">-- XXX this test isn&#39;t performed atomically with the following rename</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- ToDo: use Win32 API</span></span><span class="mpre">
+   </span><a href="#loc_750_1_750_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_1_750_15&#39;)"><span class="hl_varref"><span class="mpre">withFileStatus</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;renameDirectory&quot;</span></span><span class="mpre"> </span><a href="#loc_453_17_453_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_453_17_453_22&#39;)"><span class="hl_varref"><span class="mpre">opath</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_456_46_456_48" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_456_46_456_48&#39;)"><span class="hl_vardecl"><span class="mpre">st</span></span></a><span class="mpre"> -&gt; do
+   </span><a name="loc_457_4_457_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_457_4_457_10&#39;)"><span class="hl_vardecl"><span class="mpre">is_dir</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_770_1_770_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_1_770_12&#39;)"><span class="hl_varref"><span class="mpre">isDirectory</span></span></a><span class="mpre"> </span><a href="#loc_456_46_456_48" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_456_46_456_48&#39;)"><span class="hl_varref"><span class="mpre">st</span></span></a><span class="mpre">
+   if (</span><span class="hl_varref"><span class="mpre">not</span></span><span class="mpre"> </span><a href="#loc_457_4_457_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_457_4_457_10&#39;)"><span class="hl_varref"><span class="mpre">is_dir</span></span></a><span class="mpre">)
+    then </span><a href="GHC.IO.Exception.html#loc_217_1_217_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_217_1_217_12&#39;)"><span class="hl_varref"><span class="mpre">ioException</span></span></a><span class="mpre"> (</span><a href="System.IO.Error.html#loc_289_1_289_18" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_289_1_289_18&#39;)"><span class="hl_varref"><span class="mpre">ioeSetErrorString</span></span></a><span class="mpre">
+                          (</span><a href="System.IO.Error.html#loc_115_1_115_10" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_115_1_115_10&#39;)"><span class="hl_varref"><span class="mpre">mkIOError</span></span></a><span class="mpre"> </span><a href="GHC.IO.Exception.html#loc_273_5_273_22" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_273_5_273_22&#39;)"><span class="hl_conref"><span class="mpre">InappropriateType</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;renameDirectory&quot;</span></span><span class="mpre"> </span><a href="Data.Maybe.html#loc_49_19_49_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_19_49_26&#39;)"><span class="hl_conref"><span class="mpre">Nothing</span></span></a><span class="mpre"> (</span><a href="Data.Maybe.html#loc_49_29_49_33" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_29_49_33&#39;)"><span class="hl_conref"><span class="mpre">Just</span></span></a><span class="mpre"> </span><a href="#loc_453_17_453_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_453_17_453_22&#39;)"><span class="hl_varref"><span class="mpre">opath</span></span></a><span class="mpre">))
+                          </span><span class="hl_string"><span class="mpre">&quot;not a directory&quot;</span></span><span class="mpre">)
+    else do
+   </span><span class="hl_varref"><span class="mpre">Win32.moveFileEx</span></span><span class="mpre"> </span><a href="#loc_453_17_453_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_453_17_453_22&#39;)"><span class="hl_varref"><span class="mpre">opath</span></span></a><span class="mpre"> </span><a href="#loc_453_23_453_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_453_23_453_28&#39;)"><span class="hl_varref"><span class="mpre">npath</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Win32.mOVEFILE_REPLACE_EXISTING</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- |@&#39;renameFile&#39; old new@ changes the name of an existing file system
+object from /old/ to /new/.  If the /new/ object already
+exists, it is atomically replaced by the /old/ object.  Neither
+path may refer to an existing directory.  A conformant implementation
+need not support renaming files in all situations (e.g. renaming
+across different physical devices), but the constraints must be
+documented.
+
+The operation may fail with:
+
+* &#39;HardwareFault&#39;
+A physical I\/O error has occurred.
+@[EIO]@
+
+* &#39;InvalidArgument&#39;
+Either operand is not a valid file name.
+@[ENAMETOOLONG, ELOOP]@
+
+* &#39;isDoesNotExistError&#39; \/ &#39;NoSuchThing&#39;
+The original file does not exist, or there is no path to the target.
+@[ENOENT, ENOTDIR]@
+
+* &#39;isPermissionError&#39; \/ &#39;PermissionDenied&#39;
+The process has insufficient privileges to perform the operation.
+@[EROFS, EACCES, EPERM]@
+
+* &#39;ResourceExhausted&#39;
+Insufficient resources are available to perform the operation.  
+@[EDQUOT, ENOSPC, ENOMEM, EMLINK]@
+
+* &#39;UnsatisfiedConstraints&#39;
+Implementation-dependent constraints are not satisfied.
+@[EBUSY]@
+
+* &#39;UnsupportedOperation&#39;
+The implementation does not support renaming in this situation.
+@[EXDEV]@
+
+* &#39;InappropriateType&#39;
+Either path refers to an existing directory.
+@[ENOTDIR, EISDIR, EINVAL, EEXIST, ENOTEMPTY]@
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_510_1_510_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_1_510_11&#39;)"><span class="mpre">renameFile</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_510_1_510_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_1_510_11&#39;)"><span class="hl_fundecl"><span class="mpre">renameFile</span></span></a><span class="mpre"> </span><a name="loc_510_12_510_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_12_510_17&#39;)"><span class="hl_vardecl"><span class="mpre">opath</span></span></a><span class="mpre"> </span><a name="loc_510_18_510_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_18_510_23&#39;)"><span class="hl_vardecl"><span class="mpre">npath</span></span></a><span class="mpre"> = do
+   </span><span class="hl_comment"><span class="mpre">-- XXX this test isn&#39;t performed atomically with the following rename</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- ToDo: use Win32 API</span></span><span class="mpre">
+   </span><a href="#loc_757_1_757_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_757_1_757_24&#39;)"><span class="hl_varref"><span class="mpre">withFileOrSymlinkStatus</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;renameFile&quot;</span></span><span class="mpre"> </span><a href="#loc_510_12_510_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_12_510_17&#39;)"><span class="hl_varref"><span class="mpre">opath</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_513_50_513_52" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_513_50_513_52&#39;)"><span class="hl_vardecl"><span class="mpre">st</span></span></a><span class="mpre"> -&gt; do
+   </span><a name="loc_514_4_514_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_514_4_514_10&#39;)"><span class="hl_vardecl"><span class="mpre">is_dir</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_770_1_770_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_1_770_12&#39;)"><span class="hl_varref"><span class="mpre">isDirectory</span></span></a><span class="mpre"> </span><a href="#loc_513_50_513_52" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_513_50_513_52&#39;)"><span class="hl_varref"><span class="mpre">st</span></span></a><span class="mpre">
+   if </span><a href="#loc_514_4_514_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_514_4_514_10&#39;)"><span class="hl_varref"><span class="mpre">is_dir</span></span></a><span class="mpre">
+    then </span><a href="GHC.IO.Exception.html#loc_217_1_217_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_217_1_217_12&#39;)"><span class="hl_varref"><span class="mpre">ioException</span></span></a><span class="mpre"> (</span><a href="System.IO.Error.html#loc_289_1_289_18" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_289_1_289_18&#39;)"><span class="hl_varref"><span class="mpre">ioeSetErrorString</span></span></a><span class="mpre">
+              (</span><a href="System.IO.Error.html#loc_115_1_115_10" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_115_1_115_10&#39;)"><span class="hl_varref"><span class="mpre">mkIOError</span></span></a><span class="mpre"> </span><a href="GHC.IO.Exception.html#loc_273_5_273_22" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_273_5_273_22&#39;)"><span class="hl_conref"><span class="mpre">InappropriateType</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;renameFile&quot;</span></span><span class="mpre"> </span><a href="Data.Maybe.html#loc_49_19_49_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_19_49_26&#39;)"><span class="hl_conref"><span class="mpre">Nothing</span></span></a><span class="mpre"> (</span><a href="Data.Maybe.html#loc_49_29_49_33" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_29_49_33&#39;)"><span class="hl_conref"><span class="mpre">Just</span></span></a><span class="mpre"> </span><a href="#loc_510_12_510_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_12_510_17&#39;)"><span class="hl_varref"><span class="mpre">opath</span></span></a><span class="mpre">))
+              </span><span class="hl_string"><span class="mpre">&quot;is a directory&quot;</span></span><span class="mpre">)
+    else do
+   </span><span class="hl_varref"><span class="mpre">Win32.moveFileEx</span></span><span class="mpre"> </span><a href="#loc_510_12_510_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_12_510_17&#39;)"><span class="hl_varref"><span class="mpre">opath</span></span></a><span class="mpre"> </span><a href="#loc_510_18_510_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_18_510_23&#39;)"><span class="hl_varref"><span class="mpre">npath</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Win32.mOVEFILE_REPLACE_EXISTING</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- |@&#39;copyFile&#39; old new@ copies the existing file from /old/ to /new/.
+If the /new/ file already exists, it is atomically replaced by the /old/ file.
+Neither path may refer to an existing directory.  The permissions of /old/ are
+copied to /new/, if possible.
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_529_1_529_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_529_1_529_9&#39;)"><span class="mpre">copyFile</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_529_1_529_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_529_1_529_9&#39;)"><span class="hl_fundecl"><span class="mpre">copyFile</span></span></a><span class="mpre"> </span><a name="loc_529_10_529_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_529_10_529_19&#39;)"><span class="hl_vardecl"><span class="mpre">fromFPath</span></span></a><span class="mpre"> </span><a name="loc_529_20_529_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_529_20_529_27&#39;)"><span class="hl_vardecl"><span class="mpre">toFPath</span></span></a><span class="mpre"> =
+    </span><a href="#loc_531_11_531_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_531_11_531_15&#39;)"><span class="hl_varref"><span class="mpre">copy</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`Prelude.catch`</span></span><span class="mpre"> (\</span><a name="loc_530_28_530_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_530_28_530_31&#39;)"><span class="hl_vardecl"><span class="mpre">exc</span></span></a><span class="mpre"> -&gt; </span><span class="hl_varref"><span class="mpre">throw</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="System.IO.Error.html#loc_290_1_290_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_290_1_290_15&#39;)"><span class="hl_varref"><span class="mpre">ioeSetLocation</span></span></a><span class="mpre"> </span><a href="#loc_530_28_530_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_530_28_530_31&#39;)"><span class="hl_varref"><span class="mpre">exc</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;copyFile&quot;</span></span><span class="mpre">)
+    where </span><a name="loc_531_11_531_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_531_11_531_15&#39;)"><span class="hl_vardecl"><span class="mpre">copy</span></span></a><span class="mpre"> = </span><a href="Control.Exception.Base.html#loc_259_1_259_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_259_1_259_8&#39;)"><span class="hl_varref"><span class="mpre">bracket</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">openBinaryFile</span></span><span class="mpre"> </span><a href="#loc_529_10_529_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_529_10_529_19&#39;)"><span class="hl_varref"><span class="mpre">fromFPath</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">ReadMode</span></span><span class="mpre">) </span><span class="hl_varref"><span class="mpre">hClose</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_531_72_531_77" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_531_72_531_77&#39;)"><span class="hl_vardecl"><span class="mpre">hFrom</span></span></a><span class="mpre"> -&gt;
+                 </span><a href="Control.Exception.Base.html#loc_291_1_291_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_291_1_291_15&#39;)"><span class="hl_varref"><span class="mpre">bracketOnError</span></span></a><span class="mpre"> </span><a href="#loc_537_11_537_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_537_11_537_18&#39;)"><span class="hl_varref"><span class="mpre">openTmp</span></span></a><span class="mpre"> </span><a href="#loc_538_11_538_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_538_11_538_19&#39;)"><span class="hl_varref"><span class="mpre">cleanTmp</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \(</span><a name="loc_532_54_532_62" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_532_54_532_62&#39;)"><span class="hl_vardecl"><span class="mpre">tmpFPath</span></span></a><span class="mpre">, </span><a name="loc_532_64_532_68" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_532_64_532_68&#39;)"><span class="hl_vardecl"><span class="mpre">hTmp</span></span></a><span class="mpre">) -&gt;
+                 do </span><span class="hl_varref"><span class="mpre">allocaBytes</span></span><span class="mpre"> </span><a href="#loc_541_11_541_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_541_11_541_21&#39;)"><span class="hl_varref"><span class="mpre">bufferSize</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_543_11_543_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_11_543_23&#39;)"><span class="hl_varref"><span class="mpre">copyContents</span></span></a><span class="mpre"> </span><a href="#loc_531_72_531_77" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_531_72_531_77&#39;)"><span class="hl_varref"><span class="mpre">hFrom</span></span></a><span class="mpre"> </span><a href="#loc_532_64_532_68" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_532_64_532_68&#39;)"><span class="hl_varref"><span class="mpre">hTmp</span></span></a><span class="mpre">
+                    </span><span class="hl_varref"><span class="mpre">hClose</span></span><span class="mpre"> </span><a href="#loc_532_64_532_68" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_532_64_532_68&#39;)"><span class="hl_varref"><span class="mpre">hTmp</span></span></a><span class="mpre">
+                    </span><a href="#loc_549_11_549_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_549_11_549_29&#39;)"><span class="hl_varref"><span class="mpre">ignoreIOExceptions</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_209_1_209_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_1_209_16&#39;)"><span class="hl_varref"><span class="mpre">copyPermissions</span></span></a><span class="mpre"> </span><a href="#loc_529_10_529_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_529_10_529_19&#39;)"><span class="hl_varref"><span class="mpre">fromFPath</span></span></a><span class="mpre"> </span><a href="#loc_532_54_532_62" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_532_54_532_62&#39;)"><span class="hl_varref"><span class="mpre">tmpFPath</span></span></a><span class="mpre">
+                    </span><a href="#loc_510_1_510_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_510_1_510_11&#39;)"><span class="hl_varref"><span class="mpre">renameFile</span></span></a><span class="mpre"> </span><a href="#loc_532_54_532_62" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_532_54_532_62&#39;)"><span class="hl_varref"><span class="mpre">tmpFPath</span></span></a><span class="mpre"> </span><a href="#loc_529_20_529_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_529_20_529_27&#39;)"><span class="hl_varref"><span class="mpre">toFPath</span></span></a><span class="mpre">
+          </span><a name="loc_537_11_537_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_537_11_537_18&#39;)"><span class="hl_vardecl"><span class="mpre">openTmp</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">openBinaryTempFile</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">takeDirectory</span></span><span class="mpre"> </span><a href="#loc_529_20_529_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_529_20_529_27&#39;)"><span class="hl_varref"><span class="mpre">toFPath</span></span></a><span class="mpre">) </span><span class="hl_string"><span class="mpre">&quot;.copyFile.tmp&quot;</span></span><span class="mpre">
+          </span><a name="loc_538_11_538_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_538_11_538_19&#39;)"><span class="hl_fundecl"><span class="mpre">cleanTmp</span></span></a><span class="mpre"> (</span><a name="loc_538_21_538_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_538_21_538_29&#39;)"><span class="hl_vardecl"><span class="mpre">tmpFPath</span></span></a><span class="mpre">, </span><a name="loc_538_31_538_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_538_31_538_35&#39;)"><span class="hl_vardecl"><span class="mpre">hTmp</span></span></a><span class="mpre">)
+              = do </span><a href="#loc_549_11_549_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_549_11_549_29&#39;)"><span class="hl_varref"><span class="mpre">ignoreIOExceptions</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">hClose</span></span><span class="mpre"> </span><a href="#loc_538_31_538_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_538_31_538_35&#39;)"><span class="hl_varref"><span class="mpre">hTmp</span></span></a><span class="mpre">
+                   </span><a href="#loc_549_11_549_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_549_11_549_29&#39;)"><span class="hl_varref"><span class="mpre">ignoreIOExceptions</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_400_1_400_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_400_1_400_11&#39;)"><span class="hl_varref"><span class="mpre">removeFile</span></span></a><span class="mpre"> </span><a href="#loc_538_21_538_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_538_21_538_29&#39;)"><span class="hl_varref"><span class="mpre">tmpFPath</span></span></a><span class="mpre">
+          </span><a name="loc_541_11_541_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_541_11_541_21&#39;)"><span class="hl_vardecl"><span class="mpre">bufferSize</span></span></a><span class="mpre"> = </span><span class="hl_num"><span class="mpre">1024</span></span><span class="mpre">
+
+          </span><a name="loc_543_11_543_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_11_543_23&#39;)"><span class="hl_fundecl"><span class="mpre">copyContents</span></span></a><span class="mpre"> </span><a name="loc_543_24_543_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_24_543_29&#39;)"><span class="hl_vardecl"><span class="mpre">hFrom</span></span></a><span class="mpre"> </span><a name="loc_543_30_543_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_30_543_33&#39;)"><span class="hl_vardecl"><span class="mpre">hTo</span></span></a><span class="mpre"> </span><a name="loc_543_34_543_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_34_543_40&#39;)"><span class="hl_vardecl"><span class="mpre">buffer</span></span></a><span class="mpre"> = do
+                  </span><a name="loc_544_19_544_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_544_19_544_24&#39;)"><span class="hl_vardecl"><span class="mpre">count</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">hGetBuf</span></span><span class="mpre"> </span><a href="#loc_543_24_543_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_24_543_29&#39;)"><span class="hl_varref"><span class="mpre">hFrom</span></span></a><span class="mpre"> </span><a href="#loc_543_34_543_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_34_543_40&#39;)"><span class="hl_varref"><span class="mpre">buffer</span></span></a><span class="mpre"> </span><a href="#loc_541_11_541_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_541_11_541_21&#39;)"><span class="hl_varref"><span class="mpre">bufferSize</span></span></a><span class="mpre">
+                  </span><a href="Control.Monad.html#loc_265_1_265_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_265_1_265_5&#39;)"><span class="hl_varref"><span class="mpre">when</span></span></a><span class="mpre"> (</span><a href="#loc_544_19_544_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_544_19_544_24&#39;)"><span class="hl_varref"><span class="mpre">count</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&gt;</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+                          </span><span class="hl_varref"><span class="mpre">hPutBuf</span></span><span class="mpre"> </span><a href="#loc_543_30_543_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_30_543_33&#39;)"><span class="hl_varref"><span class="mpre">hTo</span></span></a><span class="mpre"> </span><a href="#loc_543_34_543_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_34_543_40&#39;)"><span class="hl_varref"><span class="mpre">buffer</span></span></a><span class="mpre"> </span><a href="#loc_544_19_544_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_544_19_544_24&#39;)"><span class="hl_varref"><span class="mpre">count</span></span></a><span class="mpre">
+                          </span><a href="#loc_543_11_543_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_11_543_23&#39;)"><span class="hl_varref"><span class="mpre">copyContents</span></span></a><span class="mpre"> </span><a href="#loc_543_24_543_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_24_543_29&#39;)"><span class="hl_varref"><span class="mpre">hFrom</span></span></a><span class="mpre"> </span><a href="#loc_543_30_543_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_30_543_33&#39;)"><span class="hl_varref"><span class="mpre">hTo</span></span></a><span class="mpre"> </span><a href="#loc_543_34_543_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_543_34_543_40&#39;)"><span class="hl_varref"><span class="mpre">buffer</span></span></a><span class="mpre">
+
+          </span><a name="loc_549_11_549_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_549_11_549_29&#39;)"><span class="hl_fundecl"><span class="mpre">ignoreIOExceptions</span></span></a><span class="mpre"> </span><a name="loc_549_30_549_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_549_30_549_32&#39;)"><span class="hl_vardecl"><span class="mpre">io</span></span></a><span class="mpre"> = </span><a href="#loc_549_30_549_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_549_30_549_32&#39;)"><span class="hl_varref"><span class="mpre">io</span></span></a><span class="mpre"> </span><a href="Control.Exception.Base.html#loc_150_1_150_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_150_1_150_6&#39;)"><span class="hl_infix"><span class="mpre">`catch`</span></span></a><span class="mpre"> </span><a href="#loc_551_11_551_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_11_551_29&#39;)"><span class="hl_varref"><span class="mpre">ioExceptionIgnorer</span></span></a><span class="mpre">
+          </span><a href="#loc_551_11_551_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_11_551_29&#39;)"><span class="mpre">ioExceptionIgnorer</span></a><span class="mpre"> :: </span><a href="GHC.IO.Exception.html#loc_238_6_238_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_238_6_238_17&#39;)"><span class="hl_tyconref"><span class="mpre">IOException</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+          </span><a name="loc_551_11_551_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_551_11_551_29&#39;)"><span class="hl_fundecl"><span class="mpre">ioExceptionIgnorer</span></span></a><span class="mpre"> _ = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Given path referring to a file or directory, returns a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- canonicalized path, with the intent that two paths referring</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to the same file\/directory will map to the same canonicalized</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- path. Note that it is impossible to guarantee that the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- implication (same file\/dir \&lt;=\&gt; same canonicalizedPath) holds</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in either direction: this function can make only a best-effort</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- attempt.</span></span><span class="mpre">
+</span><a href="#loc_561_1_561_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_561_1_561_17&#39;)"><span class="mpre">canonicalizePath</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+</span><a name="loc_561_1_561_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_561_1_561_17&#39;)"><span class="hl_fundecl"><span class="mpre">canonicalizePath</span></span></a><span class="mpre"> </span><a name="loc_561_18_561_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_561_18_561_23&#39;)"><span class="hl_vardecl"><span class="mpre">fpath</span></span></a><span class="mpre"> =
+    do </span><a name="loc_562_8_562_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_562_8_562_12&#39;)"><span class="hl_vardecl"><span class="mpre">path</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">Win32.getFullPathName</span></span><span class="mpre"> </span><a href="#loc_561_18_561_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_561_18_561_23&#39;)"><span class="hl_varref"><span class="mpre">fpath</span></span></a><span class="mpre">
+       </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">normalise</span></span><span class="mpre"> </span><a href="#loc_562_8_562_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_562_8_562_12&#39;)"><span class="hl_varref"><span class="mpre">path</span></span></a><span class="mpre">)
+        </span><span class="hl_comment"><span class="mpre">-- normalise does more stuff, like upper-casing the drive letter</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | &#39;makeRelative&#39; the current directory.</span></span><span class="mpre">
+</span><a href="#loc_569_1_569_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_569_1_569_31&#39;)"><span class="mpre">makeRelativeToCurrentDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+</span><a name="loc_569_1_569_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_569_1_569_31&#39;)"><span class="hl_fundecl"><span class="mpre">makeRelativeToCurrentDirectory</span></span></a><span class="mpre"> </span><a name="loc_569_32_569_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_569_32_569_33&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = do
+    </span><a name="loc_570_5_570_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_570_5_570_8&#39;)"><span class="hl_vardecl"><span class="mpre">cur</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_673_1_673_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_673_1_673_20&#39;)"><span class="hl_varref"><span class="mpre">getCurrentDirectory</span></span></a><span class="mpre">
+    </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">makeRelative</span></span><span class="mpre"> </span><a href="#loc_570_5_570_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_570_5_570_8&#39;)"><span class="hl_varref"><span class="mpre">cur</span></span></a><span class="mpre"> </span><a href="#loc_569_32_569_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_569_32_569_33&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Given an executable file name, searches for such file in the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- directories listed in system PATH. The returned value is the path</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to the found executable or Nothing if an executable with the given</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- name was not found. For example (findExecutable \&quot;ghc\&quot;) gives you</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the path to GHC.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The path returned by &#39;findExecutable&#39; corresponds to the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- program that would be executed by &#39;System.Process.createProcess&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- when passed the same string (as a RawCommand, not a ShellCommand).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- On Windows, &#39;findExecutable&#39; calls the Win32 function &#39;SearchPath&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- which may search other places before checking the directories in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @PATH@.  Where it actually searches depends on registry settings,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- but notably includes the directory containing the current</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- executable. See</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;http://msdn.microsoft.com/en-us/library/aa365527.aspx&gt; for more</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- details.  </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_592_1_592_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_592_1_592_15&#39;)"><span class="mpre">findExecutable</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">)
+</span><a name="loc_592_1_592_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_592_1_592_15&#39;)"><span class="hl_fundecl"><span class="mpre">findExecutable</span></span></a><span class="mpre"> </span><a name="loc_592_16_592_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_592_16_592_22&#39;)"><span class="hl_vardecl"><span class="mpre">binary</span></span></a><span class="mpre"> =
+  </span><span class="hl_varref"><span class="mpre">Win32.searchPath</span></span><span class="mpre"> </span><a href="Data.Maybe.html#loc_49_19_49_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_19_49_26&#39;)"><span class="hl_conref"><span class="mpre">Nothing</span></span></a><span class="mpre"> </span><a href="#loc_592_16_592_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_592_16_592_22&#39;)"><span class="hl_varref"><span class="mpre">binary</span></span></a><span class="mpre"> (</span><span class="hl_char"><span class="mpre">&#39;.&#39;</span></span><span class="hl_infix"><span class="mpre">:</span></span><a href="#loc_913_1_913_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_913_1_913_13&#39;)"><span class="hl_varref"><span class="mpre">exeExtension</span></span></a><span class="mpre">)
+
+
+</span><span class="hl_comment"><span class="mpre">{- |@&#39;getDirectoryContents&#39; dir@ returns a list of /all/ entries
+in /dir/. 
+
+The operation may fail with:
+
+* &#39;HardwareFault&#39;
+A physical I\/O error has occurred.
+@[EIO]@
+
+* &#39;InvalidArgument&#39;
+The operand is not a valid directory name.
+@[ENAMETOOLONG, ELOOP]@
+
+* &#39;isDoesNotExistError&#39; \/ &#39;NoSuchThing&#39;
+The directory does not exist.
+@[ENOENT, ENOTDIR]@
+
+* &#39;isPermissionError&#39; \/ &#39;PermissionDenied&#39;
+The process has insufficient privileges to perform the operation.
+@[EACCES]@
+
+* &#39;ResourceExhausted&#39;
+Insufficient resources are available to perform the operation.
+@[EMFILE, ENFILE]@
+
+* &#39;InappropriateType&#39;
+The path refers to an existing non-directory object.
+@[ENOTDIR]@
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_628_1_628_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_628_1_628_21&#39;)"><span class="mpre">getDirectoryContents</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">]
+</span><a name="loc_628_1_628_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_628_1_628_21&#39;)"><span class="hl_fundecl"><span class="mpre">getDirectoryContents</span></span></a><span class="mpre"> </span><a name="loc_628_22_628_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_628_22_628_26&#39;)"><span class="hl_vardecl"><span class="mpre">path</span></span></a><span class="mpre"> =
+  </span><a href="System.IO.Error.html#loc_297_1_297_14" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_297_1_297_14&#39;)"><span class="hl_varref"><span class="mpre">modifyIOError</span></span></a><span class="mpre"> ((</span><a href="System.IO.Error.html#loc_292_1_292_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_292_1_292_15&#39;)"><span class="hl_infix"><span class="mpre">`ioeSetFileName`</span></span></a><span class="mpre"> </span><a href="#loc_628_22_628_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_628_22_628_26&#39;)"><span class="hl_varref"><span class="mpre">path</span></span></a><span class="mpre">) </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> 
+                 (</span><a href="System.IO.Error.html#loc_290_1_290_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_290_1_290_15&#39;)"><span class="hl_infix"><span class="mpre">`ioeSetLocation`</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;getDirectoryContents&quot;</span></span><span class="mpre">)) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+  </span><a href="Control.Exception.Base.html#loc_259_1_259_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_259_1_259_8&#39;)"><span class="hl_varref"><span class="mpre">bracket</span></span></a><span class="mpre">
+     (</span><span class="hl_varref"><span class="mpre">Win32.findFirstFile</span></span><span class="mpre"> (</span><a href="#loc_628_22_628_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_628_22_628_26&#39;)"><span class="hl_varref"><span class="mpre">path</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;/&gt;</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;*&quot;</span></span><span class="mpre">))
+     (\(</span><a name="loc_633_9_633_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_633_9_633_10&#39;)"><span class="hl_vardecl"><span class="mpre">h</span></span></a><span class="mpre">,_) -&gt; </span><span class="hl_varref"><span class="mpre">Win32.findClose</span></span><span class="mpre"> </span><a href="#loc_633_9_633_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_633_9_633_10&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre">)
+     (\(</span><a name="loc_634_9_634_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_634_9_634_10&#39;)"><span class="hl_vardecl"><span class="mpre">h</span></span></a><span class="mpre">,</span><a name="loc_634_11_634_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_634_11_634_15&#39;)"><span class="hl_vardecl"><span class="mpre">fdat</span></span></a><span class="mpre">) -&gt; </span><a href="#loc_639_5_639_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_5_639_9&#39;)"><span class="hl_varref"><span class="mpre">loop</span></span></a><span class="mpre"> </span><a href="#loc_634_9_634_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_634_9_634_10&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre"> </span><a href="#loc_634_11_634_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_634_11_634_15&#39;)"><span class="hl_varref"><span class="mpre">fdat</span></span></a><span class="mpre"> [])
+  where
+        </span><span class="hl_comment"><span class="mpre">-- we needn&#39;t worry about empty directories: adirectory always</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- has at least &quot;.&quot; and &quot;..&quot; entries</span></span><span class="mpre">
+    </span><a href="#loc_639_5_639_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_5_639_9&#39;)"><span class="mpre">loop</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Win32.HANDLE</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Win32.FindData</span></span><span class="mpre"> -&gt; [</span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">] -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">]
+    </span><a name="loc_639_5_639_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_5_639_9&#39;)"><span class="hl_fundecl"><span class="mpre">loop</span></span></a><span class="mpre"> </span><a name="loc_639_10_639_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_10_639_11&#39;)"><span class="hl_vardecl"><span class="mpre">h</span></span></a><span class="mpre"> </span><a name="loc_639_12_639_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_12_639_16&#39;)"><span class="hl_vardecl"><span class="mpre">fdat</span></span></a><span class="mpre"> </span><a name="loc_639_17_639_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_17_639_20&#39;)"><span class="hl_vardecl"><span class="mpre">acc</span></span></a><span class="mpre"> = do
+       </span><a name="loc_640_8_640_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_640_8_640_16&#39;)"><span class="hl_vardecl"><span class="mpre">filename</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">Win32.getFindDataFileName</span></span><span class="mpre"> </span><a href="#loc_639_12_639_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_12_639_16&#39;)"><span class="hl_varref"><span class="mpre">fdat</span></span></a><span class="mpre">
+       </span><a name="loc_641_8_641_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_641_8_641_12&#39;)"><span class="hl_vardecl"><span class="mpre">more</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">Win32.findNextFile</span></span><span class="mpre"> </span><a href="#loc_639_10_639_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_10_639_11&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre"> </span><a href="#loc_639_12_639_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_12_639_16&#39;)"><span class="hl_varref"><span class="mpre">fdat</span></span></a><span class="mpre">
+       if </span><a href="#loc_641_8_641_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_641_8_641_12&#39;)"><span class="hl_varref"><span class="mpre">more</span></span></a><span class="mpre">
+          then </span><a href="#loc_639_5_639_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_5_639_9&#39;)"><span class="hl_varref"><span class="mpre">loop</span></span></a><span class="mpre"> </span><a href="#loc_639_10_639_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_10_639_11&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre"> </span><a href="#loc_639_12_639_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_12_639_16&#39;)"><span class="hl_varref"><span class="mpre">fdat</span></span></a><span class="mpre"> (</span><a href="#loc_640_8_640_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_640_8_640_16&#39;)"><span class="hl_varref"><span class="mpre">filename</span></span></a><span class="hl_infix"><span class="mpre">:</span></span><a href="#loc_639_17_639_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_17_639_20&#39;)"><span class="hl_varref"><span class="mpre">acc</span></span></a><span class="mpre">)
+          else </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><a href="#loc_640_8_640_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_640_8_640_16&#39;)"><span class="hl_varref"><span class="mpre">filename</span></span></a><span class="hl_infix"><span class="mpre">:</span></span><a href="#loc_639_17_639_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_639_17_639_20&#39;)"><span class="hl_varref"><span class="mpre">acc</span></span></a><span class="mpre">)
+                 </span><span class="hl_comment"><span class="mpre">-- no need to reverse, ordering is undefined</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- |If the operating system has a notion of current directories,
+&#39;getCurrentDirectory&#39; returns an absolute path to the
+current directory of the calling process.
+
+The operation may fail with:
+
+* &#39;HardwareFault&#39;
+A physical I\/O error has occurred.
+@[EIO]@
+
+* &#39;isDoesNotExistError&#39; \/ &#39;NoSuchThing&#39;
+There is no path referring to the current directory.
+@[EPERM, ENOENT, ESTALE...]@
+
+* &#39;isPermissionError&#39; \/ &#39;PermissionDenied&#39;
+The process has insufficient privileges to perform the operation.
+@[EACCES]@
+
+* &#39;ResourceExhausted&#39;
+Insufficient resources are available to perform the operation.
+
+* &#39;UnsupportedOperation&#39;
+The operating system has no notion of current directory.
+
+-}</span></span><span class="mpre">
+</span><a href="#loc_673_1_673_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_673_1_673_20&#39;)"><span class="mpre">getCurrentDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+</span><a name="loc_673_1_673_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_673_1_673_20&#39;)"><span class="hl_vardecl"><span class="mpre">getCurrentDirectory</span></span></a><span class="mpre"> = do
+  </span><span class="hl_varref"><span class="mpre">Win32.getCurrentDirectory</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- |If the operating system has a notion of current directories,
+@&#39;setCurrentDirectory&#39; dir@ changes the current
+directory of the calling process to /dir/.
+
+The operation may fail with:
+
+* &#39;HardwareFault&#39;
+A physical I\/O error has occurred.
+@[EIO]@
+
+* &#39;InvalidArgument&#39;
+The operand is not a valid directory name.
+@[ENAMETOOLONG, ELOOP]@
+
+* &#39;isDoesNotExistError&#39; \/ &#39;NoSuchThing&#39;
+The directory does not exist.
+@[ENOENT, ENOTDIR]@
+
+* &#39;isPermissionError&#39; \/ &#39;PermissionDenied&#39;
+The process has insufficient privileges to perform the operation.
+@[EACCES]@
+
+* &#39;UnsupportedOperation&#39;
+The operating system has no notion of current directory, or the
+current directory cannot be dynamically changed.
+
+* &#39;InappropriateType&#39;
+The path refers to an existing non-directory object.
+@[ENOTDIR]@
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_709_1_709_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_709_1_709_20&#39;)"><span class="mpre">setCurrentDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_709_1_709_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_709_1_709_20&#39;)"><span class="hl_fundecl"><span class="mpre">setCurrentDirectory</span></span></a><span class="mpre"> </span><a name="loc_709_21_709_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_709_21_709_25&#39;)"><span class="hl_vardecl"><span class="mpre">path</span></span></a><span class="mpre"> =
+  </span><span class="hl_varref"><span class="mpre">Win32.setCurrentDirectory</span></span><span class="mpre"> </span><a href="#loc_709_21_709_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_709_21_709_25&#39;)"><span class="hl_varref"><span class="mpre">path</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- |The operation &#39;doesDirectoryExist&#39; returns &#39;True&#39; if the argument file
+exists and is a directory, and &#39;False&#39; otherwise.
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_717_1_717_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_717_1_717_19&#39;)"><span class="mpre">doesDirectoryExist</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_717_1_717_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_717_1_717_19&#39;)"><span class="hl_fundecl"><span class="mpre">doesDirectoryExist</span></span></a><span class="mpre"> </span><a name="loc_717_20_717_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_717_20_717_24&#39;)"><span class="hl_vardecl"><span class="mpre">name</span></span></a><span class="mpre"> =
+   (</span><a href="#loc_750_1_750_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_1_750_15&#39;)"><span class="hl_varref"><span class="mpre">withFileStatus</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;doesDirectoryExist&quot;</span></span><span class="mpre"> </span><a href="#loc_717_20_717_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_717_20_717_24&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_718_49_718_51" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_718_49_718_51&#39;)"><span class="hl_vardecl"><span class="mpre">st</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_770_1_770_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_1_770_12&#39;)"><span class="hl_varref"><span class="mpre">isDirectory</span></span></a><span class="mpre"> </span><a href="#loc_718_49_718_51" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_718_49_718_51&#39;)"><span class="hl_varref"><span class="mpre">st</span></span></a><span class="mpre">)
+   </span><a href="Control.Exception.Base.html#loc_150_1_150_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_150_1_150_6&#39;)"><span class="hl_infix"><span class="mpre">`catch`</span></span></a><span class="mpre"> ((\ _ -&gt; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">) :: </span><a href="GHC.IO.Exception.html#loc_238_6_238_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_238_6_238_17&#39;)"><span class="hl_tyconref"><span class="mpre">IOException</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">{- |The operation &#39;doesFileExist&#39; returns &#39;True&#39;
+if the argument file exists and is not a directory, and &#39;False&#39; otherwise.
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_726_1_726_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_726_1_726_14&#39;)"><span class="mpre">doesFileExist</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_726_1_726_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_726_1_726_14&#39;)"><span class="hl_fundecl"><span class="mpre">doesFileExist</span></span></a><span class="mpre"> </span><a name="loc_726_15_726_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_726_15_726_19&#39;)"><span class="hl_vardecl"><span class="mpre">name</span></span></a><span class="mpre"> =
+   (</span><a href="#loc_750_1_750_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_1_750_15&#39;)"><span class="hl_varref"><span class="mpre">withFileStatus</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;doesFileExist&quot;</span></span><span class="mpre"> </span><a href="#loc_726_15_726_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_726_15_726_19&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_727_44_727_46" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_727_44_727_46&#39;)"><span class="hl_vardecl"><span class="mpre">st</span></span></a><span class="mpre"> -&gt; do </span><a name="loc_727_53_727_54" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_727_53_727_54&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_770_1_770_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_1_770_12&#39;)"><span class="hl_varref"><span class="mpre">isDirectory</span></span></a><span class="mpre"> </span><a href="#loc_727_44_727_46" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_727_44_727_46&#39;)"><span class="hl_varref"><span class="mpre">st</span></span></a><span class="mpre">; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">not</span></span><span class="mpre"> </span><a href="#loc_727_53_727_54" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_727_53_727_54&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">))
+   </span><a href="Control.Exception.Base.html#loc_150_1_150_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_150_1_150_6&#39;)"><span class="hl_infix"><span class="mpre">`catch`</span></span></a><span class="mpre"> ((\ _ -&gt; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">) :: </span><a href="GHC.IO.Exception.html#loc_238_6_238_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_238_6_238_17&#39;)"><span class="hl_tyconref"><span class="mpre">IOException</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">{- |The &#39;getModificationTime&#39; operation returns the
+clock time at which the file or directory was last modified.
+
+The operation may fail with:
+
+* &#39;isPermissionError&#39; if the user is not permitted to access
+  the modification time; or
+
+* &#39;isDoesNotExistError&#39; if the file or directory does not exist.
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_743_1_743_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_743_1_743_20&#39;)"><span class="mpre">getModificationTime</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ClockTime</span></span><span class="mpre">
+</span><a name="loc_743_1_743_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_743_1_743_20&#39;)"><span class="hl_fundecl"><span class="mpre">getModificationTime</span></span></a><span class="mpre"> </span><a name="loc_743_21_743_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_743_21_743_25&#39;)"><span class="hl_vardecl"><span class="mpre">name</span></span></a><span class="mpre"> = do
+ </span><span class="hl_comment"><span class="mpre">-- ToDo: use Win32 API</span></span><span class="mpre">
+ </span><a href="#loc_750_1_750_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_1_750_15&#39;)"><span class="hl_varref"><span class="mpre">withFileStatus</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;getModificationTime&quot;</span></span><span class="mpre"> </span><a href="#loc_743_21_743_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_743_21_743_25&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \ </span><a name="loc_745_48_745_50" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_745_48_745_50&#39;)"><span class="hl_vardecl"><span class="mpre">st</span></span></a><span class="mpre"> -&gt; do
+ </span><a href="#loc_764_1_764_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_764_1_764_17&#39;)"><span class="hl_varref"><span class="mpre">modificationTime</span></span></a><span class="mpre"> </span><a href="#loc_745_48_745_50" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_745_48_745_50&#39;)"><span class="hl_varref"><span class="mpre">st</span></span></a><span class="mpre">
+
+
+</span><a href="#loc_750_1_750_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_1_750_15&#39;)"><span class="mpre">withFileStatus</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyconref"><span class="mpre">Ptr</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">CStat</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_750_1_750_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_1_750_15&#39;)"><span class="hl_fundecl"><span class="mpre">withFileStatus</span></span></a><span class="mpre"> </span><a name="loc_750_16_750_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_16_750_19&#39;)"><span class="hl_vardecl"><span class="mpre">loc</span></span></a><span class="mpre"> </span><a name="loc_750_20_750_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_20_750_24&#39;)"><span class="hl_vardecl"><span class="mpre">name</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">f</span></span><span class="mpre"> = do
+  </span><a href="System.IO.Error.html#loc_297_1_297_14" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_297_1_297_14&#39;)"><span class="hl_varref"><span class="mpre">modifyIOError</span></span></a><span class="mpre"> (</span><a href="System.IO.Error.html#loc_292_1_292_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_292_1_292_15&#39;)"><span class="hl_infix"><span class="mpre">`ioeSetFileName`</span></span></a><span class="mpre"> </span><a href="#loc_750_20_750_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_20_750_24&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre">) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre">
+    </span><span class="hl_varref"><span class="mpre">allocaBytes</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">sizeof_stat</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_752_32_752_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_752_32_752_33&#39;)"><span class="hl_vardecl"><span class="mpre">p</span></span></a><span class="mpre"> -&gt;
+      </span><span class="hl_varref"><span class="mpre">withFilePath</span></span><span class="mpre"> (</span><a href="#loc_775_1_775_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_775_1_775_17&#39;)"><span class="hl_varref"><span class="mpre">fileNameEndClean</span></span></a><span class="mpre"> </span><a href="#loc_750_20_750_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_20_750_24&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre">) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_753_47_753_48" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_753_47_753_48&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt; do
+        </span><span class="hl_varref"><span class="mpre">throwErrnoIfMinus1Retry_</span></span><span class="mpre"> </span><a href="#loc_750_16_750_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_750_16_750_19&#39;)"><span class="hl_varref"><span class="mpre">loc</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">c_stat</span></span><span class="mpre"> </span><a href="#loc_753_47_753_48" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_753_47_753_48&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> </span><a href="#loc_752_32_752_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_752_32_752_33&#39;)"><span class="hl_varref"><span class="mpre">p</span></span></a><span class="mpre">)
+
+</span><a href="#loc_757_1_757_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_757_1_757_24&#39;)"><span class="mpre">withFileOrSymlinkStatus</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyconref"><span class="mpre">Ptr</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">CStat</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_757_1_757_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_757_1_757_24&#39;)"><span class="hl_fundecl"><span class="mpre">withFileOrSymlinkStatus</span></span></a><span class="mpre"> </span><a name="loc_757_25_757_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_757_25_757_28&#39;)"><span class="hl_vardecl"><span class="mpre">loc</span></span></a><span class="mpre"> </span><a name="loc_757_29_757_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_757_29_757_33&#39;)"><span class="hl_vardecl"><span class="mpre">name</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">f</span></span><span class="mpre"> = do
+  </span><a href="System.IO.Error.html#loc_297_1_297_14" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_297_1_297_14&#39;)"><span class="hl_varref"><span class="mpre">modifyIOError</span></span></a><span class="mpre"> (</span><a href="System.IO.Error.html#loc_292_1_292_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_292_1_292_15&#39;)"><span class="hl_infix"><span class="mpre">`ioeSetFileName`</span></span></a><span class="mpre"> </span><a href="#loc_757_29_757_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_757_29_757_33&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre">) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre">
+    </span><span class="hl_varref"><span class="mpre">allocaBytes</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">sizeof_stat</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_759_32_759_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_759_32_759_33&#39;)"><span class="hl_vardecl"><span class="mpre">p</span></span></a><span class="mpre"> -&gt;
+      </span><span class="hl_varref"><span class="mpre">withFilePath</span></span><span class="mpre"> </span><a href="#loc_757_29_757_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_757_29_757_33&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_760_28_760_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_760_28_760_29&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt; do
+        </span><span class="hl_varref"><span class="mpre">throwErrnoIfMinus1Retry_</span></span><span class="mpre"> </span><a href="#loc_757_25_757_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_757_25_757_28&#39;)"><span class="hl_varref"><span class="mpre">loc</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">lstat</span></span><span class="mpre"> </span><a href="#loc_760_28_760_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_760_28_760_29&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> </span><a href="#loc_759_32_759_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_759_32_759_33&#39;)"><span class="hl_varref"><span class="mpre">p</span></span></a><span class="mpre">)
+
+</span><a href="#loc_764_1_764_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_764_1_764_17&#39;)"><span class="mpre">modificationTime</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Ptr</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">CStat</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ClockTime</span></span><span class="mpre">
+</span><a name="loc_764_1_764_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_764_1_764_17&#39;)"><span class="hl_fundecl"><span class="mpre">modificationTime</span></span></a><span class="mpre"> </span><a name="loc_764_18_764_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_764_18_764_22&#39;)"><span class="hl_vardecl"><span class="mpre">stat</span></span></a><span class="mpre"> = do
+    </span><a name="loc_765_5_765_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_765_5_765_10&#39;)"><span class="hl_vardecl"><span class="mpre">mtime</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">st_mtime</span></span><span class="mpre"> </span><a href="#loc_764_18_764_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_764_18_764_22&#39;)"><span class="hl_varref"><span class="mpre">stat</span></span></a><span class="mpre">
+    let </span><a name="loc_766_9_766_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_766_9_766_22&#39;)"><span class="hl_vardecl"><span class="mpre">realToInteger</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">round</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">realToFrac</span></span><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 766, srcSpanStartColumn = 47, srcSpanEndLine = 766, srcSpanEndColumn = 56}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 766, srcSpanStartColumn = 54, srcSpanEndLine = 766, srcSpanEndColumn = 56}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/h"><span class="mpre">Real a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Integer</span></span><span class="mpre">
+    </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">TOD</span></span><span class="mpre"> (</span><a href="#loc_766_9_766_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_766_9_766_22&#39;)"><span class="hl_varref"><span class="mpre">realToInteger</span></span></a><span class="mpre"> (</span><a href="#loc_765_5_765_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_765_5_765_10&#39;)"><span class="hl_varref"><span class="mpre">mtime</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">CTime</span></span><span class="mpre">)) </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">)
+    
+</span><a href="#loc_770_1_770_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_1_770_12&#39;)"><span class="mpre">isDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Ptr</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">CStat</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_770_1_770_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_1_770_12&#39;)"><span class="hl_fundecl"><span class="mpre">isDirectory</span></span></a><span class="mpre"> </span><a name="loc_770_13_770_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_13_770_17&#39;)"><span class="hl_vardecl"><span class="mpre">stat</span></span></a><span class="mpre"> = do
+  </span><a name="loc_771_3_771_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_771_3_771_7&#39;)"><span class="hl_vardecl"><span class="mpre">mode</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">st_mode</span></span><span class="mpre"> </span><a href="#loc_770_13_770_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_13_770_17&#39;)"><span class="hl_varref"><span class="mpre">stat</span></span></a><span class="mpre">
+  </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">s_isdir</span></span><span class="mpre"> </span><a href="#loc_771_3_771_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_771_3_771_7&#39;)"><span class="hl_varref"><span class="mpre">mode</span></span></a><span class="mpre">)
+
+</span><a href="#loc_775_1_775_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_775_1_775_17&#39;)"><span class="mpre">fileNameEndClean</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_775_1_775_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_775_1_775_17&#39;)"><span class="hl_fundecl"><span class="mpre">fileNameEndClean</span></span></a><span class="mpre"> </span><a name="loc_775_18_775_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_775_18_775_22&#39;)"><span class="hl_vardecl"><span class="mpre">name</span></span></a><span class="mpre"> = if </span><span class="hl_varref"><span class="mpre">isDrive</span></span><span class="mpre"> </span><a href="#loc_775_18_775_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_775_18_775_22&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre"> then </span><span class="hl_varref"><span class="mpre">addTrailingPathSeparator</span></span><span class="mpre"> </span><a href="#loc_775_18_775_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_775_18_775_22&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre">
+                                        else </span><span class="hl_varref"><span class="mpre">dropTrailingPathSeparator</span></span><span class="mpre"> </span><a href="#loc_775_18_775_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_775_18_775_22&#39;)"><span class="hl_varref"><span class="mpre">name</span></span></a><span class="mpre">
+
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 778, srcSpanStartColumn = 1, srcSpanEndLine = 778, srcSpanEndColumn = 78}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 778, srcSpanStartColumn = 1, srcSpanEndLine = 778, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.1"><span class="mpre">foreign import ccall unsafe &quot;HsDirectory.h __hscore_S_IRUSR&quot; s_IRUSR :: CMode</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 779, srcSpanStartColumn = 1, srcSpanEndLine = 779, srcSpanEndColumn = 78}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 779, srcSpanStartColumn = 1, srcSpanEndLine = 779, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.1"><span class="mpre">foreign import ccall unsafe &quot;HsDirectory.h __hscore_S_IWUSR&quot; s_IWUSR :: CMode</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 780, srcSpanStartColumn = 1, srcSpanEndLine = 780, srcSpanEndColumn = 78}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 780, srcSpanStartColumn = 1, srcSpanEndLine = 780, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.1"><span class="mpre">foreign import ccall unsafe &quot;HsDirectory.h __hscore_S_IXUSR&quot; s_IXUSR :: CMode</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 781, srcSpanStartColumn = 1, srcSpanEndLine = 781, srcSpanEndColumn = 64}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 781, srcSpanStartColumn = 1, srcSpanEndLine = 781, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.1"><span class="mpre">foreign import ccall unsafe &quot;__hscore_S_IFDIR&quot; s_IFDIR :: CMode</span></span><span class="mpre">
+
+
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 784, srcSpanStartColumn = 1, srcSpanEndLine = 785, srcSpanEndColumn = 24}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.14.0.1/Test/examples/Directory.hs&quot;, srcSpanStartLine = 784, srcSpanStartColumn = 1, srcSpanEndLine = 784, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell-src-exts-1.1"><span class="mpre">foreign import ccall unsafe &quot;__hscore_long_path_size&quot;
+  long_path_size :: Int</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- | Returns the current user&#39;s home directory.
+
+The directory returned is expected to be writable by the current user,
+but note that it isn&#39;t generally considered good practice to store
+application-specific data here; use &#39;getAppUserDataDirectory&#39;
+instead.
+
+On Unix, &#39;getHomeDirectory&#39; returns the value of the @HOME@
+environment variable.  On Windows, the system is queried for a
+suitable path; a typical path might be 
+@C:/Documents And Settings/user@.
+
+The operation may fail with:
+
+* &#39;UnsupportedOperation&#39;
+The operating system has no notion of home directory.
+
+* &#39;isDoesNotExistError&#39;
+The home directory for the current user does not exist, or
+cannot be found.
+-}</span></span><span class="mpre">
+</span><a href="#loc_809_1_809_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_809_1_809_17&#39;)"><span class="mpre">getHomeDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+</span><a name="loc_809_1_809_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_809_1_809_17&#39;)"><span class="hl_vardecl"><span class="mpre">getHomeDirectory</span></span></a><span class="mpre"> =
+  </span><a href="System.IO.Error.html#loc_297_1_297_14" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_297_1_297_14&#39;)"><span class="hl_varref"><span class="mpre">modifyIOError</span></span></a><span class="mpre"> ((</span><a href="System.IO.Error.html#loc_290_1_290_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_290_1_290_15&#39;)"><span class="hl_infix"><span class="mpre">`ioeSetLocation`</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;getHomeDirectory&quot;</span></span><span class="mpre">)) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+  </span><a name="loc_811_3_811_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_811_3_811_4&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre"> &lt;- </span><a href="Control.Exception.Base.html#loc_212_1_212_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_212_1_212_4&#39;)"><span class="hl_varref"><span class="mpre">try</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Win32.sHGetFolderPath</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">nullPtr</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Win32.cSIDL_PROFILE</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">nullPtr</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">
+  case (</span><a href="#loc_811_3_811_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_811_3_811_4&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><a href="GHC.IO.Exception.html#loc_238_6_238_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_238_6_238_17&#39;)"><span class="hl_tyconref"><span class="mpre">IOException</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">) of
+    </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a name="loc_813_11_813_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_813_11_813_12&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_813_11_813_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_813_11_813_12&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre">
+    </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre">  _ -&gt; do
+      </span><a name="loc_815_7_815_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_815_7_815_9&#39;)"><span class="hl_vardecl"><span class="mpre">r1</span></span></a><span class="mpre"> &lt;- </span><a href="Control.Exception.Base.html#loc_212_1_212_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_212_1_212_4&#39;)"><span class="hl_varref"><span class="mpre">try</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Win32.sHGetFolderPath</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">nullPtr</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Win32.cSIDL_WINDOWS</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">nullPtr</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">
+      case </span><a href="#loc_815_7_815_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_815_7_815_9&#39;)"><span class="hl_varref"><span class="mpre">r1</span></span></a><span class="mpre"> of
+        </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a name="loc_817_15_817_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_817_15_817_16&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_817_15_817_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_817_15_817_16&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre">
+        </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre">  </span><a name="loc_818_15_818_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_818_15_818_16&#39;)"><span class="hl_vardecl"><span class="mpre">e</span></span></a><span class="mpre"> -&gt; </span><a href="GHC.IO.Exception.html#loc_221_1_221_8" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_221_1_221_8&#39;)"><span class="hl_varref"><span class="mpre">ioError</span></span></a><span class="mpre"> (</span><a href="#loc_818_15_818_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_818_15_818_16&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre"> :: </span><a href="GHC.IO.Exception.html#loc_238_6_238_17" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Exception.html#loc_238_6_238_17&#39;)"><span class="hl_tyconref"><span class="mpre">IOException</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">{- | Returns the pathname of a directory in which application-specific
+data for the current user can be stored.  The result of
+&#39;getAppUserDataDirectory&#39; for a given application is specific to
+the current user.
+
+The argument should be the name of the application, which will be used
+to construct the pathname (so avoid using unusual characters that
+might result in an invalid pathname).
+
+Note: the directory may not actually exist, and may need to be created
+first.  It is expected that the parent directory exists and is
+writable.
+
+On Unix, this function returns @$HOME\/.appName@.  On Windows, a
+typical path might be 
+
+&gt; C:/Documents And Settings/user/Application Data/appName
+
+The operation may fail with:
+
+* &#39;UnsupportedOperation&#39;
+The operating system has no notion of application-specific data directory.
+
+* &#39;isDoesNotExistError&#39;
+The home directory for the current user does not exist, or
+cannot be found.
+-}</span></span><span class="mpre">
+</span><a href="#loc_848_1_848_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_848_1_848_24&#39;)"><span class="mpre">getAppUserDataDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+</span><a name="loc_848_1_848_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_848_1_848_24&#39;)"><span class="hl_fundecl"><span class="mpre">getAppUserDataDirectory</span></span></a><span class="mpre"> </span><a name="loc_848_25_848_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_848_25_848_32&#39;)"><span class="hl_vardecl"><span class="mpre">appName</span></span></a><span class="mpre"> = do
+  </span><a href="System.IO.Error.html#loc_297_1_297_14" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_297_1_297_14&#39;)"><span class="hl_varref"><span class="mpre">modifyIOError</span></span></a><span class="mpre"> ((</span><a href="System.IO.Error.html#loc_290_1_290_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_290_1_290_15&#39;)"><span class="hl_infix"><span class="mpre">`ioeSetLocation`</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;getAppUserDataDirectory&quot;</span></span><span class="mpre">)) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+  </span><a name="loc_850_3_850_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_850_3_850_4&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">Win32.sHGetFolderPath</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">nullPtr</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Win32.cSIDL_APPDATA</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">nullPtr</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">
+  </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><a href="#loc_850_3_850_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_850_3_850_4&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="hl_infix"><span class="mpre">++</span></span><span class="hl_char"><span class="mpre">&#39;\\&#39;</span></span><span class="hl_infix"><span class="mpre">:</span></span><a href="#loc_848_25_848_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_848_25_848_32&#39;)"><span class="hl_varref"><span class="mpre">appName</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">{- | Returns the current user&#39;s document directory.
+
+The directory returned is expected to be writable by the current user,
+but note that it isn&#39;t generally considered good practice to store
+application-specific data here; use &#39;getAppUserDataDirectory&#39;
+instead.
+
+On Unix, &#39;getUserDocumentsDirectory&#39; returns the value of the @HOME@
+environment variable.  On Windows, the system is queried for a
+suitable path; a typical path might be 
+@C:\/Documents and Settings\/user\/My Documents@.
+
+The operation may fail with:
+
+* &#39;UnsupportedOperation&#39;
+The operating system has no notion of document directory.
+
+* &#39;isDoesNotExistError&#39;
+The document directory for the current user does not exist, or
+cannot be found.
+-}</span></span><span class="mpre">
+</span><a href="#loc_875_1_875_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_875_1_875_26&#39;)"><span class="mpre">getUserDocumentsDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+</span><a name="loc_875_1_875_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_875_1_875_26&#39;)"><span class="hl_vardecl"><span class="mpre">getUserDocumentsDirectory</span></span></a><span class="mpre"> = do
+  </span><a href="System.IO.Error.html#loc_297_1_297_14" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_297_1_297_14&#39;)"><span class="hl_varref"><span class="mpre">modifyIOError</span></span></a><span class="mpre"> ((</span><a href="System.IO.Error.html#loc_290_1_290_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_290_1_290_15&#39;)"><span class="hl_infix"><span class="mpre">`ioeSetLocation`</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;getUserDocumentsDirectory&quot;</span></span><span class="mpre">)) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+  </span><span class="hl_varref"><span class="mpre">Win32.sHGetFolderPath</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">nullPtr</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Win32.cSIDL_PERSONAL</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">nullPtr</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- | Returns the current directory for temporary files.
+
+On Unix, &#39;getTemporaryDirectory&#39; returns the value of the @TMPDIR@
+environment variable or \&quot;\/tmp\&quot; if the variable isn\&#39;t defined.
+On Windows, the function checks for the existence of environment variables in 
+the following order and uses the first path found:
+
+* 
+TMP environment variable. 
+
+*
+TEMP environment variable. 
+
+*
+USERPROFILE environment variable. 
+
+*
+The Windows directory
+
+The operation may fail with:
+
+* &#39;UnsupportedOperation&#39;
+The operating system has no notion of temporary directory.
+
+The function doesn\&#39;t verify whether the path exists.
+-}</span></span><span class="mpre">
+</span><a href="#loc_906_1_906_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_906_1_906_22&#39;)"><span class="mpre">getTemporaryDirectory</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">
+</span><a name="loc_906_1_906_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_906_1_906_22&#39;)"><span class="hl_vardecl"><span class="mpre">getTemporaryDirectory</span></span></a><span class="mpre"> = do
+  </span><span class="hl_varref"><span class="mpre">Win32.getTemporaryDirectory</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- ToDo: This should be determined via autoconf (AC_EXEEXT)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | Extension for executable files</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (typically @\&quot;\&quot;@ on Unix and @\&quot;exe\&quot;@ on Windows or OS\/2)</span></span><span class="mpre">
+</span><a href="#loc_913_1_913_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_913_1_913_13&#39;)"><span class="mpre">exeExtension</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_913_1_913_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_913_1_913_13&#39;)"><span class="hl_vardecl"><span class="mpre">exeExtension</span></span></a><span class="mpre"> = </span><span class="hl_string"><span class="mpre">&quot;exe&quot;</span></span><span class="mpre">
+</span></div></body></html>

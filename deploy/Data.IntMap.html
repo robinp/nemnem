@@ -1,0 +1,100 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if !defined(TESTING) &amp;&amp; __GLASGOW_HASKELL__ &gt;= 703
+{-# LANGUAGE Trustworthy #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.IntMap</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Daan Leijen 2002</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Andriy Palamarchuk 2008</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- An efficient implementation of maps from integer keys to values</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (dictionaries).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module re-exports the value lazy &quot;Data.IntMap.Lazy&quot; API, plus</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- several deprecated value strict functions. Please note that these functions</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- have different strictness properties than those in &quot;Data.IntMap.Strict&quot;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- they only evaluate the result of the combining function. For example, the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- default value to &#39;insertWith&#39;&#39; is only evaluated if the combining function</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is called and uses it.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- These modules are intended to be imported qualified, to avoid name</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- clashes with Prelude functions, e.g.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;  import Data.IntMap (IntMap)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;  import qualified Data.IntMap as IntMap</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The implementation is based on /big-endian patricia trees/.  This data</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- structure performs especially well on binary operations like &#39;union&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and &#39;intersection&#39;.  However, my benchmarks show that it is also</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (much) faster on insertions and deletions when compared to a generic</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- size-balanced map implementation (see &quot;Data.Map&quot;).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * Chris Okasaki and Andy Gill,  \&quot;/Fast Mergeable Integer Maps/\&quot;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      Workshop on ML, September 1998, pages 77-86,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      &lt;http://citeseer.ist.psu.edu/okasaki98fast.html&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * D.R. Morrison, \&quot;/PATRICIA -- Practical Algorithm To Retrieve</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      Information Coded In Alphanumeric/\&quot;, Journal of the ACM, 15(4),</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      October 1968, pages 514-534.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Operation comments contain the operation time complexity in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the Big-O notation &lt;http://en.wikipedia.org/wiki/Big_O_notation&gt;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Many operations have a worst-case complexity of /O(min(n,W))/.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This means that the operation can become linear in the number of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- elements with a maximum of /W/ -- the number of bits in an &#39;Int&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (32 or 64).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.IntMap
+    ( module Data.IntMap.Lazy
+    , insertWith&#39;
+    , insertWithKey&#39;
+    , fold
+    , foldWithKey
+    ) where
+
+import Prelude ()  </span><span class="hl_comment"><span class="mpre">-- hide foldr</span></span><span class="mpre">
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/IntMap.hs&quot;, srcSpanStartLine = 62, srcSpanStartColumn = 18, srcSpanEndLine = 62, srcSpanEndColumn = 36}, srcInfoPoints = []}) &quot;Data.IntMap.Strict&quot;"><span class="mpre">Data.IntMap.Strict</span></span><span class="mpre"> as Strict
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/IntMap.hs&quot;, srcSpanStartLine = 63, srcSpanStartColumn = 8, srcSpanEndLine = 63, srcSpanEndColumn = 24}, srcInfoPoints = []}) &quot;Data.IntMap.Lazy&quot;"><span class="mpre">Data.IntMap.Lazy</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /Deprecated./ As of version 0.5, replaced by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.IntMap.Strict.insertWith&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O(log n)/. Same as &#39;insertWith&#39;, but the result of the combining function</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is evaluated to WHNF before inserted to the map.</span></span><span class="mpre">
+
+</span><a href="#loc_72_1_72_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_12&#39;)"><span class="mpre">insertWith&#39;</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IntMap</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IntMap</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_72_1_72_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_12&#39;)"><span class="hl_vardecl"><span class="mpre">insertWith&#39;</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">Strict.insertWith</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /Deprecated./ As of version 0.5, replaced by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.IntMap.Strict.insertWithKey&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O(log n)/. Same as &#39;insertWithKey&#39;, but the result of the combining</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- function is evaluated to WHNF before inserted to the map.</span></span><span class="mpre">
+
+</span><a href="#loc_81_1_81_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_1_81_15&#39;)"><span class="mpre">insertWithKey&#39;</span></a><span class="mpre"> :: (</span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IntMap</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IntMap</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_81_1_81_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_1_81_15&#39;)"><span class="hl_vardecl"><span class="mpre">insertWithKey&#39;</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">Strict.insertWithKey</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /Deprecated./ As of version 0.5, replaced by &#39;foldr&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O(n)/. Fold the values in the map using the given</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- right-associative binary operator. This function is an equivalent</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of &#39;foldr&#39; and is present for compatibility only.</span></span><span class="mpre">
+</span><a href="#loc_89_1_89_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_5&#39;)"><span class="mpre">fold</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IntMap</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_89_1_89_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_5&#39;)"><span class="hl_vardecl"><span class="mpre">fold</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">foldr</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_89_1_89_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_5&#39;)"><span class="mpre">fold</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /Deprecated./ As of version 0.5, replaced by &#39;foldrWithKey&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O(n)/. Fold the keys and values in the map using the given</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- right-associative binary operator. This function is an equivalent</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of &#39;foldrWithKey&#39; and is present for compatibility only.</span></span><span class="mpre">
+</span><a href="#loc_98_1_98_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_1_98_12&#39;)"><span class="mpre">foldWithKey</span></a><span class="mpre"> :: (</span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IntMap</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_98_1_98_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_1_98_12&#39;)"><span class="hl_vardecl"><span class="mpre">foldWithKey</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">foldrWithKey</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_98_1_98_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_1_98_12&#39;)"><span class="mpre">foldWithKey</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span></div></body></html>

@@ -1,0 +1,19 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, GADTs, RankNTypes #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Safe #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">{- Exposing some internals to friends (e.g. GHC) -}</span></span><span class="mpre">
+module Compiler.Hoopl.Internals
+  ( module Compiler.Hoopl.Block
+  , module Compiler.Hoopl.Graph
+  , module Compiler.Hoopl.Label
+  , module Compiler.Hoopl.Dataflow
+  )
+where
+
+import Compiler.Hoopl.Block
+import Compiler.Hoopl.Graph
+import Compiler.Hoopl.Label
+import Compiler.Hoopl.Dataflow
+</span></div></body></html>

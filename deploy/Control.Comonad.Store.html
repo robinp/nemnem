@@ -1,0 +1,34 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if defined(__GLASGOW_HASKELL__) &amp;&amp; __GLASGOW_HASKELL__ &gt;= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Comonad.Store</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2008-2011 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (fundeps, MPTCs)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Control.Comonad.Store (
+  </span><span class="hl_comment"><span class="mpre">-- * ComonadStore class</span></span><span class="mpre">
+    ComonadStore(..)
+  </span><span class="hl_comment"><span class="mpre">-- * The Store comonad</span></span><span class="mpre">
+  , Store
+  , store
+  , runStore
+  </span><span class="hl_comment"><span class="mpre">-- * The StoreT comonad transformer</span></span><span class="mpre">
+  , StoreT(..)
+  , runStoreT
+  </span><span class="hl_comment"><span class="mpre">-- * Re-exported modules</span></span><span class="mpre">
+  , module Control.Comonad
+  , module Control.Comonad.Trans.Class
+  ) where
+
+import Control.Comonad
+import Control.Comonad.Store.Class (</span><a href="Control.Comonad.Store.Class.html#loc_33_20_33_32" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Store.Class.html#loc_33_20_33_32&#39;)"><span class="mpre">ComonadStore</span></a><span class="mpre">(..))
+import Control.Comonad.Trans.Class
+import Control.Comonad.Trans.Store (Store, </span><a href="Control.Comonad.Trans.Store.html#loc_121_1_121_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Trans.Store.html#loc_121_1_121_6&#39;)"><span class="mpre">store</span></a><span class="mpre">, </span><a href="Control.Comonad.Trans.Store.html#loc_124_1_124_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Trans.Store.html#loc_124_1_124_9&#39;)"><span class="mpre">runStore</span></a><span class="mpre">, </span><a href="Control.Comonad.Trans.Store.html#loc_126_6_126_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Trans.Store.html#loc_126_6_126_12&#39;)"><span class="mpre">StoreT</span></a><span class="mpre">(..), </span><a href="Control.Comonad.Trans.Store.html#loc_129_1_129_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Trans.Store.html#loc_129_1_129_10&#39;)"><span class="mpre">runStoreT</span></a><span class="mpre">)
+</span></div></body></html>

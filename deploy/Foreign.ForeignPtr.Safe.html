@@ -1,0 +1,50 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Foreign.ForeignPtr.Safe</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  ffi@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;ForeignPtr&#39; type and operations.  This module is part of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Foreign Function Interface (FFI) and will usually be imported via</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the &quot;Foreign&quot; module.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Safe API Only.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Foreign.ForeignPtr.Safe (
+        </span><span class="hl_comment"><span class="mpre">-- * Finalised data pointers</span></span><span class="mpre">
+          ForeignPtr
+        , FinalizerPtr
+        , FinalizerEnvPtr
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Basic operations</span></span><span class="mpre">
+        , newForeignPtr
+        , newForeignPtr_
+        , addForeignPtrFinalizer
+        , newForeignPtrEnv
+        , addForeignPtrFinalizerEnv
+        , withForeignPtr
+        , finalizeForeignPtr
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Low-level operations</span></span><span class="mpre">
+        , touchForeignPtr
+        , castForeignPtr
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Allocating managed memory</span></span><span class="mpre">
+        , mallocForeignPtr
+        , mallocForeignPtrBytes
+        , mallocForeignPtrArray
+        , mallocForeignPtrArray0
+    ) where
+
+import Foreign.ForeignPtr.Imp
+
+</span></div></body></html>

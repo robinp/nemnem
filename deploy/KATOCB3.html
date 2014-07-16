@@ -1,0 +1,53 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE OverloadedStrings #-}
+module KATOCB3 where
+
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/cipher-aes-0.2.8/Tests/KATOCB3.hs&quot;, srcSpanStartLine = 4, srcSpanStartColumn = 18, srcSpanEndLine = 4, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> as B
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/cipher-aes-0.2.8/Tests/KATOCB3.hs&quot;, srcSpanStartLine = 5, srcSpanStartColumn = 8, srcSpanEndLine = 5, srcSpanEndColumn = 29}, srcInfoPoints = []}) &quot;Data.ByteString.Char8&quot;"><span class="mpre">Data.ByteString.Char8</span></span><span class="mpre"> ()
+
+</span><span class="hl_comment"><span class="mpre">-- (key, iv, aad, input, out, taglen, tag)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/cipher-aes-0.2.8/Tests/KATOCB3.hs&quot;, srcSpanStartLine = 8, srcSpanStartColumn = 1, srcSpanEndLine = 8, srcSpanEndColumn = 105}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/cipher-aes-0.2.8/Tests/KATOCB3.hs&quot;, srcSpanStartLine = 8, srcSpanStartColumn = 1, srcSpanEndLine = 8, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/cipher-aes-0.2.8/Tests/KATOCB3.hs&quot;, srcSpanStartLine = 8, srcSp"><span class="mpre">type KATOCB3 = (B.ByteString, B.ByteString, B.ByteString, B.ByteString, B.ByteString, Int, B.ByteString)</span></span><span class="mpre">
+
+</span><a name="loc_10_1_10_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_10_1_10_5&#39;)"><span class="hl_vardecl"><span class="mpre">key1</span></span></a><span class="mpre">   = </span><span class="hl_string"><span class="mpre">&quot;\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f&quot;</span></span><span class="mpre">
+</span><a name="loc_11_1_11_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_11_1_11_7&#39;)"><span class="hl_vardecl"><span class="mpre">nonce1</span></span></a><span class="mpre"> = </span><span class="hl_string"><span class="mpre">&quot;\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_14_1_14_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_14_1_14_19&#39;)"><span class="mpre">vectors_aes128_enc</span></a><span class="mpre"> :: [</span><span class="hl_tyconref"><span class="mpre">KATOCB3</span></span><span class="mpre">]
+</span><a name="loc_14_1_14_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_14_1_14_19&#39;)"><span class="hl_vardecl"><span class="mpre">vectors_aes128_enc</span></span></a><span class="mpre"> =
+    [ ( </span><span class="hl_comment"><span class="mpre">{-key = -}</span></span><span class="mpre"> </span><a href="#loc_10_1_10_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_10_1_10_5&#39;)"><span class="hl_varref"><span class="mpre">key1</span></span></a><span class="mpre">
+      , </span><span class="hl_comment"><span class="mpre">{-iv = -}</span></span><span class="mpre"> </span><a href="#loc_11_1_11_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_11_1_11_7&#39;)"><span class="hl_varref"><span class="mpre">nonce1</span></span></a><span class="mpre">
+      , </span><span class="hl_comment"><span class="mpre">{-aad = -}</span></span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre">
+      , </span><span class="hl_comment"><span class="mpre">{-input = -}</span></span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre">
+      , </span><span class="hl_comment"><span class="mpre">{-out = -}</span></span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre">
+      , </span><span class="hl_comment"><span class="mpre">{-taglen = -}</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">16</span></span><span class="mpre">
+      , </span><span class="hl_comment"><span class="mpre">{-tag = -}</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;\x19\x7b\x9c\x3c\x44\x1d\x3c\x83\xea\xfb\x2b\xef\x63\x3b\x91\x82&quot;</span></span><span class="mpre">)
+    , ( </span><a href="#loc_10_1_10_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_10_1_10_5&#39;)"><span class="hl_varref"><span class="mpre">key1</span></span></a><span class="mpre">, </span><a href="#loc_11_1_11_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_11_1_11_7&#39;)"><span class="hl_varref"><span class="mpre">nonce1</span></span></a><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x00\x01\x02\x03\x04\x05\x06\x07&quot;</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x00\x01\x02\x03\x04\x05\x06\x07&quot;</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x92\xb6\x57\x13\x0a\x74\xb8\x5a&quot;</span></span><span class="mpre">
+      , </span><span class="hl_num"><span class="mpre">16</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x16\xdc\x76\xa4\x6d\x47\xe1\xea\xd5\x37\x20\x9e\x8a\x96\xd1\x4e&quot;</span></span><span class="mpre">)
+    , ( </span><a href="#loc_10_1_10_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_10_1_10_5&#39;)"><span class="hl_varref"><span class="mpre">key1</span></span></a><span class="mpre">, </span><a href="#loc_11_1_11_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_11_1_11_7&#39;)"><span class="hl_varref"><span class="mpre">nonce1</span></span></a><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x00\x01\x02\x03\x04\x05\x06\x07&quot;</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre">
+      , </span><span class="hl_num"><span class="mpre">16</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x98\xb9\x15\x52\xc8\xc0\x09\x18\x50\x44\xe3\x0a\x6e\xb2\xfe\x21&quot;</span></span><span class="mpre">)
+    , ( </span><a href="#loc_10_1_10_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_10_1_10_5&#39;)"><span class="hl_varref"><span class="mpre">key1</span></span></a><span class="mpre">, </span><a href="#loc_11_1_11_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_11_1_11_7&#39;)"><span class="hl_varref"><span class="mpre">nonce1</span></span></a><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x00\x01\x02\x03\x04\x05\x06\x07&quot;</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x92\xb6\x57\x13\x0a\x74\xb8\x5a&quot;</span></span><span class="mpre">
+      , </span><span class="hl_num"><span class="mpre">16</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x97\x1e\xff\xca\xe1\x9a\xd4\x71\x6f\x88\xe8\x7b\x87\x1f\xbe\xed&quot;</span></span><span class="mpre">)
+    , ( </span><a href="#loc_10_1_10_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_10_1_10_5&#39;)"><span class="hl_varref"><span class="mpre">key1</span></span></a><span class="mpre">, </span><a href="#loc_11_1_11_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_11_1_11_7&#39;)"><span class="hl_varref"><span class="mpre">nonce1</span></span></a><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f&quot;</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f&quot;</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\xbe\xa5\xe8\x79\x8d\xbe\x71\x10\x03\x1c\x14\x4d\xa0\xb2\x61\x22&quot;</span></span><span class="mpre">
+      , </span><span class="hl_num"><span class="mpre">16</span></span><span class="mpre">
+      , </span><span class="hl_string"><span class="mpre">&quot;\x77\x6c\x99\x24\xd6\x72\x3a\x1f\xc4\x52\x45\x32\xac\x3e\x5b\xeb&quot;</span></span><span class="mpre">)
+    ]
+
+</span><a name="loc_48_1_48_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_1_48_16&#39;)"><span class="hl_vardecl"><span class="mpre">vectors_encrypt</span></span></a><span class="mpre"> =
+    [ (</span><span class="hl_string"><span class="mpre">&quot;AES128 Enc&quot;</span></span><span class="mpre">, </span><a href="#loc_14_1_14_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_14_1_14_19&#39;)"><span class="hl_varref"><span class="mpre">vectors_aes128_enc</span></span></a><span class="mpre">)
+    ]
+
+</span><a name="loc_52_1_52_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_1_52_16&#39;)"><span class="hl_vardecl"><span class="mpre">vectors_decrypt</span></span></a><span class="mpre"> = []
+</span></div></body></html>

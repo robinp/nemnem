@@ -1,0 +1,36 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if defined(__GLASGOW_HASKELL__) &amp;&amp; __GLASGOW_HASKELL__ &gt;= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Comonad.Traced</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2008-2011 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (fundeps, MPTCs)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Control.Comonad.Traced (
+  </span><span class="hl_comment"><span class="mpre">-- * ComonadTraced class</span></span><span class="mpre">
+    ComonadTraced(..)
+  , traces
+  </span><span class="hl_comment"><span class="mpre">-- * The Traced comonad</span></span><span class="mpre">
+  , Traced
+  , traced
+  , runTraced
+  </span><span class="hl_comment"><span class="mpre">-- * The TracedT comonad transformer</span></span><span class="mpre">
+  , TracedT(..)
+  </span><span class="hl_comment"><span class="mpre">-- * Re-exported modules</span></span><span class="mpre">
+  , module Control.Comonad
+  , module Control.Comonad.Trans.Class
+  , module Data.Monoid
+  ) where
+
+import Control.Comonad
+import Control.Comonad.Traced.Class (</span><a href="Control.Comonad.Traced.Class.html#loc_32_20_32_33" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Traced.Class.html#loc_32_20_32_33&#39;)"><span class="mpre">ComonadTraced</span></a><span class="mpre">(..), </span><a href="Control.Comonad.Traced.Class.html#loc_36_1_36_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Traced.Class.html#loc_36_1_36_7&#39;)"><span class="mpre">traces</span></a><span class="mpre">)
+import Control.Comonad.Trans.Class
+import Control.Comonad.Trans.Traced (Traced, </span><a href="Control.Comonad.Trans.Traced.html#loc_56_1_56_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Trans.Traced.html#loc_56_1_56_7&#39;)"><span class="mpre">traced</span></a><span class="mpre">, </span><a href="Control.Comonad.Trans.Traced.html#loc_59_1_59_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Trans.Traced.html#loc_59_1_59_10&#39;)"><span class="mpre">runTraced</span></a><span class="mpre">, </span><a href="Control.Comonad.Trans.Traced.html#loc_61_9_61_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Trans.Traced.html#loc_61_9_61_16&#39;)"><span class="mpre">TracedT</span></a><span class="mpre">(..), </span><a href="Control.Comonad.Trans.Traced.html#loc_61_35_61_45" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Comonad.Trans.Traced.html#loc_61_35_61_45&#39;)"><span class="mpre">runTracedT</span></a><span class="mpre">)
+import Data.Monoid
+</span></div></body></html>

@@ -1,0 +1,12 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+module Crypto.Hash.Utils.Cpu
+    ( use32Hex
+    ) where
+
+</span><a href="#loc_8_1_8_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_8_1_8_9&#39;)"><span class="mpre">use32Hex</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+#ifdef ARCH_X86
+</span><a name="loc_8_1_8_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_8_1_8_9&#39;)"><span class="hl_vardecl"><span class="mpre">use32Hex</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+#else
+</span><span class="hl_vardecl"><span class="mpre">use32Hex</span></span><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+#endif
+</span></div></body></html>

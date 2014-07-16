@@ -1,0 +1,92 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.Read</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (uses Text.ParserCombinators.ReadP)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Converting strings to values.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &quot;Text.Read&quot; library is the canonical library to import for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Read&#39;-class facilities.  For GHC only, it offers an extended and much</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- improved &#39;Read&#39; class, which constitutes a proposed alternative to the </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Haskell 2010 &#39;Read&#39;.  In particular, writing parsers is easier, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the parsers are much more efficient.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Text.Read (
+   </span><span class="hl_comment"><span class="mpre">-- * The &#39;Read&#39; class</span></span><span class="mpre">
+   Read(..),
+   ReadS,
+
+   </span><span class="hl_comment"><span class="mpre">-- * Haskell 2010 functions</span></span><span class="mpre">
+   reads,
+   read,
+   readParen,
+   lex,
+
+   </span><span class="hl_comment"><span class="mpre">-- * New parsing functions</span></span><span class="mpre">
+   module Text.ParserCombinators.ReadPrec,
+   L.Lexeme(..),
+   lexP,
+   parens,
+   readListDefault,
+   readListPrecDefault,
+   readEither,
+   readMaybe
+
+ ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 47, srcSpanStartColumn = 8, srcSpanEndLine = 47, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 48, srcSpanStartColumn = 8, srcSpanEndLine = 48, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Read&quot;"><span class="mpre">GHC.Read</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 49, srcSpanStartColumn = 8, srcSpanEndLine = 49, srcSpanEndColumn = 19}, srcInfoPoints = []}) &quot;Data.Either&quot;"><span class="mpre">Data.Either</span></span><span class="mpre">
+import Data.Maybe
+import Text.ParserCombinators.ReadP as P
+import Text.ParserCombinators.ReadPrec
+import qualified Text.Read.Lex as L
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- utility functions</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | equivalent to &#39;readsPrec&#39; with a precedence of 0.</span></span><span class="mpre">
+</span><a href="#loc_60_1_60_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_6&#39;)"><span class="mpre">reads</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 59, srcSpanStartColumn = 10, srcSpanEndLine = 59, srcSpanEndColumn = 19}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 59, srcSpanStartColumn = 17, srcSpanEndLine = 59, srcSpanEndColumn = 19}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpa"><span class="mpre">Read a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ReadS</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_60_1_60_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_6&#39;)"><span class="hl_vardecl"><span class="mpre">reads</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">readsPrec</span></span><span class="mpre"> </span><a href="Text.ParserCombinators.ReadPrec.html#loc_92_1_92_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.ParserCombinators.ReadPrec.html#loc_92_1_92_8&#39;)"><span class="hl_varref"><span class="mpre">minPrec</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Parse a string using the &#39;Read&#39; instance.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Succeeds if there is exactly one valid result.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A &#39;Left&#39; value indicates a parse error.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.6.0.0/</span></span><span class="mpre">
+</span><a href="#loc_68_1_68_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_1_68_11&#39;)"><span class="mpre">readEither</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 67, srcSpanStartColumn = 15, srcSpanEndLine = 67, srcSpanEndColumn = 24}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 67, srcSpanStartColumn = 22, srcSpanEndLine = 67, srcSpanEndColumn = 24}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpa"><span class="mpre">Read a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_68_1_68_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_1_68_11&#39;)"><span class="hl_fundecl"><span class="mpre">readEither</span></span></a><span class="mpre"> </span><a name="loc_68_12_68_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_12_68_13&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> =
+  case [ </span><a href="#loc_69_15_69_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_15_69_16&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> | (</span><a name="loc_69_15_69_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_15_69_16&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">,</span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre">) &lt;- </span><a href="Text.ParserCombinators.ReadPrec.html#loc_159_1_159_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.ParserCombinators.ReadPrec.html#loc_159_1_159_14&#39;)"><span class="hl_varref"><span class="mpre">readPrec_to_S</span></span></a><span class="mpre"> </span><a href="#loc_74_3_74_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_3_74_8&#39;)"><span class="hl_varref"><span class="mpre">read&#39;</span></span></a><span class="mpre"> </span><a href="Text.ParserCombinators.ReadPrec.html#loc_92_1_92_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.ParserCombinators.ReadPrec.html#loc_92_1_92_8&#39;)"><span class="hl_varref"><span class="mpre">minPrec</span></span></a><span class="mpre"> </span><a href="#loc_68_12_68_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_12_68_13&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> ] of
+    [</span><a name="loc_70_6_70_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_6_70_7&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">] -&gt; </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a href="#loc_70_6_70_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_6_70_7&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+    []  -&gt; </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;Prelude.read: no parse&quot;</span></span><span class="mpre">
+    _   -&gt; </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;Prelude.read: ambiguous parse&quot;</span></span><span class="mpre">
+ where
+  </span><a name="loc_74_3_74_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_3_74_8&#39;)"><span class="hl_vardecl"><span class="mpre">read&#39;</span></span></a><span class="mpre"> =
+    do </span><a name="loc_75_8_75_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_8_75_9&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">readPrec</span></span><span class="mpre">
+       </span><a href="Text.ParserCombinators.ReadPrec.html#loc_99_1_99_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.ParserCombinators.ReadPrec.html#loc_99_1_99_5&#39;)"><span class="hl_varref"><span class="mpre">lift</span></span></a><span class="mpre"> </span><a href="Text.ParserCombinators.ReadP.html#loc_286_1_286_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.ParserCombinators.ReadP.html#loc_286_1_286_11&#39;)"><span class="hl_varref"><span class="mpre">P.skipSpaces</span></span></a><span class="mpre">
+       </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_75_8_75_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_8_75_9&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Parse a string using the &#39;Read&#39; instance.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Succeeds if there is exactly one valid result.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.6.0.0/</span></span><span class="mpre">
+</span><a href="#loc_84_1_84_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_10&#39;)"><span class="mpre">readMaybe</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 83, srcSpanStartColumn = 14, srcSpanEndLine = 83, srcSpanEndColumn = 23}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 83, srcSpanStartColumn = 21, srcSpanEndLine = 83, srcSpanEndColumn = 23}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpa"><span class="mpre">Read a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_84_1_84_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_10&#39;)"><span class="hl_fundecl"><span class="mpre">readMaybe</span></span></a><span class="mpre"> </span><a name="loc_84_11_84_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_11_84_12&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> = case </span><a href="#loc_68_1_68_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_1_68_11&#39;)"><span class="hl_varref"><span class="mpre">readEither</span></span></a><span class="mpre"> </span><a href="#loc_84_11_84_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_11_84_12&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> of
+                </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> _  -&gt; </span><a href="Data.Maybe.html#loc_49_19_49_26" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_19_49_26&#39;)"><span class="hl_conref"><span class="mpre">Nothing</span></span></a><span class="mpre">
+                </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a name="loc_86_23_86_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_23_86_24&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> -&gt; </span><a href="Data.Maybe.html#loc_49_29_49_33" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_29_49_33&#39;)"><span class="hl_conref"><span class="mpre">Just</span></span></a><span class="mpre"> </span><a href="#loc_86_23_86_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_23_86_24&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;read&#39; function reads input from a string, which must be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- completely consumed by the input process.</span></span><span class="mpre">
+</span><a href="#loc_91_1_91_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_5&#39;)"><span class="mpre">read</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 90, srcSpanStartColumn = 9, srcSpanEndLine = 90, srcSpanEndColumn = 18}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpanStartLine = 90, srcSpanStartColumn = 16, srcSpanEndLine = 90, srcSpanEndColumn = 18}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Read.hs&quot;, srcSpan"><span class="mpre">Read a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_91_1_91_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_5&#39;)"><span class="hl_fundecl"><span class="mpre">read</span></span></a><span class="mpre"> </span><a name="loc_91_6_91_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_6_91_7&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">either</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">id</span></span><span class="mpre"> (</span><a href="#loc_68_1_68_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_1_68_11&#39;)"><span class="hl_varref"><span class="mpre">readEither</span></span></a><span class="mpre"> </span><a href="#loc_91_6_91_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_6_91_7&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre">)
+</span></div></body></html>

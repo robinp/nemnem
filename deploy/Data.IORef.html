@@ -1,0 +1,163 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE CPP, NoImplicitPrelude, MagicHash, UnboxedTuples #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.IORef</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Mutable references in the IO monad.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.IORef
+  ( 
+        </span><span class="hl_comment"><span class="mpre">-- * IORefs</span></span><span class="mpre">
+        IORef,                </span><span class="hl_comment"><span class="mpre">-- abstract, instance of: Eq, Typeable</span></span><span class="mpre">
+        newIORef,
+        readIORef,
+        writeIORef,
+        modifyIORef,
+        modifyIORef&#39;,
+        atomicModifyIORef,
+        atomicModifyIORef&#39;,
+        atomicWriteIORef,
+
+#if !defined(__PARALLEL_HASKELL__)
+        mkWeakIORef,
+#endif
+        </span><span class="hl_comment"><span class="mpre">-- ** Memory Model</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- $memmodel</span></span><span class="mpre">
+
+        ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/IORef.hs&quot;, srcSpanStartLine = 40, srcSpanStartColumn = 8, srcSpanEndLine = 40, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/IORef.hs&quot;, srcSpanStartLine = 41, srcSpanStartColumn = 8, srcSpanEndLine = 41, srcSpanEndColumn = 17}, srcInfoPoints = []}) &quot;GHC.STRef&quot;"><span class="mpre">GHC.STRef</span></span><span class="mpre">
+import GHC.IORef hiding (</span><a href="GHC.IORef.html#loc_53_1_53_18" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_53_1_53_18&#39;)"><span class="mpre">atomicModifyIORef</span></a><span class="mpre">)
+import qualified GHC.IORef
+#if !defined(__PARALLEL_HASKELL__)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/IORef.hs&quot;, srcSpanStartLine = 45, srcSpanStartColumn = 8, srcSpanEndLine = 45, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Weak&quot;"><span class="mpre">GHC.Weak</span></span><span class="mpre">
+#endif
+
+#if !defined(__PARALLEL_HASKELL__)
+</span><span class="hl_comment"><span class="mpre">-- |Make a &#39;Weak&#39; pointer to an &#39;IORef&#39;, using the second argument as a finalizer</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to run when &#39;IORef&#39; is garbage-collected</span></span><span class="mpre">
+</span><a href="#loc_52_1_52_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_1_52_12&#39;)"><span class="mpre">mkWeakIORef</span></a><span class="mpre"> :: </span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Weak</span></span><span class="mpre"> (</span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">))
+</span><a name="loc_52_1_52_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_1_52_12&#39;)"><span class="hl_fundecl"><span class="mpre">mkWeakIORef</span></span></a><span class="mpre"> </span><a name="loc_52_13_52_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_13_52_14&#39;)"><span class="hl_specname"><span class="mpre">r</span></span></a><span class="mpre">@(</span><a href="GHC.IORef.html#loc_34_19_34_24" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_19_34_24&#39;)"><span class="hl_conref"><span class="mpre">IORef</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">STRef</span></span><span class="mpre"> </span><a name="loc_52_29_52_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_29_52_31&#39;)"><span class="hl_vardecl"><span class="mpre">r#</span></span></a><span class="mpre">)) </span><a name="loc_52_34_52_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_34_52_35&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_52_44_52_45" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_44_52_45&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt;
+  case </span><span class="hl_varref"><span class="mpre">mkWeak#</span></span><span class="mpre"> </span><a href="#loc_52_29_52_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_29_52_31&#39;)"><span class="hl_varref"><span class="mpre">r#</span></span></a><span class="mpre"> </span><a href="#loc_52_13_52_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_13_52_14&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre"> </span><a href="#loc_52_34_52_35" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_34_52_35&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_52_44_52_45" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_52_44_52_45&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> of (# </span><a name="loc_53_31_53_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_31_53_33&#39;)"><span class="hl_vardecl"><span class="mpre">s1</span></span></a><span class="mpre">, </span><a name="loc_53_35_53_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_35_53_36&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre"> #) -&gt; (# </span><a href="#loc_53_31_53_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_31_53_33&#39;)"><span class="hl_varref"><span class="mpre">s1</span></span></a><span class="mpre">, </span><span class="hl_conref"><span class="mpre">Weak</span></span><span class="mpre"> </span><a href="#loc_53_35_53_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_35_53_36&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre"> #)
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- |Mutate the contents of an &#39;IORef&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Be warned that &#39;modifyIORef&#39; does not apply the function strictly.  This</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- means if the program calls &#39;modifyIORef&#39; many times, but seldomly uses the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- value, thunks will pile up in memory resulting in a space leak.  This is a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- common mistake made when using an IORef as a counter.  For example, the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- following will likely produce a stack overflow:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;ref &lt;- newIORef 0</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;replicateM_ 1000000 $ modifyIORef ref (+1)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;readIORef ref &gt;&gt;= print</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To avoid this problem, use &#39;modifyIORef&#39;&#39; instead.</span></span><span class="mpre">
+</span><a href="#loc_70_1_70_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_1_70_12&#39;)"><span class="mpre">modifyIORef</span></a><span class="mpre"> :: </span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_70_1_70_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_1_70_12&#39;)"><span class="hl_fundecl"><span class="mpre">modifyIORef</span></span></a><span class="mpre"> </span><a name="loc_70_13_70_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_13_70_16&#39;)"><span class="hl_vardecl"><span class="mpre">ref</span></span></a><span class="mpre"> </span><a name="loc_70_17_70_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_17_70_18&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = </span><a href="GHC.IORef.html#loc_46_1_46_10" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_46_1_46_10&#39;)"><span class="hl_varref"><span class="mpre">readIORef</span></span></a><span class="mpre"> </span><a href="#loc_70_13_70_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_13_70_16&#39;)"><span class="hl_varref"><span class="mpre">ref</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&gt;&gt;=</span></span><span class="mpre"> </span><a href="GHC.IORef.html#loc_50_1_50_11" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_50_1_50_11&#39;)"><span class="hl_varref"><span class="mpre">writeIORef</span></span></a><span class="mpre"> </span><a href="#loc_70_13_70_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_13_70_16&#39;)"><span class="hl_varref"><span class="mpre">ref</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="#loc_70_17_70_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_17_70_18&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- |Strict version of &#39;modifyIORef&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.6.0.0/</span></span><span class="mpre">
+</span><a href="#loc_76_1_76_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_1_76_13&#39;)"><span class="mpre">modifyIORef&#39;</span></a><span class="mpre"> :: </span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_76_1_76_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_1_76_13&#39;)"><span class="hl_fundecl"><span class="mpre">modifyIORef&#39;</span></span></a><span class="mpre"> </span><a name="loc_76_14_76_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_14_76_17&#39;)"><span class="hl_vardecl"><span class="mpre">ref</span></span></a><span class="mpre"> </span><a name="loc_76_18_76_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_18_76_19&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = do
+    </span><a name="loc_77_5_77_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_5_77_6&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> &lt;- </span><a href="GHC.IORef.html#loc_46_1_46_10" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_46_1_46_10&#39;)"><span class="hl_varref"><span class="mpre">readIORef</span></span></a><span class="mpre"> </span><a href="#loc_76_14_76_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_14_76_17&#39;)"><span class="hl_varref"><span class="mpre">ref</span></span></a><span class="mpre">
+    let </span><a name="loc_78_9_78_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_9_78_11&#39;)"><span class="hl_vardecl"><span class="mpre">x&#39;</span></span></a><span class="mpre"> = </span><a href="#loc_76_18_76_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_18_76_19&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_77_5_77_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_5_77_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+    </span><a href="#loc_78_9_78_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_9_78_11&#39;)"><span class="hl_varref"><span class="mpre">x&#39;</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`seq`</span></span><span class="mpre"> </span><a href="GHC.IORef.html#loc_50_1_50_11" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_50_1_50_11&#39;)"><span class="hl_varref"><span class="mpre">writeIORef</span></span></a><span class="mpre"> </span><a href="#loc_76_14_76_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_14_76_17&#39;)"><span class="hl_varref"><span class="mpre">ref</span></span></a><span class="mpre"> </span><a href="#loc_78_9_78_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_9_78_11&#39;)"><span class="hl_varref"><span class="mpre">x&#39;</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- |Atomically modifies the contents of an &#39;IORef&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This function is useful for using &#39;IORef&#39; in a safe way in a multithreaded</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- program.  If you only have one &#39;IORef&#39;, then using &#39;atomicModifyIORef&#39; to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- access and modify it will prevent race conditions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Extending the atomicity to multiple &#39;IORef&#39;s is problematic, so it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is recommended that if you need to do anything more complicated</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- then using &#39;Control.Concurrent.MVar.MVar&#39; instead is a good idea.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;atomicModifyIORef&#39; does not apply the function strictly.  This is important</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to know even if all you are doing is replacing the value.  For example, this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- will leak memory:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;ref &lt;- newIORef &#39;1&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;forever $ atomicModifyIORef ref (\_ -&gt; (&#39;2&#39;, ()))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Use &#39;atomicModifyIORef&#39;&#39; or &#39;atomicWriteIORef&#39; to avoid this problem.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_101_1_101_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_18&#39;)"><span class="mpre">atomicModifyIORef</span></a><span class="mpre"> :: </span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">,</span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">)) -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_101_1_101_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_18&#39;)"><span class="hl_vardecl"><span class="mpre">atomicModifyIORef</span></span></a><span class="mpre"> = </span><a href="GHC.IORef.html#loc_53_1_53_18" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_53_1_53_18&#39;)"><span class="hl_varref"><span class="mpre">GHC.IORef.atomicModifyIORef</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Strict version of &#39;atomicModifyIORef&#39;.  This forces both the value stored</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in the &#39;IORef&#39; as well as the value returned.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.6.0.0/</span></span><span class="mpre">
+</span><a href="#loc_108_1_108_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_19&#39;)"><span class="mpre">atomicModifyIORef&#39;</span></a><span class="mpre"> :: </span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">,</span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">)) -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_108_1_108_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_19&#39;)"><span class="hl_fundecl"><span class="mpre">atomicModifyIORef&#39;</span></span></a><span class="mpre"> </span><a name="loc_108_20_108_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_20_108_23&#39;)"><span class="hl_vardecl"><span class="mpre">ref</span></span></a><span class="mpre"> </span><a name="loc_108_24_108_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_24_108_25&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = do
+    </span><a name="loc_109_5_109_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_109_5_109_6&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_101_1_101_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_18&#39;)"><span class="hl_varref"><span class="mpre">atomicModifyIORef</span></span></a><span class="mpre"> </span><a href="#loc_108_20_108_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_20_108_23&#39;)"><span class="hl_varref"><span class="mpre">ref</span></span></a><span class="mpre">
+            (\</span><a name="loc_110_15_110_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_15_110_16&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> -&gt; let (</span><a name="loc_110_25_110_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_25_110_26&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre">, </span><a name="loc_110_28_110_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_28_110_29&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre">) = </span><a href="#loc_108_24_108_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_24_108_25&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_110_15_110_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_15_110_16&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+                    in (</span><a href="#loc_110_25_110_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_25_110_26&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">, </span><a href="#loc_110_25_110_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_25_110_26&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`seq`</span></span><span class="mpre"> </span><a href="#loc_110_28_110_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_28_110_29&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">))
+    </span><a href="#loc_109_5_109_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_109_5_109_6&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`seq`</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_109_5_109_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_109_5_109_6&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Variant of &#39;writeIORef&#39; with the \&quot;barrier to reordering\&quot; property that</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;atomicModifyIORef&#39; has.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.6.0.0/</span></span><span class="mpre">
+</span><a href="#loc_119_1_119_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_1_119_17&#39;)"><span class="mpre">atomicWriteIORef</span></a><span class="mpre"> :: </span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_119_1_119_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_1_119_17&#39;)"><span class="hl_fundecl"><span class="mpre">atomicWriteIORef</span></span></a><span class="mpre"> </span><a name="loc_119_18_119_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_18_119_21&#39;)"><span class="hl_vardecl"><span class="mpre">ref</span></span></a><span class="mpre"> </span><a name="loc_119_22_119_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_22_119_23&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> = do
+    </span><a name="loc_120_5_120_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_5_120_6&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_101_1_101_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_18&#39;)"><span class="hl_varref"><span class="mpre">atomicModifyIORef</span></span></a><span class="mpre"> </span><a href="#loc_119_18_119_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_18_119_21&#39;)"><span class="hl_varref"><span class="mpre">ref</span></span></a><span class="mpre"> (\_ -&gt; (</span><a href="#loc_119_22_119_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_22_119_23&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">, </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">))
+    </span><a href="#loc_120_5_120_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_5_120_6&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`seq`</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $memmodel
+
+  In a concurrent program, &#39;IORef&#39; operations may appear out-of-order
+  to another thread, depending on the memory model of the underlying
+  processor architecture.  For example, on x86, loads can move ahead
+  of stores, so in the following example:
+
+&gt;  maybePrint :: IORef Bool -&gt; IORef Bool -&gt; IO ()
+&gt;  maybePrint myRef yourRef = do
+&gt;    writeIORef myRef True
+&gt;    yourVal &lt;- readIORef yourRef
+&gt;    unless yourVal $ putStrLn &quot;critical section&quot;
+&gt;
+&gt;  main :: IO ()
+&gt;  main = do
+&gt;    r1 &lt;- newIORef False
+&gt;    r2 &lt;- newIORef False
+&gt;    forkIO $ maybePrint r1 r2
+&gt;    forkIO $ maybePrint r2 r1
+&gt;    threadDelay 1000000
+
+  it is possible that the string @&quot;critical section&quot;@ is printed
+  twice, even though there is no interleaving of the operations of the
+  two threads that allows that outcome.  The memory model of x86
+  allows &#39;readIORef&#39; to happen before the earlier &#39;writeIORef&#39;.
+
+  The implementation is required to ensure that reordering of memory
+  operations cannot cause type-correct code to go wrong.  In
+  particular, when inspecting the value read from an &#39;IORef&#39;, the
+  memory writes that created that value must have occurred from the
+  point of view of the current thread.
+
+  &#39;atomicModifyIORef&#39; acts as a barrier to reordering.  Multiple
+  &#39;atomicModifyIORef&#39; operations occur in strict program order.  An
+  &#39;atomicModifyIORef&#39; is never observed to take place ahead of any
+  earlier (in program order) &#39;IORef&#39; operations, or after any later
+  &#39;IORef&#39; operations.
+
+-}</span></span><span class="mpre">
+
+</span></div></body></html>

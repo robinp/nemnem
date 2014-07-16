@@ -1,0 +1,59 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- | One of most commonly-asked questions about this package is whether</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- it provides lenses for working with &#39;Data.Map.Map&#39;. It does, but their uses</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- are perhaps obscured by their genericity. This module exists to provide</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- documentation for them.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.Map.Map&#39; is an instance of &#39;Control.Lens.At.At&#39;, so we have a lenses</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- on values at keys:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; Map.fromList [(1, &quot;world&quot;)] ^.at 1</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Just &quot;world&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; at 1 .~ Just &quot;world&quot; $ Map.empty</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- fromList [(1,&quot;world&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; at 0 ?~ &quot;hello&quot; $ Map.empty</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- fromList [(0,&quot;hello&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We can traverse, fold over, and map over key-value pairs in a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.Map.Map&#39;, thanks to its &#39;Control.Lens.Indexed.TraversableWithIndex&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Indexed.FoldableWithIndex&#39;, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Indexed.FunctorWithIndex&#39; instances.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; imap const $ Map.fromList [(1, &quot;Venus&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- fromList [(1,1)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; ifoldMap (\i _ -&gt; Sum i) $ Map.fromList [(2, &quot;Earth&quot;), (3, &quot;Mars&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Sum {getSum = 5}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; itraverse_ (curry print) $ Map.fromList [(4, &quot;Jupiter&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (4,&quot;Jupiter&quot;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; itoList $ Map.fromList [(5, &quot;Saturn&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- [(5,&quot;Saturn&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A related class, &#39;Control.Lens.At.Ixed&#39;, allows us to use</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.At.ix&#39; to traverse a value at a particular key.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; ix 2 %~ (&quot;New &quot; ++) $ Map.fromList [(2, &quot;Earth&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- fromList [(2,&quot;New Earth&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; preview (ix 8) $ Map.empty</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Nothing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Additionally, &#39;Data.Map.Map&#39; has &#39;Control.Lens.Traversal.TraverseMin&#39; and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Traversal.TraverseMax&#39; instances, which let us traverse over</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the value at the least and greatest keys, respectively.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; preview traverseMin $ Map.fromList [(5, &quot;Saturn&quot;), (6, &quot;Uranus&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Just &quot;Saturn&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; preview traverseMax $ Map.fromList [(5, &quot;Saturn&quot;), (6, &quot;Uranus&quot;)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Just &quot;Uranus&quot;</span></span><span class="mpre">
+module Data.Map.Lens () where
+</span><span class="hl_comment"><span class="mpre">-- $setup</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; import Control.Lens</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; import Data.Monoid</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; import qualified Data.Map as Map</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; :set -XNoOverloadedStrings</span></span><span class="mpre">
+</span></div></body></html>

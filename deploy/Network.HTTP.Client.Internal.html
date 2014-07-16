@@ -1,0 +1,40 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# OPTIONS_HADDOCK not-home #-}
+</span><span class="hl_comment"><span class="mpre">-- | Note that this is essentially the \&quot;kitchen sink\&quot; export module,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- including many functions intended only to be used internally by this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- package. No API stability is guaranteed for this module. If you see</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- functions here which you believe should be promoted to a stable API, please</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- contact the author.</span></span><span class="mpre">
+module Network.HTTP.Client.Internal
+    ( </span><span class="hl_comment"><span class="mpre">-- * Low-level response body handling</span></span><span class="mpre">
+      module Network.HTTP.Client.Body
+      </span><span class="hl_comment"><span class="mpre">-- * Raw connection handling</span></span><span class="mpre">
+    , module Network.HTTP.Client.Connection
+      </span><span class="hl_comment"><span class="mpre">-- * Cookies</span></span><span class="mpre">
+    , module Network.HTTP.Client.Cookies
+      </span><span class="hl_comment"><span class="mpre">-- * Performing requests</span></span><span class="mpre">
+    , module Network.HTTP.Client.Core
+      </span><span class="hl_comment"><span class="mpre">-- * Parse response headers</span></span><span class="mpre">
+    , module Network.HTTP.Client.Headers
+      </span><span class="hl_comment"><span class="mpre">-- * Request helper functions</span></span><span class="mpre">
+    , module Network.HTTP.Client.Request
+      </span><span class="hl_comment"><span class="mpre">-- * Low-level response body handling</span></span><span class="mpre">
+    , module Network.HTTP.Client.Response
+      </span><span class="hl_comment"><span class="mpre">-- * Manager</span></span><span class="mpre">
+    , module Network.HTTP.Client.Manager
+      </span><span class="hl_comment"><span class="mpre">-- * All types</span></span><span class="mpre">
+    , module Network.HTTP.Client.Types
+      </span><span class="hl_comment"><span class="mpre">-- * Various utilities</span></span><span class="mpre">
+    , module Network.HTTP.Client.Util
+    ) where
+
+import Network.HTTP.Client.Body
+import Network.HTTP.Client.Connection
+import Network.HTTP.Client.Cookies
+import Network.HTTP.Client.Core
+import Network.HTTP.Client.Headers
+import Network.HTTP.Client.Manager
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/http-client-0.3.5/Network/HTTP/Client/Internal.hs&quot;, srcSpanStartLine = 36, srcSpanStartColumn = 8, srcSpanEndLine = 36, srcSpanEndColumn = 35}, srcInfoPoints = []}) &quot;Network.HTTP.Client.Request&quot;"><span class="mpre">Network.HTTP.Client.Request</span></span><span class="mpre">
+import Network.HTTP.Client.Response
+import Network.HTTP.Client.Types
+import Network.HTTP.Client.Util
+</span></div></body></html>

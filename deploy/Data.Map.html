@@ -1,0 +1,130 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if !defined(TESTING) &amp;&amp; __GLASGOW_HASKELL__ &gt;= 703
+{-# LANGUAGE Safe #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Map</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Daan Leijen 2002</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Andriy Palamarchuk 2008</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Note:/ You should use &quot;Data.Map.Strict&quot; instead of this module if:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * You will eventually need all the values stored.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * The stored values don&#39;t represent large virtual data structures</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to be lazily computed.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- An efficient implementation of ordered maps from keys to values</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (dictionaries).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- These modules are intended to be imported qualified, to avoid name</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- clashes with Prelude functions, e.g.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;  import qualified Data.Map as Map</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The implementation of &#39;Map&#39; is based on /size balanced/ binary trees (or</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- trees of /bounded balance/) as described by:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * Stephen Adams, \&quot;/Efficient sets: a balancing act/\&quot;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     Journal of Functional Programming 3(4):553-562, October 1993,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     &lt;http://www.swiss.ai.mit.edu/~adams/BB/&gt;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * J. Nievergelt and E.M. Reingold,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      \&quot;/Binary search trees of bounded balance/\&quot;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      SIAM journal of computing 2(1), March 1973.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that the implementation is /left-biased/ -- the elements of a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- first argument are always preferred to the second, for example in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;union&#39; or &#39;insert&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Operation comments contain the operation time complexity in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the Big-O notation (&lt;http://en.wikipedia.org/wiki/Big_O_notation&gt;).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Map
+    ( module Data.Map.Lazy
+    , insertWith&#39;
+    , insertWithKey&#39;
+    , insertLookupWithKey&#39;
+    , fold
+    , foldWithKey
+    ) where
+
+import Prelude hiding (foldr)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/Map.hs&quot;, srcSpanStartLine = 59, srcSpanStartColumn = 8, srcSpanEndLine = 59, srcSpanEndColumn = 21}, srcInfoPoints = []}) &quot;Data.Map.Lazy&quot;"><span class="mpre">Data.Map.Lazy</span></span><span class="mpre">
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/Map.hs&quot;, srcSpanStartLine = 60, srcSpanStartColumn = 18, srcSpanEndLine = 60, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.Map.Strict&quot;"><span class="mpre">Data.Map.Strict</span></span><span class="mpre"> as Strict
+
+</span><span class="hl_comment"><span class="mpre">-- | /Deprecated./ As of version 0.5, replaced by &#39;Data.Map.Strict.insertWith&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O(log n)/. Same as &#39;insertWith&#39;, but the value being inserted to the map is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- evaluated to WHNF beforehand.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For example, to update a counter:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; insertWith&#39; (+) k 1 m</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+
+</span><a href="#loc_73_1_73_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_1_73_12&#39;)"><span class="mpre">insertWith&#39;</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/Map.hs&quot;, srcSpanStartLine = 72, srcSpanStartColumn = 16, srcSpanEndLine = 72, srcSpanEndColumn = 24}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/Map.hs&quot;, srcSpanStartLine = 72, srcSpanStartColumn = 22, srcSpanEndLine = 72, srcSpanEndColumn = 24}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/"><span class="mpre">Ord k =&gt;</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Map</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Map</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_73_1_73_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_1_73_12&#39;)"><span class="hl_vardecl"><span class="mpre">insertWith&#39;</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">Strict.insertWith</span></span><span class="mpre">
+#if __GLASGOW_HASKELL__ &gt;= 700
+</span><span class="hl_comment"><span class="mpre">{-# INLINABLE insertWith&#39; #-}</span></span><span class="mpre">
+#else
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_73_1_73_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_1_73_12&#39;)"><span class="mpre">insertWith&#39;</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | /Deprecated./ As of version 0.5, replaced by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.Map.Strict.insertWithKey&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O(log n)/. Same as &#39;insertWithKey&#39;, but the value being inserted to the map is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- evaluated to WHNF beforehand.</span></span><span class="mpre">
+
+</span><a href="#loc_89_1_89_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_15&#39;)"><span class="mpre">insertWithKey&#39;</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/Map.hs&quot;, srcSpanStartLine = 86, srcSpanStartColumn = 19, srcSpanEndLine = 86, srcSpanEndColumn = 27}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/Map.hs&quot;, srcSpanStartLine = 86, srcSpanStartColumn = 25, srcSpanEndLine = 86, srcSpanEndColumn = 27}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/"><span class="mpre">Ord k =&gt;</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Map</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Map</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We do not reuse Data.Map.Strict.insertWithKey, because it is stricter -- it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- forces evaluation of the given value.</span></span><span class="mpre">
+</span><a name="loc_89_1_89_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_15&#39;)"><span class="hl_vardecl"><span class="mpre">insertWithKey&#39;</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">Strict.insertWithKey</span></span><span class="mpre">
+#if __GLASGOW_HASKELL__ &gt;= 700
+</span><span class="hl_comment"><span class="mpre">{-# INLINABLE insertWithKey&#39; #-}</span></span><span class="mpre">
+#else
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_89_1_89_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_15&#39;)"><span class="mpre">insertWithKey&#39;</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | /Deprecated./ As of version 0.5, replaced by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.Map.Strict.insertLookupWithKey&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O(log n)/. Same as &#39;insertLookupWithKey&#39;, but the value being inserted to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the map is evaluated to WHNF beforehand.</span></span><span class="mpre">
+
+</span><a href="#loc_106_1_106_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_1_106_21&#39;)"><span class="mpre">insertLookupWithKey&#39;</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/Map.hs&quot;, srcSpanStartLine = 102, srcSpanStartColumn = 25, srcSpanEndLine = 102, srcSpanEndColumn = 33}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/Data/Map.hs&quot;, srcSpanStartLine = 102, srcSpanStartColumn = 31, srcSpanEndLine = 102, srcSpanEndColumn = 33}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/containers-0.5.5.1/D"><span class="mpre">Ord k =&gt;</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Map</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+                     -&gt; (</span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">Map</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+</span><span class="hl_comment"><span class="mpre">-- We do not reuse Data.Map.Strict.insertLookupWithKey, because it is stricter -- it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- forces evaluation of the given value.</span></span><span class="mpre">
+</span><a name="loc_106_1_106_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_1_106_21&#39;)"><span class="hl_vardecl"><span class="mpre">insertLookupWithKey&#39;</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">Strict.insertLookupWithKey</span></span><span class="mpre">
+#if __GLASGOW_HASKELL__ &gt;= 700
+</span><span class="hl_comment"><span class="mpre">{-# INLINABLE insertLookupWithKey&#39; #-}</span></span><span class="mpre">
+#else
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_106_1_106_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_1_106_21&#39;)"><span class="mpre">insertLookupWithKey&#39;</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | /Deprecated./ As of version 0.5, replaced by &#39;foldr&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O(n)/. Fold the values in the map using the given right-associative</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- binary operator. This function is an equivalent of &#39;foldr&#39; and is present</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for compatibility only.</span></span><span class="mpre">
+</span><a href="#loc_119_1_119_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_1_119_5&#39;)"><span class="mpre">fold</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Map</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_119_1_119_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_1_119_5&#39;)"><span class="hl_vardecl"><span class="mpre">fold</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">foldr</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_119_1_119_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_1_119_5&#39;)"><span class="mpre">fold</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /Deprecated./ As of version 0.4, replaced by &#39;foldrWithKey&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /O(n)/. Fold the keys and values in the map using the given right-associative</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- binary operator. This function is an equivalent of &#39;foldrWithKey&#39; and is present</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for compatibility only.</span></span><span class="mpre">
+</span><a href="#loc_128_1_128_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_12&#39;)"><span class="mpre">foldWithKey</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Map</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">k</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_128_1_128_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_12&#39;)"><span class="hl_vardecl"><span class="mpre">foldWithKey</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">foldrWithKey</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_128_1_128_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_1_128_12&#39;)"><span class="mpre">foldWithKey</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span></div></body></html>

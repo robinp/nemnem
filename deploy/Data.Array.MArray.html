@@ -1,0 +1,54 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Array.MArray</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (uses Data.Array.Base)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- An overloaded interface to mutable arrays.  For array types which can be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- used with this interface, see &quot;Data.Array.IO&quot;, &quot;Data.Array.ST&quot;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and &quot;Data.Array.Storable&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Array.MArray (
+    </span><span class="hl_comment"><span class="mpre">-- * Class of mutable array types</span></span><span class="mpre">
+    MArray,       </span><span class="hl_comment"><span class="mpre">-- :: (* -&gt; * -&gt; *) -&gt; * -&gt; (* -&gt; *) -&gt; class</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * The @Ix@ class and operations</span></span><span class="mpre">
+    module Data.Ix,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Constructing mutable arrays</span></span><span class="mpre">
+    newArray,     </span><span class="hl_comment"><span class="mpre">-- :: (MArray a e m, Ix i) =&gt; (i,i) -&gt; e -&gt; m (a i e)</span></span><span class="mpre">
+    newArray_,    </span><span class="hl_comment"><span class="mpre">-- :: (MArray a e m, Ix i) =&gt; (i,i) -&gt; m (a i e)</span></span><span class="mpre">
+    newListArray, </span><span class="hl_comment"><span class="mpre">-- :: (MArray a e m, Ix i) =&gt; (i,i) -&gt; [e] -&gt; m (a i e)</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Reading and writing mutable arrays</span></span><span class="mpre">
+    readArray,    </span><span class="hl_comment"><span class="mpre">-- :: (MArray a e m, Ix i) =&gt; a i e -&gt; i -&gt; m e</span></span><span class="mpre">
+    writeArray,   </span><span class="hl_comment"><span class="mpre">-- :: (MArray a e m, Ix i) =&gt; a i e -&gt; i -&gt; e -&gt; m ()</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Derived arrays</span></span><span class="mpre">
+    mapArray,     </span><span class="hl_comment"><span class="mpre">-- :: (MArray a e&#39; m, MArray a e m, Ix i) =&gt; (e&#39; -&gt; e) -&gt; a i e&#39; -&gt; m (a i e)</span></span><span class="mpre">
+    mapIndices,   </span><span class="hl_comment"><span class="mpre">-- :: (MArray a e m, Ix i, Ix j) =&gt; (i,i) -&gt; (i -&gt; j) -&gt; a j e -&gt; m (a i e)</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Deconstructing mutable arrays</span></span><span class="mpre">
+    getBounds,    </span><span class="hl_comment"><span class="mpre">-- :: (MArray a e m, Ix i) =&gt; a i e -&gt; m (i,i)</span></span><span class="mpre">
+    getElems,     </span><span class="hl_comment"><span class="mpre">-- :: (MArray a e m, Ix i) =&gt; a i e -&gt; m [e]</span></span><span class="mpre">
+    getAssocs,    </span><span class="hl_comment"><span class="mpre">-- :: (MArray a e m, Ix i) =&gt; a i e -&gt; m [(i, e)]</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Conversions between mutable and immutable arrays</span></span><span class="mpre">
+    freeze,       </span><span class="hl_comment"><span class="mpre">-- :: (Ix i, MArray a e m, IArray b e) =&gt; a i e -&gt; m (b i e)</span></span><span class="mpre">
+    thaw,         </span><span class="hl_comment"><span class="mpre">-- :: (Ix i, IArray a e, MArray b e m) =&gt; a i e -&gt; m (b i e)</span></span><span class="mpre">
+  ) where
+
+import Data.Ix
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/array-0.5.0.0/Data/Array/MArray.hs&quot;, srcSpanStartLine = 50, srcSpanStartColumn = 8, srcSpanEndLine = 50, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;Data.Array.Base&quot;"><span class="mpre">Data.Array.Base</span></span><span class="mpre">
+#ifdef __HADDOCK__
+import Data.Array.IArray
+#endif
+</span></div></body></html>

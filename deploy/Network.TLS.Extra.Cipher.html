@@ -1,0 +1,433 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Network.TLS.Extra.Cipher</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : unknown</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE PackageImports #-}
+module Network.TLS.Extra.Cipher
+    (
+    </span><span class="hl_comment"><span class="mpre">-- * cipher suite</span></span><span class="mpre">
+      ciphersuite_all
+    , ciphersuite_medium
+    , ciphersuite_strong
+    , ciphersuite_unencrypted
+    , ciphersuite_dhe_rsa
+    , ciphersuite_dhe_dss
+    </span><span class="hl_comment"><span class="mpre">-- * individual ciphers</span></span><span class="mpre">
+    , cipher_null_SHA1
+    , cipher_null_MD5
+    , cipher_RC4_128_MD5
+    , cipher_RC4_128_SHA1
+    , cipher_AES128_SHA1
+    , cipher_AES256_SHA1
+    , cipher_AES128_SHA256
+    , cipher_AES256_SHA256
+    , cipher_RSA_3DES_EDE_CBC_SHA1
+    , cipher_DHE_RSA_AES128_SHA1
+    , cipher_DHE_RSA_AES256_SHA1
+    , cipher_DHE_RSA_AES128_SHA256
+    , cipher_DHE_RSA_AES256_SHA256
+    , cipher_DHE_DSS_AES128_SHA1
+    , cipher_DHE_DSS_AES256_SHA1
+    , cipher_DHE_DSS_RC4_SHA1
+    ) where
+
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 38, srcSpanStartColumn = 18, srcSpanEndLine = 38, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> as B
+
+import Network.TLS (</span><a href="Network.TLS.Types.html#loc_25_6_25_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Types.html#loc_25_6_25_13&#39;)"><span class="mpre">Version</span></a><span class="mpre">(..))
+import Network.TLS.Cipher
+import qualified &quot;cipher-rc4&quot; Crypto.Cipher.RC4 as RC4
+
+import qualified Crypto.Hash.SHA256 as SHA256
+import qualified Crypto.Hash.SHA1 as SHA1
+import qualified Crypto.Hash.MD5 as MD5
+
+import qualified &quot;cipher-aes&quot; </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 48, srcSpanStartColumn = 31, srcSpanEndLine = 48, srcSpanEndColumn = 48}, srcInfoPoints = []}) &quot;Crypto.Cipher.AES&quot;"><span class="mpre">Crypto.Cipher.AES</span></span><span class="mpre"> as AES
+import Crypto.Cipher.TripleDES
+import Crypto.Cipher.Types (</span><a href="Crypto.Cipher.Types.html#loc_49_1_49_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.Types.html#loc_49_1_49_8&#39;)"><span class="mpre">makeKey</span></a><span class="mpre">, </span><a href="Crypto.Cipher.Types.Block.html#loc_142_1_142_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.Types.Block.html#loc_142_1_142_7&#39;)"><span class="mpre">makeIV</span></a><span class="mpre">, cipherInit, cbcEncrypt, cbcDecrypt)
+import qualified Crypto.Cipher.Types as T
+
+</span><a href="#loc_54_1_54_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_1_54_16&#39;)"><span class="mpre">aes_cbc_encrypt</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">
+</span><a name="loc_54_1_54_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_1_54_16&#39;)"><span class="hl_fundecl"><span class="mpre">aes_cbc_encrypt</span></span></a><span class="mpre"> </span><a name="loc_54_17_54_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_17_54_20&#39;)"><span class="hl_vardecl"><span class="mpre">key</span></span></a><span class="mpre"> </span><a name="loc_54_21_54_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_21_54_23&#39;)"><span class="hl_vardecl"><span class="mpre">iv</span></span></a><span class="mpre"> </span><a name="loc_54_24_54_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_24_54_25&#39;)"><span class="hl_vardecl"><span class="mpre">d</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">AES.encryptCBC</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">AES.initAES</span></span><span class="mpre"> </span><a href="#loc_54_17_54_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_17_54_20&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre">) </span><a href="#loc_54_21_54_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_21_54_23&#39;)"><span class="hl_varref"><span class="mpre">iv</span></span></a><span class="mpre"> </span><a href="#loc_54_24_54_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_24_54_25&#39;)"><span class="hl_varref"><span class="mpre">d</span></span></a><span class="mpre">
+
+</span><a href="#loc_57_1_57_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_1_57_16&#39;)"><span class="mpre">aes_cbc_decrypt</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">
+</span><a name="loc_57_1_57_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_1_57_16&#39;)"><span class="hl_fundecl"><span class="mpre">aes_cbc_decrypt</span></span></a><span class="mpre"> </span><a name="loc_57_17_57_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_17_57_20&#39;)"><span class="hl_vardecl"><span class="mpre">key</span></span></a><span class="mpre"> </span><a name="loc_57_21_57_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_21_57_23&#39;)"><span class="hl_vardecl"><span class="mpre">iv</span></span></a><span class="mpre"> </span><a name="loc_57_24_57_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_24_57_25&#39;)"><span class="hl_vardecl"><span class="mpre">d</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">AES.decryptCBC</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">AES.initAES</span></span><span class="mpre"> </span><a href="#loc_57_17_57_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_17_57_20&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre">) </span><a href="#loc_57_21_57_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_21_57_23&#39;)"><span class="hl_varref"><span class="mpre">iv</span></span></a><span class="mpre"> </span><a href="#loc_57_24_57_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_24_57_25&#39;)"><span class="hl_varref"><span class="mpre">d</span></span></a><span class="mpre">
+
+</span><a href="#loc_63_1_63_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_63_1_63_19&#39;)"><span class="mpre">aes128_cbc_encrypt</span></a><span class="mpre">
+  , </span><a href="#loc_64_1_64_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_64_1_64_19&#39;)"><span class="mpre">aes128_cbc_decrypt</span></a><span class="mpre">
+  , </span><a href="#loc_65_1_65_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_65_1_65_19&#39;)"><span class="mpre">aes256_cbc_encrypt</span></a><span class="mpre">
+  , </span><a href="#loc_66_1_66_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_19&#39;)"><span class="mpre">aes256_cbc_decrypt</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">
+</span><a name="loc_63_1_63_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_63_1_63_19&#39;)"><span class="hl_vardecl"><span class="mpre">aes128_cbc_encrypt</span></span></a><span class="mpre"> = </span><a href="#loc_54_1_54_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_1_54_16&#39;)"><span class="hl_varref"><span class="mpre">aes_cbc_encrypt</span></span></a><span class="mpre">
+</span><a name="loc_64_1_64_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_64_1_64_19&#39;)"><span class="hl_vardecl"><span class="mpre">aes128_cbc_decrypt</span></span></a><span class="mpre"> = </span><a href="#loc_57_1_57_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_1_57_16&#39;)"><span class="hl_varref"><span class="mpre">aes_cbc_decrypt</span></span></a><span class="mpre">
+</span><a name="loc_65_1_65_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_65_1_65_19&#39;)"><span class="hl_vardecl"><span class="mpre">aes256_cbc_encrypt</span></span></a><span class="mpre"> = </span><a href="#loc_54_1_54_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_1_54_16&#39;)"><span class="hl_varref"><span class="mpre">aes_cbc_encrypt</span></span></a><span class="mpre">
+</span><a name="loc_66_1_66_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_66_1_66_19&#39;)"><span class="hl_vardecl"><span class="mpre">aes256_cbc_decrypt</span></span></a><span class="mpre"> = </span><a href="#loc_57_1_57_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_1_57_16&#39;)"><span class="hl_varref"><span class="mpre">aes_cbc_decrypt</span></span></a><span class="mpre">
+
+</span><a href="#loc_69_1_69_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_1_69_26&#39;)"><span class="mpre">tripledes_ede_cbc_encrypt</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">
+</span><a name="loc_69_1_69_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_1_69_26&#39;)"><span class="hl_fundecl"><span class="mpre">tripledes_ede_cbc_encrypt</span></span></a><span class="mpre"> </span><a name="loc_69_27_69_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_27_69_30&#39;)"><span class="hl_vardecl"><span class="mpre">key</span></span></a><span class="mpre"> </span><a name="loc_69_31_69_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_31_69_33&#39;)"><span class="hl_vardecl"><span class="mpre">iv</span></span></a><span class="mpre"> </span><a name="loc_69_34_69_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_34_69_36&#39;)"><span class="hl_vardecl"><span class="mpre">bs</span></span></a><span class="mpre"> =
+    </span><span class="hl_varref"><span class="mpre">cbcEncrypt</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">cipherInit</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_77_1_77_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_1_77_14&#39;)"><span class="hl_varref"><span class="mpre">tripledes_key</span></span></a><span class="mpre"> </span><a href="#loc_69_27_69_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_27_69_30&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre">) (</span><a href="#loc_80_1_80_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_13&#39;)"><span class="hl_varref"><span class="mpre">tripledes_iv</span></span></a><span class="mpre"> </span><a href="#loc_69_31_69_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_31_69_33&#39;)"><span class="hl_varref"><span class="mpre">iv</span></span></a><span class="mpre">) </span><a href="#loc_69_34_69_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_34_69_36&#39;)"><span class="hl_varref"><span class="mpre">bs</span></span></a><span class="mpre">
+
+</span><a href="#loc_73_1_73_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_1_73_26&#39;)"><span class="mpre">tripledes_ede_cbc_decrypt</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">
+</span><a name="loc_73_1_73_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_1_73_26&#39;)"><span class="hl_fundecl"><span class="mpre">tripledes_ede_cbc_decrypt</span></span></a><span class="mpre"> </span><a name="loc_73_27_73_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_27_73_30&#39;)"><span class="hl_vardecl"><span class="mpre">key</span></span></a><span class="mpre"> </span><a name="loc_73_31_73_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_31_73_33&#39;)"><span class="hl_vardecl"><span class="mpre">iv</span></span></a><span class="mpre"> </span><a name="loc_73_34_73_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_34_73_36&#39;)"><span class="hl_vardecl"><span class="mpre">bs</span></span></a><span class="mpre"> =
+    </span><span class="hl_varref"><span class="mpre">cbcDecrypt</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">cipherInit</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_77_1_77_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_1_77_14&#39;)"><span class="hl_varref"><span class="mpre">tripledes_key</span></span></a><span class="mpre"> </span><a href="#loc_73_27_73_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_27_73_30&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre">) (</span><a href="#loc_80_1_80_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_13&#39;)"><span class="hl_varref"><span class="mpre">tripledes_iv</span></span></a><span class="mpre"> </span><a href="#loc_73_31_73_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_31_73_33&#39;)"><span class="hl_varref"><span class="mpre">iv</span></span></a><span class="mpre">) </span><a href="#loc_73_34_73_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_34_73_36&#39;)"><span class="hl_varref"><span class="mpre">bs</span></span></a><span class="mpre">
+
+</span><a href="#loc_77_1_77_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_1_77_14&#39;)"><span class="mpre">tripledes_key</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><a href="Crypto.Cipher.Types.Base.html#loc_44_9_44_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.Types.Base.html#loc_44_9_44_12&#39;)"><span class="hl_tyconref"><span class="mpre">T.Key</span></span></a><span class="mpre"> </span><a href="Crypto.Cipher.TripleDES.html#loc_27_6_27_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.TripleDES.html#loc_27_6_27_14&#39;)"><span class="hl_tyconref"><span class="mpre">DES_EDE3</span></span></a><span class="mpre">
+</span><a name="loc_77_1_77_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_1_77_14&#39;)"><span class="hl_fundecl"><span class="mpre">tripledes_key</span></span></a><span class="mpre"> </span><a name="loc_77_15_77_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_15_77_18&#39;)"><span class="hl_vardecl"><span class="mpre">key</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">either</span></span><span class="mpre"> (\</span><a name="loc_77_30_77_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_30_77_32&#39;)"><span class="hl_vardecl"><span class="mpre">ke</span></span></a><span class="mpre"> -&gt; </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> (</span><span class="hl_string"><span class="mpre">&quot;tripledes cipher key internal error: &quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_77_30_77_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_30_77_32&#39;)"><span class="hl_varref"><span class="mpre">ke</span></span></a><span class="mpre">)) </span><span class="hl_varref"><span class="mpre">id</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Crypto.Cipher.Types.html#loc_49_1_49_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.Types.html#loc_49_1_49_8&#39;)"><span class="hl_varref"><span class="mpre">makeKey</span></span></a><span class="mpre"> </span><a href="#loc_77_15_77_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_15_77_18&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre">
+
+</span><a href="#loc_80_1_80_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_13&#39;)"><span class="mpre">tripledes_iv</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre"> -&gt; </span><a href="Crypto.Cipher.Types.Base.html#loc_52_9_52_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.Types.Base.html#loc_52_9_52_11&#39;)"><span class="hl_tyconref"><span class="mpre">T.IV</span></span></a><span class="mpre"> </span><a href="Crypto.Cipher.TripleDES.html#loc_27_6_27_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.TripleDES.html#loc_27_6_27_14&#39;)"><span class="hl_tyconref"><span class="mpre">DES_EDE3</span></span></a><span class="mpre">
+</span><a name="loc_80_1_80_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_13&#39;)"><span class="hl_fundecl"><span class="mpre">tripledes_iv</span></span></a><span class="mpre"> </span><a name="loc_80_14_80_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_14_80_16&#39;)"><span class="hl_vardecl"><span class="mpre">iv</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">maybe</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;tripledes cipher iv internal error&quot;</span></span><span class="mpre">) </span><span class="hl_varref"><span class="mpre">id</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Crypto.Cipher.Types.Block.html#loc_142_1_142_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.Types.Block.html#loc_142_1_142_7&#39;)"><span class="hl_varref"><span class="mpre">makeIV</span></span></a><span class="mpre"> </span><a href="#loc_80_14_80_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_14_80_16&#39;)"><span class="hl_varref"><span class="mpre">iv</span></span></a><span class="mpre">
+
+</span><a href="#loc_83_1_83_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_5&#39;)"><span class="mpre">toIV</span></a><span class="mpre"> :: </span><a href="Crypto.Cipher.RC4.html#loc_63_9_63_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.RC4.html#loc_63_9_63_12&#39;)"><span class="hl_tyconref"><span class="mpre">RC4.Ctx</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre">
+</span><a name="loc_83_1_83_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_5&#39;)"><span class="hl_fundecl"><span class="mpre">toIV</span></span></a><span class="mpre"> (</span><a href="Crypto.Cipher.RC4.html#loc_63_15_63_18" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.RC4.html#loc_63_15_63_18&#39;)"><span class="hl_conref"><span class="mpre">RC4.Ctx</span></span></a><span class="mpre"> </span><a name="loc_83_15_83_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_15_83_18&#39;)"><span class="hl_vardecl"><span class="mpre">ctx</span></span></a><span class="mpre">) = </span><a href="#loc_83_15_83_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_15_83_18&#39;)"><span class="hl_varref"><span class="mpre">ctx</span></span></a><span class="mpre">
+
+</span><a href="#loc_86_1_86_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_6&#39;)"><span class="mpre">toCtx</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre"> -&gt; </span><a href="Crypto.Cipher.RC4.html#loc_63_9_63_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.RC4.html#loc_63_9_63_12&#39;)"><span class="hl_tyconref"><span class="mpre">RC4.Ctx</span></span></a><span class="mpre">
+</span><a name="loc_86_1_86_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_6&#39;)"><span class="hl_fundecl"><span class="mpre">toCtx</span></span></a><span class="mpre"> </span><a name="loc_86_7_86_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_7_86_9&#39;)"><span class="hl_vardecl"><span class="mpre">iv</span></span></a><span class="mpre"> = </span><a href="Crypto.Cipher.RC4.html#loc_63_15_63_18" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.RC4.html#loc_63_15_63_18&#39;)"><span class="hl_conref"><span class="mpre">RC4.Ctx</span></span></a><span class="mpre"> </span><a href="#loc_86_7_86_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_7_86_9&#39;)"><span class="hl_varref"><span class="mpre">iv</span></span></a><span class="mpre">
+
+</span><a href="#loc_89_1_89_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_10&#39;)"><span class="mpre">initF_rc4</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Key</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre">
+</span><a name="loc_89_1_89_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_1_89_10&#39;)"><span class="hl_fundecl"><span class="mpre">initF_rc4</span></span></a><span class="mpre"> </span><a name="loc_89_11_89_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_11_89_14&#39;)"><span class="hl_vardecl"><span class="mpre">key</span></span></a><span class="mpre">     = </span><a href="#loc_83_1_83_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_5&#39;)"><span class="hl_varref"><span class="mpre">toIV</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Crypto.Cipher.RC4.html#loc_92_1_92_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.RC4.html#loc_92_1_92_8&#39;)"><span class="hl_varref"><span class="mpre">RC4.initCtx</span></span></a><span class="mpre"> </span><a href="#loc_89_11_89_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_11_89_14&#39;)"><span class="hl_varref"><span class="mpre">key</span></span></a><span class="mpre">
+
+</span><a href="#loc_92_1_92_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_13&#39;)"><span class="mpre">encryptF_rc4</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre">)
+</span><a name="loc_92_1_92_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_13&#39;)"><span class="hl_fundecl"><span class="mpre">encryptF_rc4</span></span></a><span class="mpre"> </span><a name="loc_92_14_92_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_14_92_16&#39;)"><span class="hl_vardecl"><span class="mpre">iv</span></span></a><span class="mpre"> </span><a name="loc_92_17_92_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_17_92_18&#39;)"><span class="hl_vardecl"><span class="mpre">d</span></span></a><span class="mpre"> = (\(</span><a name="loc_92_24_92_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_24_92_27&#39;)"><span class="hl_vardecl"><span class="mpre">ctx</span></span></a><span class="mpre">, </span><a name="loc_92_29_92_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_29_92_30&#39;)"><span class="hl_vardecl"><span class="mpre">e</span></span></a><span class="mpre">) -&gt; (</span><a href="#loc_92_29_92_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_29_92_30&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre">, </span><a href="#loc_83_1_83_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_5&#39;)"><span class="hl_varref"><span class="mpre">toIV</span></span></a><span class="mpre"> </span><a href="#loc_92_24_92_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_24_92_27&#39;)"><span class="hl_varref"><span class="mpre">ctx</span></span></a><span class="mpre">)) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Crypto.Cipher.RC4.html#loc_104_1_104_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.RC4.html#loc_104_1_104_8&#39;)"><span class="hl_varref"><span class="mpre">RC4.combine</span></span></a><span class="mpre"> (</span><a href="#loc_86_1_86_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_6&#39;)"><span class="hl_varref"><span class="mpre">toCtx</span></span></a><span class="mpre"> </span><a href="#loc_92_14_92_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_14_92_16&#39;)"><span class="hl_varref"><span class="mpre">iv</span></span></a><span class="mpre">) </span><a href="#loc_92_17_92_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_17_92_18&#39;)"><span class="hl_varref"><span class="mpre">d</span></span></a><span class="mpre">
+
+</span><a href="#loc_95_1_95_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_13&#39;)"><span class="mpre">decryptF_rc4</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyconref"><span class="mpre">B.ByteString</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">IV</span></span><span class="mpre">)
+</span><a name="loc_95_1_95_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_1_95_13&#39;)"><span class="hl_fundecl"><span class="mpre">decryptF_rc4</span></span></a><span class="mpre"> </span><a name="loc_95_14_95_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_14_95_16&#39;)"><span class="hl_vardecl"><span class="mpre">iv</span></span></a><span class="mpre"> </span><a name="loc_95_17_95_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_17_95_18&#39;)"><span class="hl_vardecl"><span class="mpre">e</span></span></a><span class="mpre"> = (\(</span><a name="loc_95_24_95_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_24_95_27&#39;)"><span class="hl_vardecl"><span class="mpre">ctx</span></span></a><span class="mpre">, </span><a name="loc_95_29_95_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_29_95_30&#39;)"><span class="hl_vardecl"><span class="mpre">d</span></span></a><span class="mpre">) -&gt; (</span><a href="#loc_95_29_95_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_29_95_30&#39;)"><span class="hl_varref"><span class="mpre">d</span></span></a><span class="mpre">, </span><a href="#loc_83_1_83_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_5&#39;)"><span class="hl_varref"><span class="mpre">toIV</span></span></a><span class="mpre"> </span><a href="#loc_95_24_95_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_24_95_27&#39;)"><span class="hl_varref"><span class="mpre">ctx</span></span></a><span class="mpre">)) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Crypto.Cipher.RC4.html#loc_104_1_104_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.RC4.html#loc_104_1_104_8&#39;)"><span class="hl_varref"><span class="mpre">RC4.combine</span></span></a><span class="mpre"> (</span><a href="#loc_86_1_86_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_6&#39;)"><span class="hl_varref"><span class="mpre">toCtx</span></span></a><span class="mpre"> </span><a href="#loc_95_14_95_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_14_95_16&#39;)"><span class="hl_varref"><span class="mpre">iv</span></span></a><span class="mpre">) </span><a href="#loc_95_17_95_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_95_17_95_18&#39;)"><span class="hl_varref"><span class="mpre">e</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | all encrypted ciphers supported ordered from strong to weak.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- this choice of ciphersuite should satisfy most normal need</span></span><span class="mpre">
+</span><a href="#loc_101_1_101_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_16&#39;)"><span class="mpre">ciphersuite_all</span></a><span class="mpre"> :: [</span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">]
+</span><a name="loc_101_1_101_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_16&#39;)"><span class="hl_vardecl"><span class="mpre">ciphersuite_all</span></span></a><span class="mpre"> =
+    [ </span><a href="#loc_334_1_334_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_334_1_334_29&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_RSA_AES256_SHA256</span></span></a><span class="mpre">, </span><a href="#loc_326_1_326_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_326_1_326_29&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_RSA_AES128_SHA256</span></span></a><span class="mpre">
+    , </span><a href="#loc_293_1_293_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_293_1_293_27&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_RSA_AES256_SHA1</span></span></a><span class="mpre">, </span><a href="#loc_282_1_282_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_282_1_282_27&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_RSA_AES128_SHA1</span></span></a><span class="mpre">
+    , </span><a href="#loc_312_1_312_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_312_1_312_27&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_DSS_AES256_SHA1</span></span></a><span class="mpre">, </span><a href="#loc_301_1_301_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_301_1_301_27&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_DSS_AES128_SHA1</span></span></a><span class="mpre">
+    , </span><a href="#loc_260_1_260_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_260_1_260_21&#39;)"><span class="hl_varref"><span class="mpre">cipher_AES128_SHA256</span></span></a><span class="mpre">, </span><a href="#loc_271_1_271_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_271_1_271_21&#39;)"><span class="hl_varref"><span class="mpre">cipher_AES256_SHA256</span></span></a><span class="mpre">
+    , </span><a href="#loc_238_1_238_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_238_1_238_19&#39;)"><span class="hl_varref"><span class="mpre">cipher_AES128_SHA1</span></span></a><span class="mpre">,   </span><a href="#loc_249_1_249_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_249_1_249_19&#39;)"><span class="hl_varref"><span class="mpre">cipher_AES256_SHA1</span></span></a><span class="mpre">
+    , </span><a href="#loc_319_1_319_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_319_1_319_24&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_DSS_RC4_SHA1</span></span></a><span class="mpre">, </span><a href="#loc_227_1_227_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_227_1_227_20&#39;)"><span class="hl_varref"><span class="mpre">cipher_RC4_128_SHA1</span></span></a><span class="mpre">,  </span><a href="#loc_216_1_216_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_216_1_216_19&#39;)"><span class="hl_varref"><span class="mpre">cipher_RC4_128_MD5</span></span></a><span class="mpre">
+    , </span><a href="#loc_342_1_342_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_342_1_342_29&#39;)"><span class="hl_varref"><span class="mpre">cipher_RSA_3DES_EDE_CBC_SHA1</span></span></a><span class="mpre">
+    ]
+
+</span><span class="hl_comment"><span class="mpre">-- | list of medium ciphers.</span></span><span class="mpre">
+</span><a href="#loc_113_1_113_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_1_113_19&#39;)"><span class="mpre">ciphersuite_medium</span></a><span class="mpre"> :: [</span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">]
+</span><a name="loc_113_1_113_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_1_113_19&#39;)"><span class="hl_vardecl"><span class="mpre">ciphersuite_medium</span></span></a><span class="mpre"> = [</span><a href="#loc_216_1_216_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_216_1_216_19&#39;)"><span class="hl_varref"><span class="mpre">cipher_RC4_128_MD5</span></span></a><span class="mpre">, </span><a href="#loc_227_1_227_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_227_1_227_20&#39;)"><span class="hl_varref"><span class="mpre">cipher_RC4_128_SHA1</span></span></a><span class="mpre">, </span><a href="#loc_238_1_238_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_238_1_238_19&#39;)"><span class="hl_varref"><span class="mpre">cipher_AES128_SHA1</span></span></a><span class="mpre">, </span><a href="#loc_249_1_249_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_249_1_249_19&#39;)"><span class="hl_varref"><span class="mpre">cipher_AES256_SHA1</span></span></a><span class="mpre">]
+
+</span><span class="hl_comment"><span class="mpre">-- | the strongest ciphers supported.</span></span><span class="mpre">
+</span><a href="#loc_117_1_117_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_1_117_19&#39;)"><span class="mpre">ciphersuite_strong</span></a><span class="mpre"> :: [</span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">]
+</span><a name="loc_117_1_117_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_1_117_19&#39;)"><span class="hl_vardecl"><span class="mpre">ciphersuite_strong</span></span></a><span class="mpre"> = [</span><a href="#loc_334_1_334_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_334_1_334_29&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_RSA_AES256_SHA256</span></span></a><span class="mpre">, </span><a href="#loc_271_1_271_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_271_1_271_21&#39;)"><span class="hl_varref"><span class="mpre">cipher_AES256_SHA256</span></span></a><span class="mpre">, </span><a href="#loc_249_1_249_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_249_1_249_19&#39;)"><span class="hl_varref"><span class="mpre">cipher_AES256_SHA1</span></span></a><span class="mpre">]
+
+</span><span class="hl_comment"><span class="mpre">-- | DHE-RSA cipher suite</span></span><span class="mpre">
+</span><a href="#loc_121_1_121_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_121_1_121_20&#39;)"><span class="mpre">ciphersuite_dhe_rsa</span></a><span class="mpre"> :: [</span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">]
+</span><a name="loc_121_1_121_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_121_1_121_20&#39;)"><span class="hl_vardecl"><span class="mpre">ciphersuite_dhe_rsa</span></span></a><span class="mpre"> = [</span><a href="#loc_334_1_334_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_334_1_334_29&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_RSA_AES256_SHA256</span></span></a><span class="mpre">, </span><a href="#loc_326_1_326_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_326_1_326_29&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_RSA_AES128_SHA256</span></span></a><span class="mpre">
+                      , </span><a href="#loc_293_1_293_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_293_1_293_27&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_RSA_AES256_SHA1</span></span></a><span class="mpre">, </span><a href="#loc_282_1_282_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_282_1_282_27&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_RSA_AES128_SHA1</span></span></a><span class="mpre">]
+
+</span><a href="#loc_125_1_125_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_20&#39;)"><span class="mpre">ciphersuite_dhe_dss</span></a><span class="mpre"> :: [</span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">]
+</span><a name="loc_125_1_125_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_20&#39;)"><span class="hl_vardecl"><span class="mpre">ciphersuite_dhe_dss</span></span></a><span class="mpre"> = [</span><a href="#loc_312_1_312_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_312_1_312_27&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_DSS_AES256_SHA1</span></span></a><span class="mpre">, </span><a href="#loc_301_1_301_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_301_1_301_27&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_DSS_AES128_SHA1</span></span></a><span class="mpre">, </span><a href="#loc_319_1_319_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_319_1_319_24&#39;)"><span class="hl_varref"><span class="mpre">cipher_DHE_DSS_RC4_SHA1</span></span></a><span class="mpre">]
+
+</span><span class="hl_comment"><span class="mpre">-- | all unencrypted ciphers, do not use on insecure network.</span></span><span class="mpre">
+</span><a href="#loc_129_1_129_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_129_1_129_24&#39;)"><span class="mpre">ciphersuite_unencrypted</span></a><span class="mpre"> :: [</span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">]
+</span><a name="loc_129_1_129_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_129_1_129_24&#39;)"><span class="hl_vardecl"><span class="mpre">ciphersuite_unencrypted</span></span></a><span class="mpre"> = [</span><a href="#loc_194_1_194_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_194_1_194_16&#39;)"><span class="hl_varref"><span class="mpre">cipher_null_MD5</span></span></a><span class="mpre">, </span><a href="#loc_205_1_205_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_205_1_205_17&#39;)"><span class="hl_varref"><span class="mpre">cipher_null_SHA1</span></span></a><span class="mpre">]
+
+</span><a href="#loc_132_1_132_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_132_1_132_10&#39;)"><span class="mpre">bulk_null</span></a><span class="mpre">, </span><a href="#loc_141_1_141_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_1_141_9&#39;)"><span class="mpre">bulk_rc4</span></a><span class="mpre">, </span><a href="#loc_149_1_149_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_149_1_149_12&#39;)"><span class="mpre">bulk_aes128</span></a><span class="mpre">, </span><a href="#loc_157_1_157_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_1_157_12&#39;)"><span class="mpre">bulk_aes256</span></a><span class="mpre">, </span><a href="#loc_165_1_165_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_165_1_165_19&#39;)"><span class="mpre">bulk_tripledes_ede</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_53_6_53_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_53_6_53_10&#39;)"><span class="hl_tyconref"><span class="mpre">Bulk</span></span></a><span class="mpre">
+</span><a name="loc_132_1_132_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_132_1_132_10&#39;)"><span class="hl_vardecl"><span class="mpre">bulk_null</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 132, srcSpanStartColumn = 13, srcSpanEndLine = 138, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 133, srcSpanStartColumn = 5, srcSpanEndLine = 133, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Bulk
+    { bulkName         = &quot;null&quot;
+    , bulkKeySize      = 0
+    , bulkIVSize       = 0
+    , bulkBlockSize    = 0
+    , bulkF            = BulkStreamF (const B.empty) streamId streamId
+    }</span></span><span class="mpre">
+    where </span><span class="hl_vardecl"><span class="mpre">streamId</span></span><span class="mpre"> = \</span><a name="loc_139_23_139_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_23_139_25&#39;)"><span class="hl_vardecl"><span class="mpre">iv</span></span></a><span class="mpre"> </span><a name="loc_139_26_139_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_26_139_27&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre"> -&gt; (</span><a href="#loc_139_26_139_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_26_139_27&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">,</span><a href="#loc_139_23_139_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_23_139_25&#39;)"><span class="hl_varref"><span class="mpre">iv</span></span></a><span class="mpre">)
+
+</span><a name="loc_141_1_141_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_1_141_9&#39;)"><span class="hl_vardecl"><span class="mpre">bulk_rc4</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 141, srcSpanStartColumn = 12, srcSpanEndLine = 147, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 142, srcSpanStartColumn = 5, srcSpanEndLine = 142, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Bulk
+    { bulkName         = &quot;RC4-128&quot;
+    , bulkKeySize      = 16
+    , bulkIVSize       = 0
+    , bulkBlockSize    = 0
+    , bulkF            = BulkStreamF initF_rc4 encryptF_rc4 decryptF_rc4
+    }</span></span><span class="mpre">
+
+</span><a name="loc_149_1_149_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_149_1_149_12&#39;)"><span class="hl_vardecl"><span class="mpre">bulk_aes128</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 149, srcSpanStartColumn = 15, srcSpanEndLine = 155, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 150, srcSpanStartColumn = 5, srcSpanEndLine = 150, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Bulk
+    { bulkName         = &quot;AES128&quot;
+    , bulkKeySize      = 16
+    , bulkIVSize       = 16
+    , bulkBlockSize    = 16
+    , bulkF            = BulkBlockF aes128_cbc_encrypt aes128_cbc_decrypt
+    }</span></span><span class="mpre">
+
+</span><a name="loc_157_1_157_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_1_157_12&#39;)"><span class="hl_vardecl"><span class="mpre">bulk_aes256</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 157, srcSpanStartColumn = 15, srcSpanEndLine = 163, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 158, srcSpanStartColumn = 5, srcSpanEndLine = 158, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Bulk
+    { bulkName         = &quot;AES256&quot;
+    , bulkKeySize      = 32
+    , bulkIVSize       = 16
+    , bulkBlockSize    = 16
+    , bulkF            = BulkBlockF aes256_cbc_encrypt aes256_cbc_decrypt
+    }</span></span><span class="mpre">
+
+</span><a name="loc_165_1_165_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_165_1_165_19&#39;)"><span class="hl_vardecl"><span class="mpre">bulk_tripledes_ede</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 165, srcSpanStartColumn = 22, srcSpanEndLine = 171, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 166, srcSpanStartColumn = 5, srcSpanEndLine = 166, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Bulk
+    { bulkName      = &quot;3DES-EDE-CBC&quot;
+    , bulkKeySize   = 24
+    , bulkIVSize    = 8
+    , bulkBlockSize = 8
+    , bulkF         = BulkBlockF tripledes_ede_cbc_encrypt tripledes_ede_cbc_decrypt
+    }</span></span><span class="mpre">
+
+</span><a href="#loc_174_1_174_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_174_1_174_9&#39;)"><span class="mpre">hash_md5</span></a><span class="mpre">, </span><a href="#loc_180_1_180_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_1_180_10&#39;)"><span class="mpre">hash_sha1</span></a><span class="mpre">, </span><a href="#loc_186_1_186_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_186_1_186_12&#39;)"><span class="mpre">hash_sha256</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_70_6_70_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_70_6_70_10&#39;)"><span class="hl_tyconref"><span class="mpre">Hash</span></span></a><span class="mpre">
+</span><a name="loc_174_1_174_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_174_1_174_9&#39;)"><span class="hl_vardecl"><span class="mpre">hash_md5</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 174, srcSpanStartColumn = 12, srcSpanEndLine = 178, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 175, srcSpanStartColumn = 5, srcSpanEndLine = 175, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Hash
+    { hashName = &quot;MD5&quot;
+    , hashSize = 16
+    , hashF    = MD5.hash
+    }</span></span><span class="mpre">
+
+</span><a name="loc_180_1_180_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_1_180_10&#39;)"><span class="hl_vardecl"><span class="mpre">hash_sha1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 180, srcSpanStartColumn = 13, srcSpanEndLine = 184, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 181, srcSpanStartColumn = 5, srcSpanEndLine = 181, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Hash
+    { hashName = &quot;SHA1&quot;
+    , hashSize = 20
+    , hashF    = SHA1.hash
+    }</span></span><span class="mpre">
+
+</span><a name="loc_186_1_186_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_186_1_186_12&#39;)"><span class="hl_vardecl"><span class="mpre">hash_sha256</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 186, srcSpanStartColumn = 15, srcSpanEndLine = 190, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 187, srcSpanStartColumn = 5, srcSpanEndLine = 187, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Hash
+    { hashName = &quot;SHA256&quot;
+    , hashSize = 32
+    , hashF    = SHA256.hash
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | unencrypted cipher using RSA for key exchange and MD5 for digest</span></span><span class="mpre">
+</span><a href="#loc_194_1_194_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_194_1_194_16&#39;)"><span class="mpre">cipher_null_MD5</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_194_1_194_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_194_1_194_16&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_null_MD5</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 194, srcSpanStartColumn = 19, srcSpanEndLine = 201, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 195, srcSpanStartColumn = 5, srcSpanEndLine = 195, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x1
+    , cipherName         = &quot;RSA-null-MD5&quot;
+    , cipherBulk         = bulk_null
+    , cipherHash         = hash_md5
+    , cipherKeyExchange  = CipherKeyExchange_RSA
+    , cipherMinVer       = Nothing
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | unencrypted cipher using RSA for key exchange and SHA1 for digest</span></span><span class="mpre">
+</span><a href="#loc_205_1_205_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_205_1_205_17&#39;)"><span class="mpre">cipher_null_SHA1</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_205_1_205_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_205_1_205_17&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_null_SHA1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 205, srcSpanStartColumn = 20, srcSpanEndLine = 212, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 206, srcSpanStartColumn = 5, srcSpanEndLine = 206, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x2
+    , cipherName         = &quot;RSA-null-SHA1&quot;
+    , cipherBulk         = bulk_null
+    , cipherHash         = hash_sha1
+    , cipherKeyExchange  = CipherKeyExchange_RSA
+    , cipherMinVer       = Nothing
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | RC4 cipher, RSA key exchange and MD5 for digest</span></span><span class="mpre">
+</span><a href="#loc_216_1_216_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_216_1_216_19&#39;)"><span class="mpre">cipher_RC4_128_MD5</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_216_1_216_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_216_1_216_19&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_RC4_128_MD5</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 216, srcSpanStartColumn = 22, srcSpanEndLine = 223, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 217, srcSpanStartColumn = 5, srcSpanEndLine = 217, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x04
+    , cipherName         = &quot;RSA-rc4-128-md5&quot;
+    , cipherBulk         = bulk_rc4
+    , cipherHash         = hash_md5
+    , cipherKeyExchange  = CipherKeyExchange_RSA
+    , cipherMinVer       = Nothing
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | RC4 cipher, RSA key exchange and SHA1 for digest</span></span><span class="mpre">
+</span><a href="#loc_227_1_227_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_227_1_227_20&#39;)"><span class="mpre">cipher_RC4_128_SHA1</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_227_1_227_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_227_1_227_20&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_RC4_128_SHA1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 227, srcSpanStartColumn = 23, srcSpanEndLine = 234, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 228, srcSpanStartColumn = 5, srcSpanEndLine = 228, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x05
+    , cipherName         = &quot;RSA-rc4-128-sha1&quot;
+    , cipherBulk         = bulk_rc4
+    , cipherHash         = hash_sha1
+    , cipherKeyExchange  = CipherKeyExchange_RSA
+    , cipherMinVer       = Nothing
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | AES cipher (128 bit key), RSA key exchange and SHA1 for digest</span></span><span class="mpre">
+</span><a href="#loc_238_1_238_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_238_1_238_19&#39;)"><span class="mpre">cipher_AES128_SHA1</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_238_1_238_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_238_1_238_19&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_AES128_SHA1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 238, srcSpanStartColumn = 22, srcSpanEndLine = 245, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 239, srcSpanStartColumn = 5, srcSpanEndLine = 239, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x2f
+    , cipherName         = &quot;RSA-aes128-sha1&quot;
+    , cipherBulk         = bulk_aes128
+    , cipherHash         = hash_sha1
+    , cipherKeyExchange  = CipherKeyExchange_RSA
+    , cipherMinVer       = Just SSL3
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | AES cipher (256 bit key), RSA key exchange and SHA1 for digest</span></span><span class="mpre">
+</span><a href="#loc_249_1_249_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_249_1_249_19&#39;)"><span class="mpre">cipher_AES256_SHA1</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_249_1_249_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_249_1_249_19&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_AES256_SHA1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 249, srcSpanStartColumn = 22, srcSpanEndLine = 256, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 250, srcSpanStartColumn = 5, srcSpanEndLine = 250, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x35
+    , cipherName         = &quot;RSA-aes256-sha1&quot;
+    , cipherBulk         = bulk_aes256
+    , cipherHash         = hash_sha1
+    , cipherKeyExchange  = CipherKeyExchange_RSA
+    , cipherMinVer       = Just SSL3
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | AES cipher (128 bit key), RSA key exchange and SHA256 for digest</span></span><span class="mpre">
+</span><a href="#loc_260_1_260_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_260_1_260_21&#39;)"><span class="mpre">cipher_AES128_SHA256</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_260_1_260_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_260_1_260_21&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_AES128_SHA256</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 260, srcSpanStartColumn = 24, srcSpanEndLine = 267, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 261, srcSpanStartColumn = 5, srcSpanEndLine = 261, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x3c
+    , cipherName         = &quot;RSA-aes128-sha256&quot;
+    , cipherBulk         = bulk_aes128
+    , cipherHash         = hash_sha256
+    , cipherKeyExchange  = CipherKeyExchange_RSA
+    , cipherMinVer       = Just TLS12
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | AES cipher (256 bit key), RSA key exchange and SHA256 for digest</span></span><span class="mpre">
+</span><a href="#loc_271_1_271_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_271_1_271_21&#39;)"><span class="mpre">cipher_AES256_SHA256</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_271_1_271_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_271_1_271_21&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_AES256_SHA256</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 271, srcSpanStartColumn = 24, srcSpanEndLine = 278, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 272, srcSpanStartColumn = 5, srcSpanEndLine = 272, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x3d
+    , cipherName         = &quot;RSA-aes256-sha256&quot;
+    , cipherBulk         = bulk_aes256
+    , cipherHash         = hash_sha256
+    , cipherKeyExchange  = CipherKeyExchange_RSA
+    , cipherMinVer       = Just TLS12
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | AES cipher (128 bit key), DHE key exchanged signed by RSA and SHA1 for digest</span></span><span class="mpre">
+</span><a href="#loc_282_1_282_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_282_1_282_27&#39;)"><span class="mpre">cipher_DHE_RSA_AES128_SHA1</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_282_1_282_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_282_1_282_27&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_DHE_RSA_AES128_SHA1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 282, srcSpanStartColumn = 30, srcSpanEndLine = 289, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 283, srcSpanStartColumn = 5, srcSpanEndLine = 283, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x33
+    , cipherName         = &quot;DHE-RSA-AES128-SHA1&quot;
+    , cipherBulk         = bulk_aes128
+    , cipherHash         = hash_sha1
+    , cipherKeyExchange  = CipherKeyExchange_DHE_RSA
+    , cipherMinVer       = Nothing
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | AES cipher (256 bit key), DHE key exchanged signed by RSA and SHA1 for digest</span></span><span class="mpre">
+</span><a href="#loc_293_1_293_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_293_1_293_27&#39;)"><span class="mpre">cipher_DHE_RSA_AES256_SHA1</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_293_1_293_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_293_1_293_27&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_DHE_RSA_AES256_SHA1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 293, srcSpanStartColumn = 30, srcSpanEndLine = 297, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 294, srcSpanStartColumn = 5, srcSpanEndLine = 294, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">cipher_DHE_RSA_AES128_SHA1
+    { cipherID           = 0x39
+    , cipherName         = &quot;DHE-RSA-AES256-SHA1&quot;
+    , cipherBulk         = bulk_aes256
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | AES cipher (128 bit key), DHE key exchanged signed by DSA and SHA1 for digest</span></span><span class="mpre">
+</span><a href="#loc_301_1_301_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_301_1_301_27&#39;)"><span class="mpre">cipher_DHE_DSS_AES128_SHA1</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_301_1_301_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_301_1_301_27&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_DHE_DSS_AES128_SHA1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 301, srcSpanStartColumn = 30, srcSpanEndLine = 308, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 302, srcSpanStartColumn = 5, srcSpanEndLine = 302, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x32
+    , cipherName         = &quot;DHE-DSA-AES128-SHA1&quot;
+    , cipherBulk         = bulk_aes128
+    , cipherHash         = hash_sha1
+    , cipherKeyExchange  = CipherKeyExchange_DHE_DSS
+    , cipherMinVer       = Nothing
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | AES cipher (256 bit key), DHE key exchanged signed by DSA and SHA1 for digest</span></span><span class="mpre">
+</span><a href="#loc_312_1_312_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_312_1_312_27&#39;)"><span class="mpre">cipher_DHE_DSS_AES256_SHA1</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_312_1_312_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_312_1_312_27&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_DHE_DSS_AES256_SHA1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 312, srcSpanStartColumn = 30, srcSpanEndLine = 316, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 313, srcSpanStartColumn = 5, srcSpanEndLine = 313, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">cipher_DHE_DSS_AES128_SHA1
+    { cipherID           = 0x38
+    , cipherName         = &quot;DHE-DSA-AES256-SHA1&quot;
+    , cipherBulk         = bulk_aes256
+    }</span></span><span class="mpre">
+
+</span><a href="#loc_319_1_319_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_319_1_319_24&#39;)"><span class="mpre">cipher_DHE_DSS_RC4_SHA1</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_319_1_319_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_319_1_319_24&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_DHE_DSS_RC4_SHA1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 319, srcSpanStartColumn = 27, srcSpanEndLine = 323, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 320, srcSpanStartColumn = 5, srcSpanEndLine = 320, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">cipher_DHE_DSS_AES128_SHA1
+    { cipherID           = 0x66
+    , cipherName         = &quot;DHE-DSA-RC4-SHA1&quot;
+    , cipherBulk         = bulk_rc4
+    }</span></span><span class="mpre">
+
+</span><a href="#loc_326_1_326_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_326_1_326_29&#39;)"><span class="mpre">cipher_DHE_RSA_AES128_SHA256</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_326_1_326_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_326_1_326_29&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_DHE_RSA_AES128_SHA256</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 326, srcSpanStartColumn = 32, srcSpanEndLine = 331, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 327, srcSpanStartColumn = 5, srcSpanEndLine = 327, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">cipher_DHE_RSA_AES128_SHA1
+    { cipherID           = 0x67
+    , cipherName         = &quot;DHE-RSA-AES128-SHA256&quot;
+    , cipherHash         = hash_sha256
+    , cipherMinVer       = Just TLS12
+    }</span></span><span class="mpre">
+
+</span><a href="#loc_334_1_334_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_334_1_334_29&#39;)"><span class="mpre">cipher_DHE_RSA_AES256_SHA256</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_334_1_334_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_334_1_334_29&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_DHE_RSA_AES256_SHA256</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 334, srcSpanStartColumn = 32, srcSpanEndLine = 338, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 335, srcSpanStartColumn = 5, srcSpanEndLine = 335, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">cipher_DHE_RSA_AES128_SHA256
+    { cipherID           = 0x6b
+    , cipherName         = &quot;DHE-RSA-AES256-SHA256&quot;
+    , cipherBulk         = bulk_aes256
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | 3DES cipher (168 bit key), RSA key exchange and SHA1 for digest</span></span><span class="mpre">
+</span><a href="#loc_342_1_342_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_342_1_342_29&#39;)"><span class="mpre">cipher_RSA_3DES_EDE_CBC_SHA1</span></a><span class="mpre"> :: </span><a href="Network.TLS.Cipher.html#loc_82_6_82_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Cipher.html#loc_82_6_82_12&#39;)"><span class="hl_tyconref"><span class="mpre">Cipher</span></span></a><span class="mpre">
+</span><a name="loc_342_1_342_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_342_1_342_29&#39;)"><span class="hl_vardecl"><span class="mpre">cipher_RSA_3DES_EDE_CBC_SHA1</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 342, srcSpanStartColumn = 32, srcSpanEndLine = 349, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpanStartLine = 343, srcSpanStartColumn = 5, srcSpanEndLine = 343, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Extra/Cipher.hs&quot;, srcSpan"><span class="mpre">Cipher
+    { cipherID           = 0x0a
+    , cipherName         = &quot;RSA-3DES-EDE-CBC-SHA1&quot;
+    , cipherBulk         = bulk_tripledes_ede
+    , cipherHash         = hash_sha1
+    , cipherKeyExchange  = CipherKeyExchange_RSA
+    , cipherMinVer       = Nothing
+    }</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">{-
+TLS 1.0 ciphers definition
+
+CipherSuite TLS_NULL_WITH_NULL_NULL               = { 0x00,0x00 };
+CipherSuite TLS_RSA_WITH_NULL_MD5                 = { 0x00,0x01 };
+CipherSuite TLS_RSA_WITH_NULL_SHA                 = { 0x00,0x02 };
+CipherSuite TLS_RSA_EXPORT_WITH_RC4_40_MD5        = { 0x00,0x03 };
+CipherSuite TLS_RSA_WITH_RC4_128_MD5              = { 0x00,0x04 };
+CipherSuite TLS_RSA_WITH_RC4_128_SHA              = { 0x00,0x05 };
+CipherSuite TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5    = { 0x00,0x06 };
+CipherSuite TLS_RSA_WITH_IDEA_CBC_SHA             = { 0x00,0x07 };
+CipherSuite TLS_RSA_EXPORT_WITH_DES40_CBC_SHA     = { 0x00,0x08 };
+CipherSuite TLS_RSA_WITH_DES_CBC_SHA              = { 0x00,0x09 };
+CipherSuite TLS_RSA_WITH_3DES_EDE_CBC_SHA         = { 0x00,0x0A };
+CipherSuite TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA  = { 0x00,0x0B };
+CipherSuite TLS_DH_DSS_WITH_DES_CBC_SHA           = { 0x00,0x0C };
+CipherSuite TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA      = { 0x00,0x0D };
+CipherSuite TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA  = { 0x00,0x0E };
+CipherSuite TLS_DH_RSA_WITH_DES_CBC_SHA           = { 0x00,0x0F };
+CipherSuite TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA      = { 0x00,0x10 };
+CipherSuite TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA = { 0x00,0x11 };
+CipherSuite TLS_DHE_DSS_WITH_DES_CBC_SHA          = { 0x00,0x12 };
+CipherSuite TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA     = { 0x00,0x13 };
+CipherSuite TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA = { 0x00,0x14 };
+CipherSuite TLS_DHE_RSA_WITH_DES_CBC_SHA          = { 0x00,0x15 };
+CipherSuite TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA     = { 0x00,0x16 };
+CipherSuite TLS_DH_anon_EXPORT_WITH_RC4_40_MD5    = { 0x00,0x17 };
+CipherSuite TLS_DH_anon_WITH_RC4_128_MD5          = { 0x00,0x18 };
+CipherSuite TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA = { 0x00,0x19 };
+CipherSuite TLS_DH_anon_WITH_DES_CBC_SHA          = { 0x00,0x1A };
+CipherSuite TLS_DH_anon_WITH_3DES_EDE_CBC_SHA     = { 0x00,0x1B };
+
+TLS-DHE-RSA-WITH-AES-128-CBC-SHA     {0x00,0x33}
+TLS-DHE-RSA-WITH-AES-256-CBC-SHA     {0x00,0x39}
+TLS-DHE-RSA-WITH-AES-128-CBC-SHA256   {0x00,0x67}
+TLS-DHE-RSA-WITH-AES-256-CBC-SHA256   {0x00,0x6B}
+TLS-DHE-RSA-WITH-AES-128-GCM-SHA256   {0x00,0x9E}
+TLS-DHE-RSA-WITH-AES-256-GCM-SHA384   {0x00,0x9F}
+TLS-DHE-RSA-WITH-CAMELLIA-128-CBC-SHA   {0x00,0x45}
+TLS-DHE-RSA-WITH-CAMELLIA-256-CBC-SHA   {0x00,0x88}
+TLS-DHE-RSA-WITH-CAMELLIA-128-CBC-SHA256      {0x00,0xBE}
+TLS-DHE-RSA-WITH-CAMELLIA-256-CBC-SHA256      {0x00,0xC4}
+TLS-DHE-RSA-WITH-CAMELLIA-128-GCM-SHA256      {0x00,0x7C}
+TLS-DHE-RSA-WITH-CAMELLIA-256-GCM-SHA256      {0x00,0x7D}
+TLS-DHE-RSA-WITH-3DES-EDE-CBC-SHA      {0x00,0x16}
+TLS-DHE-RSA-WITH-DES-CBC-SHA    {0x00,0x15}
+
+TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA     {0xC0,0x13}
+TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA     {0xC0,0x14}
+TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA256   {0xC0,0x27}
+TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA384   {0xC0,0x28}
+TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256   {0xC0,0x2F}
+TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384   {0xC0,0x30}
+TLS-ECDHE-RSA-WITH-CAMELLIA-128-CBC-SHA256    {0xC0,0x76}
+TLS-ECDHE-RSA-WITH-CAMELLIA-256-CBC-SHA384    {0xC0,0x77}
+TLS-ECDHE-RSA-WITH-CAMELLIA-128-GCM-SHA256    {0xC0,0x8A}
+TLS-ECDHE-RSA-WITH-CAMELLIA-256-GCM-SHA384    {0xC0,0x8B}
+TLS-ECDHE-RSA-WITH-3DES-EDE-CBC-SHA  {0xC0,0x12}
+TLS-ECDHE-RSA-WITH-RC4-128-SHA    {0xC0,0x11}
+TLS-ECDHE-RSA-WITH-NULL-SHA  {0xC0,0x10}
+
+TLS-PSK-WITH-RC4-128-SHA    {0x00,0x8A}
+TLS-PSK-WITH-3DES-EDE-CBC-SHA      {0x00,0x8B}
+TLS-PSK-WITH-AES-128-CBC-SHA     {0x00,0x8C}
+TLS-PSK-WITH-AES-256-CBC-SHA     {0x00,0x8D}
+TLS-PSK-WITH-AES-128-CBC-SHA256   {0x00,0xAE}
+TLS-PSK-WITH-AES-256-CBC-SHA384   {0x00,0xAF}
+TLS-PSK-WITH-AES-128-GCM-SHA256   {0x00,0xA8}
+TLS-PSK-WITH-AES-256-GCM-SHA384   {0x00,0xA9}
+TLS-PSK-WITH-CAMELLIA-128-CBC-SHA256      {0xC0,0x94}
+TLS-PSK-WITH-CAMELLIA-256-CBC-SHA384      {0xC0,0x95}
+TLS-PSK-WITH-CAMELLIA-128-GCM-SHA256      {0xC0,0x8D}
+TLS-PSK-WITH-CAMELLIA-256-GCM-SHA384      {0xC0,0x8F}
+TLS-PSK-WITH-NULL-SHA     {0x00,0x2C}
+TLS-PSK-WITH-NULL-SHA256      {0x00,0xB4}
+TLS-PSK-WITH-NULL-SHA384      {0x00,0xB5}
+
+best ciphers suite description:
+    &lt;http://www.thesprawl.org/research/tls-and-ssl-cipher-suites/&gt;
+
+-}</span></span><span class="mpre">
+</span></div></body></html>

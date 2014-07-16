@@ -1,0 +1,432 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE CPP
+           , NoImplicitPrelude
+           , ExistentialQuantification
+           , DeriveDataTypeable
+  #-}
+{-# OPTIONS_GHC -funbox-strict-fields #-}
+{-# OPTIONS_HADDOCK hide #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  GHC.IO.Handle.Types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow, 1994-2009</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  see libraries/base/LICENSE</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  internal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Basic types for the implementation of IO Handles.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module GHC.IO.Handle.Types (
+      Handle(..), Handle__(..), showHandle,
+      checkHandleInvariants,
+      BufferList(..),
+      HandleType(..),
+      isReadableHandleType, isWritableHandleType, isReadWriteHandleType,
+      BufferMode(..),
+      BufferCodec(..),
+      NewlineMode(..), Newline(..), nativeNewline,
+      universalNewlineMode, noNewlineTranslation, nativeNewlineMode
+  ) where
+
+#undef DEBUG
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 38, srcSpanStartColumn = 8, srcSpanEndLine = 38, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+import GHC.MVar
+import GHC.IO
+import GHC.IO.Buffer
+import GHC.IO.BufferedIO
+import GHC.IO.Encoding.Types
+import GHC.IORef
+import Data.Maybe
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 46, srcSpanStartColumn = 8, srcSpanEndLine = 46, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Show&quot;"><span class="mpre">GHC.Show</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 47, srcSpanStartColumn = 8, srcSpanEndLine = 47, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Read&quot;"><span class="mpre">GHC.Read</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 48, srcSpanStartColumn = 8, srcSpanEndLine = 48, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Word&quot;"><span class="mpre">GHC.Word</span></span><span class="mpre">
+import GHC.IO.Device
+import Data.Typeable
+#ifdef DEBUG
+import Control.Monad
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- ---------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Handle type</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">--  A Handle is represented by (a reference to) a record </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  containing the state of the I/O port/device. We record</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  the following pieces of info:</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">--    * type (read,write,closed etc.)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * the underlying file descriptor</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * buffering mode </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * buffer, and spare buffers</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * user-friendly name (usually the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      FilePath used when IO.openFile was called)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- Note: when a Handle is garbage collected, we want to flush its buffer</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and close the OS file handle, so as to free up a (precious) resource.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Haskell defines operations to read and write characters from and to files,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- represented by values of type @Handle@.  Each value of this type is a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /handle/: a record used by the Haskell run-time system to /manage/ I\/O</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- with file system objects.  A handle has at least the following properties:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * whether it manages input or output or both;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * whether it is /open/, /closed/ or /semi-closed/;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * whether the object is seekable;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * whether buffering is disabled, or enabled on a line or block basis;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * a buffer (whose length may be zero).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Most handles will also have a current I\/O position indicating where the next</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- input or output operation will occur.  A handle is /readable/ if it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- manages only input or both input and output; likewise, it is /writable/ if</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- it manages only output or both input and output.  A handle is /open/ when</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- first allocated.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Once it is closed it can no longer be used for either input or output,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- though an implementation cannot re-use its storage while references</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- remain to it.  Handles are in the &#39;Show&#39; and &#39;Eq&#39; classes.  The string</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- produced by showing a handle is system dependent; it should include</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- enough information to identify the handle for debugging.  A handle is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- equal according to &#39;==&#39; only to itself; no attempt</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is made to compare the internal state of different handles for equality.</span></span><span class="mpre">
+
+data </span><a name="loc_100_6_100_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_6_100_12&#39;)"><span class="hl_tycondecl"><span class="mpre">Handle</span></span></a><span class="mpre"> 
+  = </span><a name="loc_101_5_101_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_5_101_15&#39;)"><span class="hl_condecl"><span class="mpre">FileHandle</span></span></a><span class="mpre">                          </span><span class="hl_comment"><span class="mpre">-- A normal handle to a file</span></span><span class="mpre">
+        </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">                        </span><span class="hl_comment"><span class="mpre">-- the file (used for error messages</span></span><span class="mpre">
+                                        </span><span class="hl_comment"><span class="mpre">-- only)</span></span><span class="mpre">
+        !(</span><a href="GHC.MVar.html#loc_39_6_39_10" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.MVar.html#loc_39_6_39_10&#39;)"><span class="hl_tyconref"><span class="mpre">MVar</span></span></a><span class="mpre"> </span><a href="#loc_124_6_124_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_124_6_124_14&#39;)"><span class="hl_tyconref"><span class="mpre">Handle__</span></span></a><span class="mpre">)
+
+  | </span><a name="loc_106_5_106_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_5_106_17&#39;)"><span class="hl_condecl"><span class="mpre">DuplexHandle</span></span></a><span class="mpre">                        </span><span class="hl_comment"><span class="mpre">-- A handle to a read/write stream</span></span><span class="mpre">
+        </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre">                        </span><span class="hl_comment"><span class="mpre">-- file for a FIFO, otherwise some</span></span><span class="mpre">
+                                        </span><span class="hl_comment"><span class="mpre">--   descriptive string (used for error</span></span><span class="mpre">
+                                        </span><span class="hl_comment"><span class="mpre">--   messages only)</span></span><span class="mpre">
+        !(</span><a href="GHC.MVar.html#loc_39_6_39_10" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.MVar.html#loc_39_6_39_10&#39;)"><span class="hl_tyconref"><span class="mpre">MVar</span></span></a><span class="mpre"> </span><a href="#loc_124_6_124_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_124_6_124_14&#39;)"><span class="hl_tyconref"><span class="mpre">Handle__</span></span></a><span class="mpre">)                </span><span class="hl_comment"><span class="mpre">-- The read side</span></span><span class="mpre">
+        !(</span><a href="GHC.MVar.html#loc_39_6_39_10" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.MVar.html#loc_39_6_39_10&#39;)"><span class="hl_tyconref"><span class="mpre">MVar</span></span></a><span class="mpre"> </span><a href="#loc_124_6_124_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_124_6_124_14&#39;)"><span class="hl_tyconref"><span class="mpre">Handle__</span></span></a><span class="mpre">)                </span><span class="hl_comment"><span class="mpre">-- The write side</span></span><span class="mpre">
+
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 113, srcSpanStartColumn = 3, srcSpanEndLine = 113, srcSpanEndColumn = 20}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 113, srcSpanStartColumn = 3, srcSpanEndLine = 113, srcSpanEndColumn = 11}]}) [IHead (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/"><span class="mpre">deriving Typeable</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- NOTES:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * A &#39;FileHandle&#39; is seekable.  A &#39;DuplexHandle&#39; may or may not be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      seekable.</span></span><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Eq</span></span><span class="mpre"> </span><a href="#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_6_100_12&#39;)"><span class="hl_tyconref"><span class="mpre">Handle</span></span></a><span class="mpre"> where
+ (</span><a href="#loc_101_5_101_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_5_101_15&#39;)"><span class="hl_conref"><span class="mpre">FileHandle</span></span></a><span class="mpre"> _ </span><a name="loc_120_16_120_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_16_120_18&#39;)"><span class="hl_vardecl"><span class="mpre">h1</span></span></a><span class="mpre">)     </span><a name="loc_120_24_120_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_24_120_26&#39;)"><span class="hl_fundecl"><span class="mpre">==</span></span></a><span class="mpre"> (</span><a href="#loc_101_5_101_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_5_101_15&#39;)"><span class="hl_conref"><span class="mpre">FileHandle</span></span></a><span class="mpre"> _ </span><a name="loc_120_41_120_43" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_41_120_43&#39;)"><span class="hl_vardecl"><span class="mpre">h2</span></span></a><span class="mpre">)     = </span><a href="#loc_120_16_120_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_16_120_18&#39;)"><span class="hl_varref"><span class="mpre">h1</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">==</span></span><span class="mpre"> </span><a href="#loc_120_41_120_43" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_41_120_43&#39;)"><span class="hl_varref"><span class="mpre">h2</span></span></a><span class="mpre">
+ (</span><a href="#loc_106_5_106_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_5_106_17&#39;)"><span class="hl_conref"><span class="mpre">DuplexHandle</span></span></a><span class="mpre"> _ </span><a name="loc_121_18_121_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_121_18_121_20&#39;)"><span class="hl_vardecl"><span class="mpre">h1</span></span></a><span class="mpre"> _) </span><a href="#loc_120_24_120_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_24_120_26&#39;)"><span class="hl_fundecl"><span class="mpre">==</span></span></a><span class="mpre"> (</span><a href="#loc_106_5_106_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_5_106_17&#39;)"><span class="hl_conref"><span class="mpre">DuplexHandle</span></span></a><span class="mpre"> _ </span><a name="loc_121_43_121_45" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_121_43_121_45&#39;)"><span class="hl_vardecl"><span class="mpre">h2</span></span></a><span class="mpre"> _) = </span><a href="#loc_121_18_121_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_121_18_121_20&#39;)"><span class="hl_varref"><span class="mpre">h1</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">==</span></span><span class="mpre"> </span><a href="#loc_121_43_121_45" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_121_43_121_45&#39;)"><span class="hl_varref"><span class="mpre">h2</span></span></a><span class="mpre">
+ _ </span><a href="#loc_120_24_120_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_24_120_26&#39;)"><span class="hl_fundecl"><span class="mpre">==</span></span></a><span class="mpre"> _ = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre"> 
+
+data </span><a name="loc_124_6_124_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_124_6_124_14&#39;)"><span class="hl_tycondecl"><span class="mpre">Handle__</span></span></a><span class="mpre">
+  = forall dev enc_state dec_state . (IODevice dev, BufferedIO dev, Typeable dev) =&gt;
+    </span><span class="hl_condecl"><span class="mpre">Handle__</span></span><span class="mpre"> {
+      </span><a name="loc_127_7_127_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_7_127_15&#39;)"><span class="hl_fielddecl"><span class="mpre">haDevice</span></span></a><span class="mpre">      :: !</span><span class="hl_tyvar"><span class="mpre">dev</span></span><span class="mpre">,
+      </span><a name="loc_128_7_128_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_7_128_13&#39;)"><span class="hl_fielddecl"><span class="mpre">haType</span></span></a><span class="mpre">        :: </span><a href="#loc_154_6_154_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_154_6_154_16&#39;)"><span class="hl_tyconref"><span class="mpre">HandleType</span></span></a><span class="mpre">,           </span><span class="hl_comment"><span class="mpre">-- type (read/write/append etc.)</span></span><span class="mpre">
+      </span><a name="loc_129_7_129_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_129_7_129_19&#39;)"><span class="hl_fielddecl"><span class="mpre">haByteBuffer</span></span></a><span class="mpre">  :: !(</span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> (</span><a href="GHC.IO.Buffer.html#loc_180_6_180_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_180_6_180_12&#39;)"><span class="hl_tyconref"><span class="mpre">Buffer</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre">)),
+      </span><a name="loc_130_7_130_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_130_7_130_19&#39;)"><span class="hl_fielddecl"><span class="mpre">haBufferMode</span></span></a><span class="mpre">  :: </span><a href="#loc_246_6_246_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_246_6_246_16&#39;)"><span class="hl_tyconref"><span class="mpre">BufferMode</span></span></a><span class="mpre">,
+      </span><a name="loc_131_7_131_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_131_7_131_19&#39;)"><span class="hl_fielddecl"><span class="mpre">haLastDecode</span></span></a><span class="mpre">  :: !(</span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">dec_state</span></span><span class="mpre">, </span><a href="GHC.IO.Buffer.html#loc_180_6_180_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_180_6_180_12&#39;)"><span class="hl_tyconref"><span class="mpre">Buffer</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Word8</span></span><span class="mpre">)),
+      </span><a name="loc_132_7_132_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_132_7_132_19&#39;)"><span class="hl_fielddecl"><span class="mpre">haCharBuffer</span></span></a><span class="mpre">  :: !(</span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> (</span><a href="GHC.IO.Buffer.html#loc_180_6_180_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_180_6_180_12&#39;)"><span class="hl_tyconref"><span class="mpre">Buffer</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">CharBufElem</span></span><span class="mpre">)), </span><span class="hl_comment"><span class="mpre">-- the current buffer</span></span><span class="mpre">
+      </span><a name="loc_133_7_133_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_133_7_133_16&#39;)"><span class="hl_fielddecl"><span class="mpre">haBuffers</span></span></a><span class="mpre">     :: !(</span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> (</span><a href="#loc_147_6_147_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_147_6_147_16&#39;)"><span class="hl_tyconref"><span class="mpre">BufferList</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">CharBufElem</span></span><span class="mpre">)),  </span><span class="hl_comment"><span class="mpre">-- spare buffers</span></span><span class="mpre">
+      </span><a name="loc_134_7_134_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_134_7_134_16&#39;)"><span class="hl_fielddecl"><span class="mpre">haEncoder</span></span></a><span class="mpre">     :: </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">TextEncoder</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">enc_state</span></span><span class="mpre">),
+      </span><a name="loc_135_7_135_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_135_7_135_16&#39;)"><span class="hl_fielddecl"><span class="mpre">haDecoder</span></span></a><span class="mpre">     :: </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">TextDecoder</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">dec_state</span></span><span class="mpre">),
+      </span><a name="loc_136_7_136_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_136_7_136_14&#39;)"><span class="hl_fielddecl"><span class="mpre">haCodec</span></span></a><span class="mpre">       :: </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> </span><a href="GHC.IO.Encoding.Types.html#loc_107_6_107_18" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Encoding.Types.html#loc_107_6_107_18&#39;)"><span class="hl_tyconref"><span class="mpre">TextEncoding</span></span></a><span class="mpre">,
+      </span><a name="loc_137_7_137_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_7_137_16&#39;)"><span class="hl_fielddecl"><span class="mpre">haInputNL</span></span></a><span class="mpre">     :: </span><a href="#loc_354_6_354_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_354_6_354_13&#39;)"><span class="hl_tyconref"><span class="mpre">Newline</span></span></a><span class="mpre">,
+      </span><a name="loc_138_7_138_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_138_7_138_17&#39;)"><span class="hl_fielddecl"><span class="mpre">haOutputNL</span></span></a><span class="mpre">    :: </span><a href="#loc_354_6_354_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_354_6_354_13&#39;)"><span class="hl_tyconref"><span class="mpre">Newline</span></span></a><span class="mpre">,
+      </span><a name="loc_139_7_139_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_139_7_139_18&#39;)"><span class="hl_fielddecl"><span class="mpre">haOtherSide</span></span></a><span class="mpre">   :: </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> (</span><a href="GHC.MVar.html#loc_39_6_39_10" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.MVar.html#loc_39_6_39_10&#39;)"><span class="hl_tyconref"><span class="mpre">MVar</span></span></a><span class="mpre"> </span><a href="#loc_124_6_124_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_124_6_124_14&#39;)"><span class="hl_tyconref"><span class="mpre">Handle__</span></span></a><span class="mpre">) </span><span class="hl_comment"><span class="mpre">-- ptr to the write side of a </span></span><span class="mpre">
+                                             </span><span class="hl_comment"><span class="mpre">-- duplex handle.</span></span><span class="mpre">
+    }
+    </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 142, srcSpanStartColumn = 5, srcSpanEndLine = 142, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 142, srcSpanStartColumn = 5, srcSpanEndLine = 142, srcSpanEndColumn = 13}]}) [IHead (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/"><span class="mpre">deriving Typeable</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- we keep a few spare buffers around in a handle to avoid allocating</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a new one for each hPutStr.  These buffers are *guaranteed* to be the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- same size as the main buffer.</span></span><span class="mpre">
+data </span><a name="loc_147_6_147_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_147_6_147_16&#39;)"><span class="hl_tycondecl"><span class="mpre">BufferList</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">e</span></span><span class="mpre">
+  = </span><a name="loc_148_5_148_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_148_5_148_18&#39;)"><span class="hl_condecl"><span class="mpre">BufferListNil</span></span></a><span class="mpre"> 
+  | </span><a name="loc_149_5_149_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_149_5_149_19&#39;)"><span class="hl_condecl"><span class="mpre">BufferListCons</span></span></a><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">RawBuffer</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">e</span></span><span class="mpre">) (</span><a href="#loc_147_6_147_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_147_6_147_16&#39;)"><span class="hl_tyconref"><span class="mpre">BufferList</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">e</span></span><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">--  Internally, we classify handles as being one</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  of the following:</span></span><span class="mpre">
+
+data </span><a name="loc_154_6_154_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_154_6_154_16&#39;)"><span class="hl_tycondecl"><span class="mpre">HandleType</span></span></a><span class="mpre">
+ = </span><a name="loc_155_4_155_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_155_4_155_16&#39;)"><span class="hl_condecl"><span class="mpre">ClosedHandle</span></span></a><span class="mpre">
+ | </span><a name="loc_156_4_156_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_156_4_156_20&#39;)"><span class="hl_condecl"><span class="mpre">SemiClosedHandle</span></span></a><span class="mpre">
+ | </span><a name="loc_157_4_157_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_4_157_14&#39;)"><span class="hl_condecl"><span class="mpre">ReadHandle</span></span></a><span class="mpre">
+ | </span><a name="loc_158_4_158_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_158_4_158_15&#39;)"><span class="hl_condecl"><span class="mpre">WriteHandle</span></span></a><span class="mpre">
+ | </span><a name="loc_159_4_159_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_159_4_159_16&#39;)"><span class="hl_condecl"><span class="mpre">AppendHandle</span></span></a><span class="mpre">
+ | </span><a name="loc_160_4_160_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_4_160_19&#39;)"><span class="hl_condecl"><span class="mpre">ReadWriteHandle</span></span></a><span class="mpre">
+
+</span><a href="#loc_163_1_163_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_1_163_21&#39;)"><span class="mpre">isReadableHandleType</span></a><span class="mpre"> :: </span><a href="#loc_154_6_154_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_154_6_154_16&#39;)"><span class="hl_tyconref"><span class="mpre">HandleType</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_163_1_163_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_1_163_21&#39;)"><span class="hl_fundecl"><span class="mpre">isReadableHandleType</span></span></a><span class="mpre"> </span><a href="#loc_157_4_157_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_4_157_14&#39;)"><span class="hl_conref"><span class="mpre">ReadHandle</span></span></a><span class="mpre">         = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+</span><a href="#loc_163_1_163_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_1_163_21&#39;)"><span class="hl_fundecl"><span class="mpre">isReadableHandleType</span></span></a><span class="mpre"> </span><a href="#loc_160_4_160_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_4_160_19&#39;)"><span class="hl_conref"><span class="mpre">ReadWriteHandle</span></span></a><span class="mpre">    = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+</span><a href="#loc_163_1_163_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_1_163_21&#39;)"><span class="hl_fundecl"><span class="mpre">isReadableHandleType</span></span></a><span class="mpre"> _                  = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+
+</span><a href="#loc_168_1_168_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_168_1_168_21&#39;)"><span class="mpre">isWritableHandleType</span></a><span class="mpre"> :: </span><a href="#loc_154_6_154_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_154_6_154_16&#39;)"><span class="hl_tyconref"><span class="mpre">HandleType</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_168_1_168_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_168_1_168_21&#39;)"><span class="hl_fundecl"><span class="mpre">isWritableHandleType</span></span></a><span class="mpre"> </span><a href="#loc_159_4_159_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_159_4_159_16&#39;)"><span class="hl_conref"><span class="mpre">AppendHandle</span></span></a><span class="mpre">    = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+</span><a href="#loc_168_1_168_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_168_1_168_21&#39;)"><span class="hl_fundecl"><span class="mpre">isWritableHandleType</span></span></a><span class="mpre"> </span><a href="#loc_158_4_158_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_158_4_158_15&#39;)"><span class="hl_conref"><span class="mpre">WriteHandle</span></span></a><span class="mpre">     = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+</span><a href="#loc_168_1_168_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_168_1_168_21&#39;)"><span class="hl_fundecl"><span class="mpre">isWritableHandleType</span></span></a><span class="mpre"> </span><a href="#loc_160_4_160_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_4_160_19&#39;)"><span class="hl_conref"><span class="mpre">ReadWriteHandle</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+</span><a href="#loc_168_1_168_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_168_1_168_21&#39;)"><span class="hl_fundecl"><span class="mpre">isWritableHandleType</span></span></a><span class="mpre"> _               = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+
+</span><a href="#loc_174_1_174_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_174_1_174_22&#39;)"><span class="mpre">isReadWriteHandleType</span></a><span class="mpre"> :: </span><a href="#loc_154_6_154_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_154_6_154_16&#39;)"><span class="hl_tyconref"><span class="mpre">HandleType</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_174_1_174_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_174_1_174_22&#39;)"><span class="hl_fundecl"><span class="mpre">isReadWriteHandleType</span></span></a><span class="mpre"> </span><span class="warning" data-warning="PatPRec (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 174, srcSpanStartColumn = 23, srcSpanEndLine = 174, srcSpanEndColumn = 40}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 174, srcSpanStartColumn = 38, srcSpanEndLine = 174, srcSpanEndColumn = 39},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLin"><span class="mpre">ReadWriteHandle{}</span></span><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+</span><a href="#loc_174_1_174_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_174_1_174_22&#39;)"><span class="hl_fundecl"><span class="mpre">isReadWriteHandleType</span></span></a><span class="mpre"> _                 = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- INVARIANTS on Handles:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   * A handle *always* has a buffer, even if it is only 1 character long</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     (an unbuffered handle needs a 1 character buffer in order to support</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      hLookAhead and hIsEOF).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   * In a read Handle, the byte buffer is always empty (we decode when reading)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   * In a wriite Handle, the Char buffer is always empty (we encode when writing)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_187_1_187_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_187_1_187_22&#39;)"><span class="mpre">checkHandleInvariants</span></a><span class="mpre"> :: </span><a href="#loc_124_6_124_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_124_6_124_14&#39;)"><span class="hl_tyconref"><span class="mpre">Handle__</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+#ifdef DEBUG
+</span><a name="loc_187_1_187_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_187_1_187_22&#39;)"><span class="hl_fundecl"><span class="mpre">checkHandleInvariants</span></span></a><span class="mpre"> </span><a name="loc_187_23_187_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_187_23_187_25&#39;)"><span class="hl_vardecl"><span class="mpre">h_</span></span></a><span class="mpre"> = do
+ </span><a name="loc_188_2_188_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_188_2_188_6&#39;)"><span class="hl_vardecl"><span class="mpre">bbuf</span></span></a><span class="mpre"> &lt;- </span><a href="GHC.IORef.html#loc_46_1_46_10" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_46_1_46_10&#39;)"><span class="hl_varref"><span class="mpre">readIORef</span></span></a><span class="mpre"> (</span><a href="#loc_129_7_129_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_129_7_129_19&#39;)"><span class="hl_varref"><span class="mpre">haByteBuffer</span></span></a><span class="mpre"> </span><a href="#loc_187_23_187_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_187_23_187_25&#39;)"><span class="hl_varref"><span class="mpre">h_</span></span></a><span class="mpre">)
+ </span><a href="GHC.IO.Buffer.html#loc_279_1_279_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_279_1_279_12&#39;)"><span class="hl_varref"><span class="mpre">checkBuffer</span></span></a><span class="mpre"> </span><a href="#loc_188_2_188_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_188_2_188_6&#39;)"><span class="hl_varref"><span class="mpre">bbuf</span></span></a><span class="mpre">
+ </span><a name="loc_190_2_190_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_2_190_6&#39;)"><span class="hl_vardecl"><span class="mpre">cbuf</span></span></a><span class="mpre"> &lt;- </span><a href="GHC.IORef.html#loc_46_1_46_10" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_46_1_46_10&#39;)"><span class="hl_varref"><span class="mpre">readIORef</span></span></a><span class="mpre"> (</span><a href="#loc_132_7_132_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_132_7_132_19&#39;)"><span class="hl_varref"><span class="mpre">haCharBuffer</span></span></a><span class="mpre"> </span><a href="#loc_187_23_187_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_187_23_187_25&#39;)"><span class="hl_varref"><span class="mpre">h_</span></span></a><span class="mpre">)
+ </span><a href="GHC.IO.Buffer.html#loc_279_1_279_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_279_1_279_12&#39;)"><span class="hl_varref"><span class="mpre">checkBuffer</span></span></a><span class="mpre"> </span><a href="#loc_190_2_190_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_2_190_6&#39;)"><span class="hl_varref"><span class="mpre">cbuf</span></span></a><span class="mpre">
+ </span><a href="Control.Monad.html#loc_265_1_265_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_265_1_265_5&#39;)"><span class="hl_varref"><span class="mpre">when</span></span></a><span class="mpre"> (</span><a href="GHC.IO.Buffer.html#loc_218_1_218_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_218_1_218_14&#39;)"><span class="hl_varref"><span class="mpre">isWriteBuffer</span></span></a><span class="mpre"> </span><a href="#loc_190_2_190_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_2_190_6&#39;)"><span class="hl_varref"><span class="mpre">cbuf</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&amp;&amp;</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">not</span></span><span class="mpre"> (</span><a href="GHC.IO.Buffer.html#loc_204_1_204_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_204_1_204_14&#39;)"><span class="hl_varref"><span class="mpre">isEmptyBuffer</span></span></a><span class="mpre"> </span><a href="#loc_190_2_190_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_2_190_6&#39;)"><span class="hl_varref"><span class="mpre">cbuf</span></span></a><span class="mpre">)) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre">
+   </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> (</span><span class="hl_string"><span class="mpre">&quot;checkHandleInvariants: char write buffer non-empty: &quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre">
+          </span><a href="GHC.IO.Buffer.html#loc_267_1_267_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_267_1_267_14&#39;)"><span class="hl_varref"><span class="mpre">summaryBuffer</span></span></a><span class="mpre"> </span><a href="#loc_188_2_188_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_188_2_188_6&#39;)"><span class="hl_varref"><span class="mpre">bbuf</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;, &quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><a href="GHC.IO.Buffer.html#loc_267_1_267_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_267_1_267_14&#39;)"><span class="hl_varref"><span class="mpre">summaryBuffer</span></span></a><span class="mpre"> </span><a href="#loc_190_2_190_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_2_190_6&#39;)"><span class="hl_varref"><span class="mpre">cbuf</span></span></a><span class="mpre">)
+ </span><a href="Control.Monad.html#loc_265_1_265_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_265_1_265_5&#39;)"><span class="hl_varref"><span class="mpre">when</span></span></a><span class="mpre"> (</span><a href="GHC.IO.Buffer.html#loc_218_1_218_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_218_1_218_14&#39;)"><span class="hl_varref"><span class="mpre">isWriteBuffer</span></span></a><span class="mpre"> </span><a href="#loc_188_2_188_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_188_2_188_6&#39;)"><span class="hl_varref"><span class="mpre">bbuf</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">/=</span></span><span class="mpre"> </span><a href="GHC.IO.Buffer.html#loc_218_1_218_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_218_1_218_14&#39;)"><span class="hl_varref"><span class="mpre">isWriteBuffer</span></span></a><span class="mpre"> </span><a href="#loc_190_2_190_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_2_190_6&#39;)"><span class="hl_varref"><span class="mpre">cbuf</span></span></a><span class="mpre">) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre">
+   </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> (</span><span class="hl_string"><span class="mpre">&quot;checkHandleInvariants: buffer modes differ: &quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre">
+          </span><a href="GHC.IO.Buffer.html#loc_267_1_267_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_267_1_267_14&#39;)"><span class="hl_varref"><span class="mpre">summaryBuffer</span></span></a><span class="mpre"> </span><a href="#loc_188_2_188_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_188_2_188_6&#39;)"><span class="hl_varref"><span class="mpre">bbuf</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;, &quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><a href="GHC.IO.Buffer.html#loc_267_1_267_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_267_1_267_14&#39;)"><span class="hl_varref"><span class="mpre">summaryBuffer</span></span></a><span class="mpre"> </span><a href="#loc_190_2_190_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_190_2_190_6&#39;)"><span class="hl_varref"><span class="mpre">cbuf</span></span></a><span class="mpre">)
+
+#else
+</span><a href="#loc_187_1_187_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_187_1_187_22&#39;)"><span class="hl_fundecl"><span class="mpre">checkHandleInvariants</span></span></a><span class="mpre"> _ = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- ---------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Buffering modes</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Three kinds of buffering are supported: line-buffering, </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- block-buffering or no-buffering.  These modes have the following</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- effects. For output, items are written out, or /flushed/,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- from the internal buffer according to the buffer mode:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * /line-buffering/: the entire output buffer is flushed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    whenever a newline is output, the buffer overflows, </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    a &#39;System.IO.hFlush&#39; is issued, or the handle is closed.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * /block-buffering/: the entire buffer is written out whenever it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    overflows, a &#39;System.IO.hFlush&#39; is issued, or the handle is closed.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * /no-buffering/: output is written immediately, and never stored</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    in the buffer.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- An implementation is free to flush the buffer more frequently,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- but not less frequently, than specified above.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The output buffer is emptied as soon as it has been written out.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Similarly, input occurs according to the buffer mode for the handle:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * /line-buffering/: when the buffer for the handle is not empty,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    the next item is obtained from the buffer; otherwise, when the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    buffer is empty, characters up to and including the next newline</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    character are read into the buffer.  No characters are available</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    until the newline character is available or the buffer is full.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * /block-buffering/: when the buffer for the handle becomes empty,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    the next block of data is read into the buffer.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  * /no-buffering/: the next input item is read and returned.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    The &#39;System.IO.hLookAhead&#39; operation implies that even a no-buffered</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    handle may require a one-character buffer.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The default buffering mode when a handle is opened is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- implementation-dependent and may depend on the file system object</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- which is attached to that handle.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For most implementations, physical files will normally be block-buffered </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and terminals will normally be line-buffered.</span></span><span class="mpre">
+
+data </span><a name="loc_246_6_246_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_246_6_246_16&#39;)"><span class="hl_tycondecl"><span class="mpre">BufferMode</span></span></a><span class="mpre">  
+ = </span><a name="loc_247_4_247_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_247_4_247_15&#39;)"><span class="hl_condecl"><span class="mpre">NoBuffering</span></span></a><span class="mpre">  </span><span class="hl_comment"><span class="mpre">-- ^ buffering is disabled if possible.</span></span><span class="mpre">
+ | </span><a name="loc_248_4_248_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_248_4_248_17&#39;)"><span class="hl_condecl"><span class="mpre">LineBuffering</span></span></a><span class="mpre">
+                </span><span class="hl_comment"><span class="mpre">-- ^ line-buffering should be enabled if possible.</span></span><span class="mpre">
+ | </span><a name="loc_250_4_250_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_250_4_250_18&#39;)"><span class="hl_condecl"><span class="mpre">BlockBuffering</span></span></a><span class="mpre"> (</span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="hl_tyconref"><span class="mpre">Maybe</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">)
+                </span><span class="hl_comment"><span class="mpre">-- ^ block-buffering should be enabled if possible.</span></span><span class="mpre">
+                </span><span class="hl_comment"><span class="mpre">-- The size of the buffer is @n@ items if the argument</span></span><span class="mpre">
+                </span><span class="hl_comment"><span class="mpre">-- is &#39;Just&#39; @n@ and is otherwise implementation-dependent.</span></span><span class="mpre">
+   </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 254, srcSpanStartColumn = 4, srcSpanEndLine = 254, srcSpanEndColumn = 34}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 254, srcSpanStartColumn = 4, srcSpanEndLine = 254, srcSpanEndColumn = 12},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartL"><span class="mpre">deriving (Eq, Ord, Read, Show)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-
+[note Buffering Implementation]
+
+Each Handle has two buffers: a byte buffer (haByteBuffer) and a Char
+buffer (haCharBuffer).  
+
+[note Buffered Reading]
+
+For read Handles, bytes are read into the byte buffer, and immediately
+decoded into the Char buffer (see
+GHC.IO.Handle.Internals.readTextDevice).  The only way there might be
+some data left in the byte buffer is if there is a partial multi-byte
+character sequence that cannot be decoded into a full character.
+
+Note that the buffering mode (haBufferMode) makes no difference when
+reading data into a Handle.  When reading, we can always just read all
+the data there is available without blocking, decode it into the Char
+buffer, and then provide it immediately to the caller.
+
+[note Buffered Writing]
+
+Characters are written into the Char buffer by e.g. hPutStr.  At the
+end of the operation, or when the char buffer is full, the buffer is
+decoded to the byte buffer (see writeCharBuffer).  This is so that we
+can detect encoding errors at the right point.
+
+Hence, the Char buffer is always empty between Handle operations.
+
+[note Buffer Sizing]
+
+The char buffer is always a default size (dEFAULT_CHAR_BUFFER_SIZE).
+The byte buffer size is chosen by the underlying device (via its
+IODevice.newBuffer).  Hence the size of these buffers is not under
+user control.
+
+There are certain minimum sizes for these buffers imposed by the
+library (but not checked):
+
+ - we must be able to buffer at least one character, so that
+   hLookAhead can work
+
+ - the byte buffer must be able to store at least one encoded
+   character in the current encoding (6 bytes?)
+
+ - when reading, the char buffer must have room for two characters, so
+   that we can spot the \r\n sequence.
+
+How do we implement hSetBuffering?
+
+For reading, we have never used the user-supplied buffer size, because
+there&#39;s no point: we always pass all available data to the reader
+immediately.  Buffering would imply waiting until a certain amount of
+data is available, which has no advantages.  So hSetBuffering is
+essentially a no-op for read handles, except that it turns on/off raw
+mode for the underlying device if necessary.
+
+For writing, the buffering mode is handled by the write operations
+themselves (hPutChar and hPutStr).  Every write ends with
+writeCharBuffer, which checks whether the buffer should be flushed
+according to the current buffering mode.  Additionally, we look for
+newlines and flush if the mode is LineBuffering.
+
+[note Buffer Flushing]
+
+** Flushing the Char buffer
+
+We must be able to flush the Char buffer, in order to implement
+hSetEncoding, and things like hGetBuf which want to read raw bytes.
+
+Flushing the Char buffer on a write Handle is easy: it is always empty.
+
+Flushing the Char buffer on a read Handle involves rewinding the byte
+buffer to the point representing the next Char in the Char buffer.
+This is done by
+
+ - remembering the state of the byte buffer *before* the last decode
+
+ - re-decoding the bytes that represent the chars already read from the
+   Char buffer.  This gives us the point in the byte buffer that
+   represents the *next* Char to be read.
+
+In order for this to work, after readTextHandle we must NOT MODIFY THE
+CONTENTS OF THE BYTE OR CHAR BUFFERS, except to remove characters from
+the Char buffer.
+
+** Flushing the byte buffer
+
+The byte buffer can be flushed if the Char buffer has already been
+flushed (see above).  For a read Handle, flushing the byte buffer
+means seeking the device back by the number of bytes in the buffer,
+and hence it is only possible on a seekable Handle.
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- ---------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Newline translation</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The representation of a newline in the external file or stream.</span></span><span class="mpre">
+data </span><a name="loc_354_6_354_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_354_6_354_13&#39;)"><span class="hl_tycondecl"><span class="mpre">Newline</span></span></a><span class="mpre"> = </span><a name="loc_354_16_354_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_354_16_354_18&#39;)"><span class="hl_condecl"><span class="mpre">LF</span></span></a><span class="mpre">    </span><span class="hl_comment"><span class="mpre">-- ^ &#39;\n&#39;</span></span><span class="mpre">
+             | </span><a name="loc_355_16_355_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_355_16_355_20&#39;)"><span class="hl_condecl"><span class="mpre">CRLF</span></span></a><span class="mpre">  </span><span class="hl_comment"><span class="mpre">-- ^ &#39;\r\n&#39;</span></span><span class="mpre">
+             </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 356, srcSpanStartColumn = 14, srcSpanEndLine = 356, srcSpanEndColumn = 44}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 356, srcSpanStartColumn = 14, srcSpanEndLine = 356, srcSpanEndColumn = 22},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStar"><span class="mpre">deriving (Eq, Ord, Read, Show)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Specifies the translation, if any, of newline characters between</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- internal Strings and the external file or stream.  Haskell Strings</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- are assumed to represent newlines with the &#39;\n&#39; character; the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- newline mode specifies how to translate &#39;\n&#39; on output, and what to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- translate into &#39;\n&#39; on input.</span></span><span class="mpre">
+data </span><a name="loc_363_6_363_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_363_6_363_17&#39;)"><span class="hl_tycondecl"><span class="mpre">NewlineMode</span></span></a><span class="mpre"> 
+  = </span><span class="hl_condecl"><span class="mpre">NewlineMode</span></span><span class="mpre"> { </span><a name="loc_364_19_364_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_364_19_364_26&#39;)"><span class="hl_fielddecl"><span class="mpre">inputNL</span></span></a><span class="mpre"> :: </span><a href="#loc_354_6_354_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_354_6_354_13&#39;)"><span class="hl_tyconref"><span class="mpre">Newline</span></span></a><span class="mpre">,
+                    </span><span class="hl_comment"><span class="mpre">-- ^ the representation of newlines on input</span></span><span class="mpre">
+                  </span><a name="loc_366_19_366_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_366_19_366_27&#39;)"><span class="hl_fielddecl"><span class="mpre">outputNL</span></span></a><span class="mpre"> :: </span><a href="#loc_354_6_354_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_354_6_354_13&#39;)"><span class="hl_tyconref"><span class="mpre">Newline</span></span></a><span class="mpre">
+                    </span><span class="hl_comment"><span class="mpre">-- ^ the representation of newlines on output</span></span><span class="mpre">
+                 }
+             </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 369, srcSpanStartColumn = 14, srcSpanEndLine = 369, srcSpanEndColumn = 44}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 369, srcSpanStartColumn = 14, srcSpanEndLine = 369, srcSpanEndColumn = 22},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStar"><span class="mpre">deriving (Eq, Ord, Read, Show)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The native newline representation for the current platform: &#39;LF&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- on Unix systems, &#39;CRLF&#39; on Windows.</span></span><span class="mpre">
+</span><a href="#loc_375_1_375_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_375_1_375_14&#39;)"><span class="mpre">nativeNewline</span></a><span class="mpre"> :: </span><a href="#loc_354_6_354_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_354_6_354_13&#39;)"><span class="hl_tyconref"><span class="mpre">Newline</span></span></a><span class="mpre">
+#ifdef mingw32_HOST_OS
+</span><a name="loc_375_1_375_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_375_1_375_14&#39;)"><span class="hl_vardecl"><span class="mpre">nativeNewline</span></span></a><span class="mpre"> = </span><a href="#loc_355_16_355_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_355_16_355_20&#39;)"><span class="hl_conref"><span class="mpre">CRLF</span></span></a><span class="mpre">
+#else
+</span><span class="hl_vardecl"><span class="mpre">nativeNewline</span></span><span class="mpre"> = </span><a href="#loc_354_16_354_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_354_16_354_18&#39;)"><span class="hl_conref"><span class="mpre">LF</span></span></a><span class="mpre">
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | Map &#39;\r\n&#39; into &#39;\n&#39; on input, and &#39;\n&#39; to the native newline</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- represetnation on output.  This mode can be used on any platform, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- works with text files using any newline convention.  The downside is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that @readFile &gt;&gt;= writeFile@ might yield a different file.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; universalNewlineMode  = NewlineMode { inputNL  = CRLF, </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                                       outputNL = nativeNewline }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_389_1_389_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_389_1_389_21&#39;)"><span class="mpre">universalNewlineMode</span></a><span class="mpre"> :: </span><a href="#loc_363_6_363_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_363_6_363_17&#39;)"><span class="hl_tyconref"><span class="mpre">NewlineMode</span></span></a><span class="mpre">
+</span><a name="loc_389_1_389_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_389_1_389_21&#39;)"><span class="hl_vardecl"><span class="mpre">universalNewlineMode</span></span></a><span class="mpre">  = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 389, srcSpanStartColumn = 25, srcSpanEndLine = 390, srcSpanEndColumn = 65}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 389, srcSpanStartColumn = 37, srcSpanEndLine = 389, srcSpanEndColumn = 38},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanSta"><span class="mpre">NewlineMode { inputNL  = CRLF, 
+                                      outputNL = nativeNewline }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Use the native newline representation on both input and output</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; nativeNewlineMode  = NewlineMode { inputNL  = nativeNewline</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                                    outputNL = nativeNewline }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_398_1_398_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_398_1_398_18&#39;)"><span class="mpre">nativeNewlineMode</span></a><span class="mpre">    :: </span><a href="#loc_363_6_363_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_363_6_363_17&#39;)"><span class="hl_tyconref"><span class="mpre">NewlineMode</span></span></a><span class="mpre">
+</span><a name="loc_398_1_398_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_398_1_398_18&#39;)"><span class="hl_vardecl"><span class="mpre">nativeNewlineMode</span></span></a><span class="mpre">     = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 398, srcSpanStartColumn = 25, srcSpanEndLine = 399, srcSpanEndColumn = 65}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 398, srcSpanStartColumn = 37, srcSpanEndLine = 398, srcSpanEndColumn = 38},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanSta"><span class="mpre">NewlineMode { inputNL  = nativeNewline, 
+                                      outputNL = nativeNewline }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Do no newline translation at all.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; noNewlineTranslation  = NewlineMode { inputNL  = LF, outputNL = LF }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_406_1_406_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_406_1_406_21&#39;)"><span class="mpre">noNewlineTranslation</span></a><span class="mpre"> :: </span><a href="#loc_363_6_363_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_363_6_363_17&#39;)"><span class="hl_tyconref"><span class="mpre">NewlineMode</span></span></a><span class="mpre">
+</span><a name="loc_406_1_406_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_406_1_406_21&#39;)"><span class="hl_vardecl"><span class="mpre">noNewlineTranslation</span></span></a><span class="mpre">  = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 406, srcSpanStartColumn = 25, srcSpanEndLine = 406, srcSpanEndColumn = 69}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanStartLine = 406, srcSpanStartColumn = 37, srcSpanEndLine = 406, srcSpanEndColumn = 38},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Handle/Types.hs&quot;, srcSpanSta"><span class="mpre">NewlineMode { inputNL  = LF, outputNL = LF }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- ---------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Show instance for Handles</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- handle types are &#39;show&#39;n when printing error msgs, so</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- we provide a more user-friendly Show instance for it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- than the derived one.</span></span><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Show</span></span><span class="mpre"> </span><a href="#loc_154_6_154_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_154_6_154_16&#39;)"><span class="hl_tyconref"><span class="mpre">HandleType</span></span></a><span class="mpre"> where
+  </span><span class="hl_fundecl"><span class="mpre">showsPrec</span></span><span class="mpre"> _ </span><a name="loc_416_15_416_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_416_15_416_16&#39;)"><span class="hl_vardecl"><span class="mpre">t</span></span></a><span class="mpre"> =
+    case </span><a href="#loc_416_15_416_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_416_15_416_16&#39;)"><span class="hl_varref"><span class="mpre">t</span></span></a><span class="mpre"> of
+      </span><a href="#loc_155_4_155_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_155_4_155_16&#39;)"><span class="hl_conref"><span class="mpre">ClosedHandle</span></span></a><span class="mpre">      -&gt; </span><span class="hl_varref"><span class="mpre">showString</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;closed&quot;</span></span><span class="mpre">
+      </span><a href="#loc_156_4_156_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_156_4_156_20&#39;)"><span class="hl_conref"><span class="mpre">SemiClosedHandle</span></span></a><span class="mpre">  -&gt; </span><span class="hl_varref"><span class="mpre">showString</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;semi-closed&quot;</span></span><span class="mpre">
+      </span><a href="#loc_157_4_157_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_4_157_14&#39;)"><span class="hl_conref"><span class="mpre">ReadHandle</span></span></a><span class="mpre">        -&gt; </span><span class="hl_varref"><span class="mpre">showString</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;readable&quot;</span></span><span class="mpre">
+      </span><a href="#loc_158_4_158_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_158_4_158_15&#39;)"><span class="hl_conref"><span class="mpre">WriteHandle</span></span></a><span class="mpre">       -&gt; </span><span class="hl_varref"><span class="mpre">showString</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;writable&quot;</span></span><span class="mpre">
+      </span><a href="#loc_159_4_159_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_159_4_159_16&#39;)"><span class="hl_conref"><span class="mpre">AppendHandle</span></span></a><span class="mpre">      -&gt; </span><span class="hl_varref"><span class="mpre">showString</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;writable (append)&quot;</span></span><span class="mpre">
+      </span><a href="#loc_160_4_160_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_4_160_19&#39;)"><span class="hl_conref"><span class="mpre">ReadWriteHandle</span></span></a><span class="mpre">   -&gt; </span><span class="hl_varref"><span class="mpre">showString</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;read-writable&quot;</span></span><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Show</span></span><span class="mpre"> </span><a href="#loc_100_6_100_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_6_100_12&#39;)"><span class="hl_tyconref"><span class="mpre">Handle</span></span></a><span class="mpre"> where 
+  </span><a name="loc_426_3_426_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_426_3_426_12&#39;)"><span class="hl_fundecl"><span class="mpre">showsPrec</span></span></a><span class="mpre"> _ (</span><a href="#loc_101_5_101_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_5_101_15&#39;)"><span class="hl_conref"><span class="mpre">FileHandle</span></span></a><span class="mpre">   </span><a name="loc_426_29_426_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_426_29_426_33&#39;)"><span class="hl_vardecl"><span class="mpre">file</span></span></a><span class="mpre"> _)   = </span><a href="#loc_430_1_430_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_430_1_430_11&#39;)"><span class="hl_varref"><span class="mpre">showHandle</span></span></a><span class="mpre"> </span><a href="#loc_426_29_426_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_426_29_426_33&#39;)"><span class="hl_varref"><span class="mpre">file</span></span></a><span class="mpre">
+  </span><a href="#loc_426_3_426_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_426_3_426_12&#39;)"><span class="hl_fundecl"><span class="mpre">showsPrec</span></span></a><span class="mpre"> _ (</span><a href="#loc_106_5_106_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_106_5_106_17&#39;)"><span class="hl_conref"><span class="mpre">DuplexHandle</span></span></a><span class="mpre"> </span><a name="loc_427_29_427_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_427_29_427_33&#39;)"><span class="hl_vardecl"><span class="mpre">file</span></span></a><span class="mpre"> _ _) = </span><a href="#loc_430_1_430_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_430_1_430_11&#39;)"><span class="hl_varref"><span class="mpre">showHandle</span></span></a><span class="mpre"> </span><a href="#loc_427_29_427_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_427_29_427_33&#39;)"><span class="hl_varref"><span class="mpre">file</span></span></a><span class="mpre">
+
+</span><a href="#loc_430_1_430_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_430_1_430_11&#39;)"><span class="mpre">showHandle</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_430_1_430_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_430_1_430_11&#39;)"><span class="hl_fundecl"><span class="mpre">showHandle</span></span></a><span class="mpre"> </span><a name="loc_430_12_430_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_430_12_430_16&#39;)"><span class="hl_vardecl"><span class="mpre">file</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">showString</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;{handle: &quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">showString</span></span><span class="mpre"> </span><a href="#loc_430_12_430_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_430_12_430_16&#39;)"><span class="hl_varref"><span class="mpre">file</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">showString</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;}&quot;</span></span><span class="mpre">
+
+</span></div></body></html>

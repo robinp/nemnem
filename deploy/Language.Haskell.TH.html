@@ -1,0 +1,150 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{- | The public face of Template Haskell
+
+For other documentation, refer to:
+&lt;http://www.haskell.org/haskellwiki/Template_Haskell&gt;
+
+-}</span></span><span class="mpre">
+module Language.Haskell.TH(
+        </span><span class="hl_comment"><span class="mpre">-- * The monad and its operations</span></span><span class="mpre">
+        Q,
+        runQ,
+        </span><span class="hl_comment"><span class="mpre">-- ** Administration: errors, locations and IO</span></span><span class="mpre">
+        reportError,                  </span><span class="hl_comment"><span class="mpre">-- :: String -&gt; Q ()</span></span><span class="mpre">
+        reportWarning,                  </span><span class="hl_comment"><span class="mpre">-- :: String -&gt; Q ()</span></span><span class="mpre">
+        report,                          </span><span class="hl_comment"><span class="mpre">-- :: Bool -&gt; String -&gt; Q ()</span></span><span class="mpre">
+        recover,           </span><span class="hl_comment"><span class="mpre">-- :: Q a -&gt; Q a -&gt; Q a</span></span><span class="mpre">
+        location,          </span><span class="hl_comment"><span class="mpre">-- :: Q Loc</span></span><span class="mpre">
+        Loc(..),
+        runIO,                   </span><span class="hl_comment"><span class="mpre">-- :: IO a -&gt; Q a</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- ** Querying the compiler</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- *** Reify</span></span><span class="mpre">
+        reify,                   </span><span class="hl_comment"><span class="mpre">-- :: Name -&gt; Q Info</span></span><span class="mpre">
+        reifyModule,
+        thisModule,
+        Info(..), ModuleInfo(..),
+        InstanceDec,
+        ParentName,
+        Arity,
+        Unlifted,
+        </span><span class="hl_comment"><span class="mpre">-- *** Name lookup</span></span><span class="mpre">
+        lookupTypeName,         </span><span class="hl_comment"><span class="mpre">-- :: String -&gt; Q (Maybe Name)</span></span><span class="mpre">
+        lookupValueName, </span><span class="hl_comment"><span class="mpre">-- :: String -&gt; Q (Maybe Name)</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- *** Instance lookup</span></span><span class="mpre">
+        reifyInstances,
+        isInstance,
+        </span><span class="hl_comment"><span class="mpre">-- *** Roles lookup</span></span><span class="mpre">
+        reifyRoles,
+        </span><span class="hl_comment"><span class="mpre">-- *** Annotation lookup</span></span><span class="mpre">
+        reifyAnnotations, AnnLookup(..),
+
+        </span><span class="hl_comment"><span class="mpre">-- * Typed expressions</span></span><span class="mpre">
+        TExp, unType,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Names</span></span><span class="mpre">
+        Name, NameSpace,        </span><span class="hl_comment"><span class="mpre">-- Abstract</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- ** Constructing names</span></span><span class="mpre">
+        mkName,          </span><span class="hl_comment"><span class="mpre">-- :: String -&gt; Name</span></span><span class="mpre">
+        newName,         </span><span class="hl_comment"><span class="mpre">-- :: String -&gt; Q Name</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- ** Deconstructing names</span></span><span class="mpre">
+        nameBase,        </span><span class="hl_comment"><span class="mpre">-- :: Name -&gt; String</span></span><span class="mpre">
+        nameModule,        </span><span class="hl_comment"><span class="mpre">-- :: Name -&gt; Maybe String</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- ** Built-in names</span></span><span class="mpre">
+        tupleTypeName, tupleDataName,        </span><span class="hl_comment"><span class="mpre">-- Int -&gt; Name</span></span><span class="mpre">
+        unboxedTupleTypeName, unboxedTupleDataName, </span><span class="hl_comment"><span class="mpre">-- :: Int -&gt; Name</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * The algebraic data types</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- | The lowercase versions (/syntax operators/) of these constructors are</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- preferred to these constructors, since they compose better with</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- quotations (@[| |]@) and splices (@$( ... )@)</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Declarations</span></span><span class="mpre">
+        Dec(..), Con(..), Clause(..), 
+        Strict(..), Foreign(..), Callconv(..), Safety(..), Pragma(..),
+        Inline(..), RuleMatch(..), Phases(..), RuleBndr(..), AnnTarget(..),
+        FunDep(..), FamFlavour(..), TySynEqn(..),
+        Fixity(..), FixityDirection(..), defaultFixity, maxPrecedence,
+    </span><span class="hl_comment"><span class="mpre">-- ** Expressions</span></span><span class="mpre">
+        Exp(..), Match(..), Body(..), Guard(..), Stmt(..), Range(..), Lit(..),
+    </span><span class="hl_comment"><span class="mpre">-- ** Patterns</span></span><span class="mpre">
+        Pat(..), FieldExp, FieldPat,
+    </span><span class="hl_comment"><span class="mpre">-- ** Types</span></span><span class="mpre">
+        Type(..), TyVarBndr(..), TyLit(..), Kind, Cxt, Pred(..), Syntax.Role(..),
+
+    </span><span class="hl_comment"><span class="mpre">-- * Library functions</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- ** Abbreviations</span></span><span class="mpre">
+        InfoQ, ExpQ, DecQ, DecsQ, ConQ, TypeQ, TyLitQ, CxtQ, PredQ, MatchQ, ClauseQ,
+        BodyQ, GuardQ, StmtQ, RangeQ, StrictTypeQ, VarStrictTypeQ, PatQ, FieldPatQ,
+        RuleBndrQ, TySynEqnQ,
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Constructors lifted to &#39;Q&#39;</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- *** Literals</span></span><span class="mpre">
+        intPrimL, wordPrimL, floatPrimL, doublePrimL, integerL, rationalL,
+        charL, stringL, stringPrimL,
+    </span><span class="hl_comment"><span class="mpre">-- *** Patterns</span></span><span class="mpre">
+        litP, varP, tupP, conP, uInfixP, parensP, infixP,
+        tildeP, bangP, asP, wildP, recP,
+        listP, sigP, viewP,
+        fieldPat,
+
+    </span><span class="hl_comment"><span class="mpre">-- *** Pattern Guards</span></span><span class="mpre">
+        normalB, guardedB, normalG, normalGE, patG, patGE, match, clause,
+
+    </span><span class="hl_comment"><span class="mpre">-- *** Expressions</span></span><span class="mpre">
+        dyn, global, varE, conE, litE, appE, uInfixE, parensE,
+        infixE, infixApp, sectionL, sectionR,
+        lamE, lam1E, lamCaseE, tupE, condE, multiIfE, letE, caseE, appsE,
+        listE, sigE, recConE, recUpdE, stringE, fieldExp,
+    </span><span class="hl_comment"><span class="mpre">-- **** Ranges</span></span><span class="mpre">
+    fromE, fromThenE, fromToE, fromThenToE,
+
+    </span><span class="hl_comment"><span class="mpre">-- ***** Ranges with more indirection</span></span><span class="mpre">
+    arithSeqE,
+    fromR, fromThenR, fromToR, fromThenToR,
+    </span><span class="hl_comment"><span class="mpre">-- **** Statements</span></span><span class="mpre">
+    doE, compE,
+    bindS, letS, noBindS, parS,
+
+    </span><span class="hl_comment"><span class="mpre">-- *** Types</span></span><span class="mpre">
+        forallT, varT, conT, appT, arrowT, listT, tupleT, sigT, litT,
+    promotedT, promotedTupleT, promotedNilT, promotedConsT,
+    </span><span class="hl_comment"><span class="mpre">-- **** Type literals</span></span><span class="mpre">
+    numTyLit, strTyLit,
+    </span><span class="hl_comment"><span class="mpre">-- **** Strictness</span></span><span class="mpre">
+        isStrict, notStrict, strictType, varStrictType,
+    </span><span class="hl_comment"><span class="mpre">-- **** Class Contexts</span></span><span class="mpre">
+    cxt, classP, equalP, normalC, recC, infixC, forallC,
+
+    </span><span class="hl_comment"><span class="mpre">-- *** Kinds</span></span><span class="mpre">
+  varK, conK, tupleK, arrowK, listK, appK, starK, constraintK,
+
+    </span><span class="hl_comment"><span class="mpre">-- *** Roles</span></span><span class="mpre">
+    nominalR, representationalR, phantomR, inferR,
+
+    </span><span class="hl_comment"><span class="mpre">-- *** Top Level Declarations</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- **** Data</span></span><span class="mpre">
+        valD, funD, tySynD, dataD, newtypeD,
+    </span><span class="hl_comment"><span class="mpre">-- **** Class</span></span><span class="mpre">
+    classD, instanceD, sigD,
+    </span><span class="hl_comment"><span class="mpre">-- **** Role annotations</span></span><span class="mpre">
+    roleAnnotD,
+    </span><span class="hl_comment"><span class="mpre">-- **** Type Family / Data Family</span></span><span class="mpre">
+    familyNoKindD, familyKindD, dataInstD,
+    closedTypeFamilyNoKindD, closedTypeFamilyKindD,
+    newtypeInstD, tySynInstD,
+    typeFam, dataFam, tySynEqn,
+    </span><span class="hl_comment"><span class="mpre">-- **** Foreign Function Interface (FFI)</span></span><span class="mpre">
+    cCall, stdCall, unsafe, safe, forImpD,
+    </span><span class="hl_comment"><span class="mpre">-- **** Pragmas</span></span><span class="mpre">
+    ruleVar, typedRuleVar,
+    pragInlD, pragSpecD, pragSpecInlD, pragSpecInstD, pragRuleD, pragAnnD,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Pretty-printer</span></span><span class="mpre">
+    Ppr(..), pprint, pprExp, pprLit, pprPat, pprParendType
+
+   ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/template-haskell-2.9.0.0/Language/Haskell/TH.hs&quot;, srcSpanStartLine = 146, srcSpanStartColumn = 8, srcSpanEndLine = 146, srcSpanEndColumn = 34}, srcInfoPoints = []}) &quot;Language.Haskell.TH.Syntax&quot;"><span class="mpre">Language.Haskell.TH.Syntax</span></span><span class="mpre"> as Syntax
+import Language.Haskell.TH.Lib
+import Language.Haskell.TH.Ppr
+
+</span></div></body></html>

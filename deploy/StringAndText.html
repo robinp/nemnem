@@ -1,0 +1,128 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE OverloadedStrings #-}
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : StringAndText</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) 2010 Simon Meier</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD3-style (see LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Simon Meier &lt;iridcode@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : tested on GHC only</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Benchmarking of String and Text serialization.</span></span><span class="mpre">
+module StringAndText (main)  where
+
+import Data.Char (ord)
+import Data.Monoid 
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/benchmarks/StringAndText.hs&quot;, srcSpanStartLine = 17, srcSpanStartColumn = 8, srcSpanEndLine = 17, srcSpanEndColumn = 22}, srcInfoPoints = []}) &quot;Criterion.Main&quot;"><span class="mpre">Criterion.Main</span></span><span class="mpre">
+
+import Foreign (plusPtr)
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/benchmarks/StringAndText.hs&quot;, srcSpanStartLine = 20, srcSpanStartColumn = 18, srcSpanEndLine = 20, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre">      as S
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/benchmarks/StringAndText.hs&quot;, srcSpanStartLine = 21, srcSpanStartColumn = 18, srcSpanEndLine = 21, srcSpanEndColumn = 38}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy&quot;"><span class="mpre">Data.ByteString.Lazy</span></span><span class="mpre"> as L
+import qualified Data.Text               as TS
+import qualified Data.Text.Encoding      as TS
+import qualified Data.Text.Lazy          as TL
+import qualified Data.Text.Lazy.Encoding as TL
+
+import qualified Blaze.ByteString.Builder           as Blaze
+import qualified Blaze.ByteString.Builder.Internal  as Blaze
+import qualified Blaze.ByteString.Builder.Html.Utf8 as Blaze
+
+</span><a href="#loc_32_1_32_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_1_32_5&#39;)"><span class="mpre">main</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_32_1_32_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_1_32_5&#39;)"><span class="hl_vardecl"><span class="mpre">main</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">defaultMain</span></span><span class="mpre"> 
+    [ </span><span class="hl_varref"><span class="mpre">bench</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;TL.unpack :: LazyText -&gt; String&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">nf</span></span><span class="mpre">
+        </span><a href="Data.Text.Lazy.html#loc_354_1_354_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Lazy.html#loc_354_1_354_7&#39;)"><span class="hl_varref"><span class="mpre">TL.unpack</span></span></a><span class="mpre"> </span><a href="#loc_83_1_83_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_14&#39;)"><span class="hl_varref"><span class="mpre">benchLazyText</span></span></a><span class="mpre">
+
+    , </span><span class="hl_varref"><span class="mpre">bench</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;TL.foldr  :: LazyText -&gt; String&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">nf</span></span><span class="mpre">
+        (</span><a href="Data.Text.Lazy.html#loc_760_1_760_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Lazy.html#loc_760_1_760_6&#39;)"><span class="hl_varref"><span class="mpre">TL.foldr</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">(:)</span></span><span class="mpre"> []) </span><a href="#loc_83_1_83_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_14&#39;)"><span class="hl_varref"><span class="mpre">benchLazyText</span></span></a><span class="mpre">
+    
+    , </span><span class="hl_varref"><span class="mpre">bench</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;fromString :: String --[Utf8 encoding]--&gt; L.ByteString&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">whnf</span></span><span class="mpre">
+        (</span><span class="hl_varref"><span class="mpre">L.length</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17&#39;)"><span class="hl_varref"><span class="mpre">Blaze.toLazyByteString</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Char.Utf8.html#loc_97_1_97_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Char.Utf8.html#loc_97_1_97_11&#39;)"><span class="hl_varref"><span class="mpre">Blaze.fromString</span></span></a><span class="mpre">) </span><a href="#loc_75_1_75_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_12&#39;)"><span class="hl_varref"><span class="mpre">benchString</span></span></a><span class="mpre">
+
+    , </span><span class="hl_varref"><span class="mpre">bench</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;fromStrictTextUnpacked :: StrictText --[Utf8 encoding]--&gt; L.ByteString&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">whnf</span></span><span class="mpre">
+        (</span><span class="hl_varref"><span class="mpre">L.length</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17&#39;)"><span class="hl_varref"><span class="mpre">Blaze.toLazyByteString</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Char.Utf8.html#loc_115_1_115_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Char.Utf8.html#loc_115_1_115_9&#39;)"><span class="hl_varref"><span class="mpre">Blaze.fromText</span></span></a><span class="mpre">) </span><a href="#loc_79_1_79_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_1_79_16&#39;)"><span class="hl_varref"><span class="mpre">benchStrictText</span></span></a><span class="mpre">
+     
+    </span><span class="hl_comment"><span class="mpre">-- , bench &quot;fromStrictTextFolded :: StrictText --[Utf8 encoding]--&gt; L.ByteString&quot; $ whnf</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- (L.length . Blaze.toLazyByteString . fromStrictTextFolded) benchStrictText</span></span><span class="mpre">
+
+    , </span><span class="hl_varref"><span class="mpre">bench</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;TS.encodeUtf8 :: StrictText --[Utf8 encoding]--&gt; S.ByteString&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">whnf</span></span><span class="mpre">
+        (</span><a href="Data.Text.Encoding.html#loc_386_1_386_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Encoding.html#loc_386_1_386_11&#39;)"><span class="hl_varref"><span class="mpre">TS.encodeUtf8</span></span></a><span class="mpre">) </span><a href="#loc_79_1_79_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_1_79_16&#39;)"><span class="hl_varref"><span class="mpre">benchStrictText</span></span></a><span class="mpre">
+
+    , </span><span class="hl_varref"><span class="mpre">bench</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;fromLazyTextUnpacked :: LazyText --[Utf8 encoding]--&gt; L.ByteString&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">whnf</span></span><span class="mpre">
+        (</span><span class="hl_varref"><span class="mpre">L.length</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17&#39;)"><span class="hl_varref"><span class="mpre">Blaze.toLazyByteString</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Char.Utf8.html#loc_122_1_122_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Char.Utf8.html#loc_122_1_122_13&#39;)"><span class="hl_varref"><span class="mpre">Blaze.fromLazyText</span></span></a><span class="mpre">) </span><a href="#loc_83_1_83_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_14&#39;)"><span class="hl_varref"><span class="mpre">benchLazyText</span></span></a><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- , bench &quot;fromLazyTextFolded :: LazyText --[Utf8 encoding]--&gt; L.ByteString&quot; $ whnf</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- (L.length . Blaze.toLazyByteString . fromLazyTextFolded) benchLazyText</span></span><span class="mpre">
+
+    , </span><span class="hl_varref"><span class="mpre">bench</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;TL.encodeUtf8 :: LazyText --[Utf8 encoding]--&gt; L.ByteString&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">whnf</span></span><span class="mpre">
+        (</span><span class="hl_varref"><span class="mpre">L.length</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Data.Text.Lazy.Encoding.html#loc_153_1_153_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Lazy.Encoding.html#loc_153_1_153_11&#39;)"><span class="hl_varref"><span class="mpre">TL.encodeUtf8</span></span></a><span class="mpre">) </span><a href="#loc_83_1_83_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_14&#39;)"><span class="hl_varref"><span class="mpre">benchLazyText</span></span></a><span class="mpre">
+
+    , </span><span class="hl_varref"><span class="mpre">bench</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;fromHtmlEscapedString :: String --[Html esc. &amp; Utf8 encoding]--&gt; L.ByteString&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">whnf</span></span><span class="mpre">
+        (</span><span class="hl_varref"><span class="mpre">L.length</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17&#39;)"><span class="hl_varref"><span class="mpre">Blaze.toLazyByteString</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Html.Utf8.html#loc_67_1_67_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Html.Utf8.html#loc_67_1_67_22&#39;)"><span class="hl_varref"><span class="mpre">Blaze.fromHtmlEscapedString</span></span></a><span class="mpre">) </span><a href="#loc_75_1_75_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_12&#39;)"><span class="hl_varref"><span class="mpre">benchString</span></span></a><span class="mpre">
+
+    , </span><span class="hl_varref"><span class="mpre">bench</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;fromHtmlEscapedStrictTextUnpacked :: StrictText --[HTML esc. &amp; Utf8 encoding]--&gt; L.ByteString&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">whnf</span></span><span class="mpre">
+        (</span><span class="hl_varref"><span class="mpre">L.length</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17&#39;)"><span class="hl_varref"><span class="mpre">Blaze.toLazyByteString</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Html.Utf8.html#loc_80_1_80_20" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Html.Utf8.html#loc_80_1_80_20&#39;)"><span class="hl_varref"><span class="mpre">Blaze.fromHtmlEscapedText</span></span></a><span class="mpre">) </span><a href="#loc_79_1_79_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_1_79_16&#39;)"><span class="hl_varref"><span class="mpre">benchStrictText</span></span></a><span class="mpre">
+     
+    , </span><span class="hl_varref"><span class="mpre">bench</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;fromHtmlEscapedLazyTextUnpacked :: LazyText --[HTML esc. &amp; Utf8 encoding]--&gt; L.ByteString&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">whnf</span></span><span class="mpre">
+        (</span><span class="hl_varref"><span class="mpre">L.length</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Internal.html#loc_269_1_269_17&#39;)"><span class="hl_varref"><span class="mpre">Blaze.toLazyByteString</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Blaze.ByteString.Builder.Html.Utf8.html#loc_85_1_85_24" onmouseover="nemnem.highlightLocalToRemote(&#39;Blaze.ByteString.Builder.Html.Utf8.html#loc_85_1_85_24&#39;)"><span class="hl_varref"><span class="mpre">Blaze.fromHtmlEscapedLazyText</span></span></a><span class="mpre">) </span><a href="#loc_83_1_83_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_14&#39;)"><span class="hl_varref"><span class="mpre">benchLazyText</span></span></a><span class="mpre">
+     
+    ]
+
+</span><a href="#loc_72_1_72_2" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_2&#39;)"><span class="mpre">n</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+</span><a name="loc_72_1_72_2" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_2&#39;)"><span class="hl_vardecl"><span class="mpre">n</span></span></a><span class="mpre"> = </span><span class="hl_num"><span class="mpre">100000</span></span><span class="mpre">
+
+</span><a href="#loc_75_1_75_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_12&#39;)"><span class="mpre">benchString</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_75_1_75_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_12&#39;)"><span class="hl_vardecl"><span class="mpre">benchString</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">take</span></span><span class="mpre"> </span><a href="#loc_72_1_72_2" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_2&#39;)"><span class="hl_varref"><span class="mpre">n</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">concatMap</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><span class="warning" data-warning="ExpEnumFrom (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/benchmarks/StringAndText.hs&quot;, srcSpanStartLine = 75, srcSpanStartColumn = 39, srcSpanEndLine = 75, srcSpanEndColumn = 51}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/benchmarks/StringAndText.hs&quot;, srcSpanStartLine = 75, srcSpanStartColumn = 39, srcSpanEndLine = 75, srcSpanEndColumn = 40},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/blaze-builder-0.3.3.2/ben"><span class="mpre">[(1::Int)..]</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# NOINLINE </span><a href="#loc_75_1_75_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_12&#39;)"><span class="mpre">benchString</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><a href="#loc_79_1_79_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_1_79_16&#39;)"><span class="mpre">benchStrictText</span></a><span class="mpre"> :: </span><a href="Data.Text.Internal.html#loc_50_6_50_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.html#loc_50_6_50_10&#39;)"><span class="hl_tyconref"><span class="mpre">TS.Text</span></span></a><span class="mpre">
+</span><a name="loc_79_1_79_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_1_79_16&#39;)"><span class="hl_vardecl"><span class="mpre">benchStrictText</span></span></a><span class="mpre"> = </span><a href="Data.Text.html#loc_387_1_387_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.html#loc_387_1_387_5&#39;)"><span class="hl_varref"><span class="mpre">TS.pack</span></span></a><span class="mpre"> </span><a href="#loc_75_1_75_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_12&#39;)"><span class="hl_varref"><span class="mpre">benchString</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# NOINLINE </span><a href="#loc_79_1_79_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_1_79_16&#39;)"><span class="mpre">benchStrictText</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><a href="#loc_83_1_83_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_14&#39;)"><span class="mpre">benchLazyText</span></a><span class="mpre"> :: </span><a href="Data.Text.Internal.Lazy.html#loc_47_6_47_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Internal.Lazy.html#loc_47_6_47_10&#39;)"><span class="hl_tyconref"><span class="mpre">TL.Text</span></span></a><span class="mpre">
+</span><a name="loc_83_1_83_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_14&#39;)"><span class="hl_vardecl"><span class="mpre">benchLazyText</span></span></a><span class="mpre"> = </span><a href="Data.Text.Lazy.html#loc_348_1_348_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Text.Lazy.html#loc_348_1_348_5&#39;)"><span class="hl_varref"><span class="mpre">TL.pack</span></span></a><span class="mpre"> </span><a href="#loc_75_1_75_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_75_1_75_12&#39;)"><span class="hl_varref"><span class="mpre">benchString</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# NOINLINE </span><a href="#loc_83_1_83_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_83_1_83_14&#39;)"><span class="mpre">benchLazyText</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-
+
+-- | Encode the &#39;TS.Text&#39; as UTF-8 by folding it and filling the raw buffer
+-- directly.
+fromStrictTextFolded :: TS.Text -&gt; Blaze.Builder
+fromStrictTextFolded t = Blaze.fromBuildStepCont $ \k -&gt; TS.foldr step k t
+  where
+    step c k pf pe
+      | pf&#39; &lt;= pe = do
+          io pf
+          k pf&#39; pe  -- here it would be great, if we wouldn&#39;t have to pass
+                    -- around pe: requires a more powerful fold for StrictText.
+      | otherwise =
+          return $ Blaze.bufferFull size pf $ \(Blaze.BufRange pfNew peNew) -&gt; do
+            let !br&#39; = Blaze.BufRange (pfNew `plusPtr` size) peNew
+            io pfNew
+            k br&#39;
+      where
+        pf&#39; = pf `plusPtr` size
+        Blaze.Write size io = Blaze.writeChar c
+{-# INLINE fromStrictTextFolded #-}
+
+-- | Encode the &#39;TL.Text&#39; as UTF-8 by folding it and filling the raw buffer
+-- directly.
+fromLazyTextFolded :: TL.Text -&gt; Blaze.Builder
+fromLazyTextFolded t = Blaze.fromBuildStepContBuilder $ \k -&gt; TL.foldr step k t
+  where
+    step c k pf pe
+      | pf&#39; &lt;= pe = do
+          io pf
+          k pf&#39; pe  -- here it would be great, if we wouldn&#39;t have to pass
+                    -- around pe: requires a more powerful fold for StrictText.
+      | otherwise =
+          return $ Blaze.bufferFull size pf $ \(Blaze.BufRange pfNew peNew) -&gt; do
+            let !br&#39; = Blaze.BufRange (pfNew `plusPtr` size) peNew
+            io pfNew
+            k br&#39;
+      where
+        pf&#39; = pf `plusPtr` size
+        Blaze.Write size io = Blaze.writeChar c
+{-# INLINE fromLazyTextFolded #-}
+-}</span></span><span class="mpre">
+</span></div></body></html>

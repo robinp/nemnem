@@ -1,0 +1,403 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
+</span><span class="hl_comment"><span class="mpre">{-| @pipes-parse@ builds upon @pipes@ to add several missing features necessary
+    to implement &#39;Parser&#39;s:
+
+    * End-of-input detection, so that &#39;Parser&#39;s can react to an exhausted input
+      stream
+
+    * Leftovers support, which simplifies several parsing problems
+
+    * Connect-and-resume, to connect a &#39;Producer&#39; to a &#39;Parser&#39; and retrieve
+      unused input
+-}</span></span><span class="mpre">
+
+module Pipes.Parse.Tutorial (
+    </span><span class="hl_comment"><span class="mpre">-- * Overview</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $overview</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Parsers</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $parsers</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Lenses</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $lenses</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Getters</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $getters</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Building Lenses</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $buildlenses</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Conclusion</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $conclusion</span></span><span class="mpre">
+    ) where
+
+import Pipes
+import Pipes.Parse
+
+</span><span class="hl_comment"><span class="mpre">{- $overview
+    @pipes-parse@ centers on three abstractions:
+
+    * &#39;Producer&#39;s, unchanged from @pipes@
+
+    * &#39;Parser&#39;s, which play a role analogous to &#39;Consumer&#39;s
+
+    * &#39;Lens.Family2.Lens&#39;&#39;es between &#39;Producer&#39;s, which play a role analogous to
+      &#39;Pipe&#39;s
+
+    There are four ways to connect these three abstractions:
+
+    * Connect &#39;Parser&#39;s to &#39;Producer&#39;s using &#39;runStateT&#39; \/ &#39;evalStateT&#39; \/
+      &#39;execStateT&#39;:
+
+&gt; runStateT  :: Parser a m r -&gt; Producer a m x -&gt; m (r, Producer a m x)
+&gt; evalStateT :: Parser a m r -&gt; Producer a m x -&gt; m  r
+&gt; execStateT :: Parser a m r -&gt; Producer a m x -&gt; m (   Producer a m x)
+
+
+    * Connect &#39;Lens.Family2.Lens&#39;&#39;es to &#39;Parser&#39;s using
+      &#39;Lens.Family.State.Strict.zoom&#39;
+
+&gt; zoom :: Lens&#39; (Producer a m x) (Producer b m y)
+&gt;      -&gt; Parser b m r
+&gt;      -&gt; Parser a m r
+
+    * Connect &#39;Producer&#39;s to &#39;Lens.Family2.Lens&#39;&#39;es using (&#39;Lens.Family.^.&#39;) or
+      &#39;Lens.Family.view&#39;:
+
+&gt; (^.) :: Producer a m x
+&gt;      -&gt; Lens&#39; (Producer a m x) (Producer b m y)
+&gt;      -&gt; Producer b m y
+
+    * Connect &#39;Lens.Family2.Lens&#39;&#39;es to &#39;Lens.Family2.Lens&#39;&#39;es using (&#39;.&#39;) (i.e.
+      function composition):
+
+&gt; (.) :: Lens&#39; (Producer a m x) (Producer b m y)
+&gt;     -&gt; Lens&#39; (Producer b m y) (Producer c m z)
+&gt;     -&gt; Lens&#39; (Producer a m x) (Producer c m z)
+
+    You can obtain the necessary lens utilities from either:
+    
+    * The @lens-family-core@ library, importing @Lens.Family@ (for
+      (&#39;Lens.Family.^.&#39;) \/ &#39;Lens.Family.view&#39; and &#39;Lens.Family.over&#39;) and
+      @Lens.Family.State.Strict@ (for &#39;Lens.Family.State.Strict.zoom&#39;), or:
+
+    * The @lens@ library, importing @Control.Lens@ (for (&#39;Control.Lens.^.&#39;) \/
+      &#39;Control.Lens.view&#39;, &#39;Control.Lens.over&#39; and &#39;Control.Lens.zoom&#39;)
+
+    This tutorial uses @Lens.Family@ since it has fewer dependencies and simpler
+    types.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $parsers
+    &#39;Parser&#39;s handle end-of-input and pushback by storing a &#39;Producer&#39; in a
+    &#39;StateT&#39; layer:
+
+&gt; type Parser a m r = forall x . StateT (Producer a m x) m r
+
+    To draw a single element from the underlying &#39;Producer&#39;, use the &#39;draw&#39;
+    command:
+
+&gt; draw :: Monad m =&gt; Parser a m (Maybe a)
+
+    &#39;draw&#39; returns the next element from the &#39;Producer&#39; wrapped in &#39;Just&#39; or
+    returns &#39;Nothing&#39; if the underlying &#39;Producer&#39; is empty.  Here&#39;s an example
+    &#39;Parser&#39; written using &#39;draw&#39; that retrieves the first two elements from a
+    stream:
+
+&gt; import Pipes.Parse
+&gt;
+&gt; drawTwo :: Monad m =&gt; Parser a m (Maybe a, Maybe a)
+&gt; drawTwo = do
+&gt;     mx &lt;- draw
+&gt;     my &lt;- draw
+&gt;     return (mx, my)
+&gt;
+&gt; -- or: drawTwo = liftM2 (,) draw draw
+
+    Since a &#39;Parser&#39; is just a &#39;StateT&#39; action, you run a &#39;Parser&#39; using the
+    same run functions as &#39;StateT&#39;:
+
+&gt; -- Feed a &#39;Producer&#39; to a &#39;Parser&#39;, returning the result and leftovers
+&gt; runStateT  :: Parser a m r -&gt; Producer a m x -&gt; m (r, Producer a m x)
+&gt;
+&gt; -- Feed a &#39;Producer&#39; to a &#39;Parser&#39;, returning only the result
+&gt; evalStateT :: Parser a m r -&gt; Producer a m x -&gt; m  r
+&gt;
+&gt; -- Feed a &#39;Producer&#39; to a &#39;Parser&#39;, returning only the leftovers
+&gt; execStateT :: Parser a m r -&gt; Producer a m x -&gt; m (   Producer a m x)
+
+    All three of these functions require a &#39;Producer&#39; which we feed to the
+    &#39;Parser&#39;.  For example, we can feed standard input:
+
+&gt;&gt;&gt; evalStateT drawTwo Pipes.Prelude.stdinLn
+Pink&lt;Enter&gt;
+Elephants&lt;Enter&gt;
+(Just &quot;Pink&quot;,Just &quot;Elephants&quot;)
+
+    The result is wrapped in a &#39;Maybe&#39; because &#39;draw&#39; can fail if the &#39;Producer&#39;
+    is empty:
+
+&gt;&gt;&gt; evalStateT drawTwo (yield 0)
+(Just 0,Nothing)
+
+    Parsing might not necessarily consume the entire stream.  We can use
+    &#39;runStateT&#39; or &#39;execStateT&#39; to retrieve unused elements that our parser does
+    not consume:
+
+&gt;&gt;&gt; import Pipes
+&gt;&gt;&gt; (result, unused) &lt;- runStateT drawTwo (each [1..4])
+&gt;&gt;&gt; -- View the parsed result
+&gt;&gt;&gt; result
+(Just 1,Just 2)
+&gt;&gt;&gt; -- Now print the leftovers
+&gt;&gt;&gt; runEffect $ for unused (lift . print)
+3
+4
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $lenses
+    @pipes-parse@ also provides a convenience function for testing purposes that
+    draws all remaining elements and returns them as a list:
+
+&gt; drawAll :: Monad m =&gt; Parser a m [a]
+
+    For example:
+
+&gt;&gt;&gt; import Pipes
+&gt;&gt;&gt; import Pipes.Parse
+&gt;&gt;&gt; evalStateT drawAll (each [1..10])
+[1,2,3,4,5,6,7,8,9,10]
+
+    However, this function is not recommended in general because it loads the
+    entire input into memory, which defeats the purpose of streaming parsing.
+
+    You can instead use &#39;foldAll&#39; if you wish to fold all input elements into a
+    single result:
+
+&gt;&gt;&gt; evalStateT (foldAll (+) 0 id) (each [1..10])
+55
+
+    You can also use the @foldl@ package to simplify writing more complex folds:
+
+&gt;&gt;&gt; import Control.Applicative
+&gt;&gt;&gt; import Control.Foldl as L
+&gt;&gt;&gt; evalStateT (purely foldAll (liftA2 (,) L.sum L.maximum)) (each [1..10])
+(55,Just 10)
+
+    But what if you wanted to draw or fold just the first three elements from
+    an infinite stream instead of the entire input?  This is what lenses are
+    for:
+
+&gt; import Lens.Family
+&gt; import Lens.Family.State.Strict
+&gt; import Pipes
+&gt; import Pipes.Parse
+&gt;
+&gt; import Prelude hiding (splitAt, span)
+&gt;
+&gt; drawThree :: Monad m =&gt; Parser a m [a]
+&gt; drawThree = zoom (splitAt 3) drawAll
+
+    &#39;Lens.Family.State.Strict.zoom&#39; lets you delimit a &#39;Parser&#39; using a
+    &#39;Lens.Family2.Lens&#39;&#39;.  The above code says to limit &#39;drawAll&#39; to a subset of
+    the input, in this case the first three elements:
+
+&gt;&gt;&gt; evalStateT drawThree (each [1..])
+[1,2,3]
+
+    &#39;splitAt&#39; is a &#39;Lens.Family2.Lens&#39;&#39; with the following type:
+
+&gt; splitAt
+&gt;     :: Monad m
+&gt;     =&gt; Int -&gt; Lens&#39; (Producer a m x) (Producer a m (Producer a m x))
+
+    The easiest way to understand &#39;splitAt&#39; is to study what happens when you
+    use it as a getter:
+
+&gt; view (splitAt 3) :: Producer a m x -&gt; Producer a m (Producer a m x) 
+
+    In this context, @(splitAt 3)@ behaves like &#39;splitAt&#39; from the Prelude,
+    except instead of splitting a list it splits a &#39;Producer&#39;.  Here&#39;s an
+    example of how you can use &#39;splitAt&#39;:
+
+&gt; outer :: Monad m =&gt; Producer Int m (Producer Int m ())
+&gt; outer = each [1..6] ^. splitAt 3
+
+    The above definition of @outer@ is exactly equivalent to:
+
+&gt; outer = do
+&gt;     each [1..3]
+&gt;     return (each [4..6])
+
+    We can prove this by successively running the outer and inner &#39;Producer&#39;
+    layers:
+
+&gt;&gt;&gt; -- Print all the elements in the outer layer and return the inner layer
+&gt;&gt;&gt; inner &lt;- runEffect $ for outer (lift . print)
+1
+2
+3
+&gt;&gt;&gt; -- Now print the elements in the inner layer
+&gt;&gt;&gt; runEffect $ for inner (lift . print)
+4
+5
+6
+
+    We can also uses lenses to modify &#39;Parser&#39;s, using
+    &#39;Lens.Family.State.Strict.zoom&#39;.  When we combine
+    &#39;Lens.Family.State.Strict.zoom&#39; with @(splitAt 3)@ we limit a parser to the
+    the first three elements of the stream.  When the parser is done
+    &#39;Lens.Family.State.Strict.zoom&#39; also returns unused elements back to the
+    original stream.  We can demonstrate this using the following example
+    parser:
+
+&gt; splitExample :: Monad m =&gt; Parser a m ([a], Maybe a, [a])
+&gt; splitExample = do
+&gt;     x &lt;- zoom (splitAt 3) drawAll
+&gt;     y &lt;- zoom (splitAt 3) draw
+&gt;     z &lt;- zoom (splitAt 3) drawAll
+&gt;     return (x, y, z)
+
+    The second parser begins where the first parser left off:
+
+&gt;&gt;&gt; evalStateT splitExample (each [1..])
+([1,2,3],Just 4,[5,6,7])
+
+    &#39;span&#39; behaves the same way, except that it uses a predicate and takes as
+    many consecutive elements as possible that satisfy the predicate:
+
+&gt; spanExample :: Monad m =&gt; Parser Int m (Maybe Int, [Int], Maybe Int)
+&gt; spanExample = do
+&gt;     x &lt;- zoom (span (&gt;= 4)) draw
+&gt;     y &lt;- zoom (span (&lt;  4)) drawAll
+&gt;     z &lt;- zoom (span (&gt;= 4)) draw
+&gt;     return (x, y, z)
+
+    Note that even if the first parser fails, subsequent parsers can still
+    succeed because they operate under a different lens:
+
+&gt;&gt;&gt; evalStateT spanExample (each [1..])
+(Nothing,[1,2,3],Just 4)
+
+    You can even nest &#39;Lens.Family.State.Strict.zoom&#39;s, too:
+
+&gt; nestExample :: Monad m =&gt; Parser Int m (Maybe Int, [Int], Maybe Int)
+&gt; nestExample = zoom (splitAt 2) spanExample
+
+    All the parsers from @spanExample@ now only see a subset of the input,
+    namely the first two elements:
+
+&gt;&gt;&gt; evalStateT nestExample (each [1..])
+(Nothing,[1,2],Nothing)
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $getters
+    Not all transformations are reversible.  For example, consider the following
+    contrived function:
+
+&gt; import Pipes
+&gt; import qualified Pipes.Prelude as P
+&gt;
+&gt; map&#39; :: Monad m =&gt; (a -&gt; b) -&gt; Producer a m r -&gt; Producer b m r
+&gt; map&#39; f p = p &gt;-&gt; P.map f
+
+    Given a function of type @(a -&gt; b)@, we can transform a stream of @a@&#39;s into
+    a stream of @b@&#39;s, but not the other way around.  Transformations which are
+    not reversible and cannot be modeled as &#39;Pipe&#39;s can only be modeled as
+    functions between &#39;Producer&#39;s.  However, &#39;Pipe&#39;s are preferable to functions
+    between &#39;Producer&#39;s when possible because &#39;Pipe&#39;s can transform both
+    &#39;Producer&#39;s and &#39;Consumer&#39;s.
+
+    If you prefer, you can use lens-like syntax for functions between
+    &#39;Producer&#39;s by promoting them to @Getter@s using &#39;Lens.Family.to&#39;:
+
+&gt; import Lens.Family
+&gt;
+&gt; example :: Monad m =&gt; Producer Int m ()
+&gt; example = each [1..3] ^. to (map&#39; (*2))
+
+    However, a function of &#39;Producer&#39;s (or the equivalent @Getter@) cannot be
+    used transform &#39;Parser&#39;s (using &#39;Lens.Family.State.Strict.zoom&#39; or
+    otherwise) .  This reflects the fact that such a transformation cannot be
+    applied in reversed.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $buildlenses
+    Lenses are very easy to write if you are willing to depend on either the
+    @lens-family@ or @lens@ library.  Both of these libraries provide an
+    &#39;Lens.Family2.Unchecked.iso&#39; function that you can use to assemble your own
+    lenses.  You only need two functions which reversibly transform back and
+    forth between a stream of @a@s and a stream of @b@s:
+
+&gt; -- &quot;Forward&quot;
+&gt; fw :: Producer a m x -&gt; Producer b m y
+&gt;
+&gt; -- &quot;Backward&quot;
+&gt; bw :: Producer b m y -&gt; Producer a m x
+
+    ... such that:
+
+&gt; fw . bw = id
+&gt;
+&gt; bw . fw = id
+
+    You can then convert them to a &#39;Lens.Family2.Lens&#39;&#39; using
+    &#39;Lens.Family2.Unchecked.iso&#39;:
+
+&gt; import Lens.Family2 (Lens&#39;)
+&gt; import Lens.Family2.Unchecked (iso)
+&gt;
+&gt; lens :: Lens&#39; (Producer a m x) (Producer b m y)
+&gt; lens = iso fw bw
+
+    You can even do this without incurring any dependencies if you rewrite the
+    above code like this:
+
+&gt; -- This type synonym requires the &#39;RankNTypes&#39; extension
+&gt; type Lens&#39; a b = forall f . Functor f =&gt; (b -&gt; f b) -&gt; (a -&gt; f a)
+&gt;
+&gt; lens :: Lens&#39; (Producer a m x) (Producer b m y)
+&gt; lens k p = fmap bw (k (fw p))
+
+    This is what @pipes-parse@ does internally, and you will find several
+    examples of this pattern in the source code of the &quot;Pipes.Parse&quot; module.
+
+    Lenses defined using either approach will work with both the @lens@ and
+    @lens-family@ libraries.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $conclusion
+    @pipes-parse@ introduces core idioms for @pipes@-based parsing.  These
+    idioms reuse &#39;Producer&#39;s, but introduce two new abstractions:
+    &#39;Lens.Family2.Lens&#39;&#39;es and &#39;Parser&#39;s.
+
+    This library is very minimal and only contains datatype-agnostic parsing
+    utilities, so this tutorial does not explore the full range of parsing
+    tricks using lenses.  For example, you can also use lenses to change the
+    element type.
+
+    Several downstream libraries provide more specific functionality, including:
+
+    * @pipes-binary@: Lenses and parsers for @binary@ values
+
+    * @pipes-attoparsec@: Converts @attoparsec@ parsers to @pipes@ parsers
+
+    * @pipes-aeson@: Lenses and parsers for JSON values
+
+    * @pipes-bytestring@: Lenses and parsers for byte streams
+
+    * @pipes-text@: Lenses and parsers for text encodings
+
+    To learn more about @pipes-parse@, ask questions, or follow development, you
+    can subscribe to the @haskell-pipes@ mailing list at:
+
+    &lt;https://groups.google.com/forum/#!forum/haskell-pipes&gt;
+
+    ... or you can mail the list directly at:
+
+    &lt;mailto:haskell-pipes@googlegroups.com&gt;
+-}</span></span><span class="mpre">
+</span></div></body></html>

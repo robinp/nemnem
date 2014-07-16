@@ -1,0 +1,33 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Monad.Signatures</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Ross Paterson 2012</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  ross@soi.city.ac.uk</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Signatures for monad operations that require specialized lifting.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Control.Monad.Signatures (
+    CallCC, Catch, Listen, Pass
+  ) where
+
+</span><span class="hl_comment"><span class="mpre">-- | Signature of the @callCC@ operation,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- introduced in &quot;Control.Monad.Trans.Cont&quot;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/Signatures.hs&quot;, srcSpanStartLine = 20, srcSpanStartColumn = 1, srcSpanEndLine = 20, srcSpanEndColumn = 47}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/Signatures.hs&quot;, srcSpanStartLine = 20, srcSpanStartColumn = 1, srcSpanEndLine = 20, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/M"><span class="mpre">type CallCC m a b = ((a -&gt; m b) -&gt; m a) -&gt; m a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Signature of the @catchE@ operation,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- introduced in &quot;Control.Monad.Trans.Except&quot;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/Signatures.hs&quot;, srcSpanStartLine = 24, srcSpanStartColumn = 1, srcSpanEndLine = 24, srcSpanEndColumn = 44}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/Signatures.hs&quot;, srcSpanStartLine = 24, srcSpanStartColumn = 1, srcSpanEndLine = 24, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/M"><span class="mpre">type Catch e m a = m a -&gt; (e -&gt; m a) -&gt; m a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Signature of the @listen@ operation,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- introduced in &quot;Control.Monad.Trans.Writer&quot;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/Signatures.hs&quot;, srcSpanStartLine = 28, srcSpanStartColumn = 1, srcSpanEndLine = 28, srcSpanEndColumn = 36}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/Signatures.hs&quot;, srcSpanStartLine = 28, srcSpanStartColumn = 1, srcSpanEndLine = 28, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/M"><span class="mpre">type Listen w m a = m a -&gt; m (a, w)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Signature of the @pass@ operation,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- introduced in &quot;Control.Monad.Trans.Writer&quot;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/Signatures.hs&quot;, srcSpanStartLine = 32, srcSpanStartColumn = 1, srcSpanEndLine = 32, srcSpanEndColumn = 40}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/Signatures.hs&quot;, srcSpanStartLine = 32, srcSpanStartColumn = 1, srcSpanEndLine = 32, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/M"><span class="mpre">type Pass w m a =  m (a, w -&gt; w) -&gt; m a</span></span><span class="mpre">
+</span></div></body></html>

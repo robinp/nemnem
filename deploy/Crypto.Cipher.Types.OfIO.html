@@ -1,0 +1,184 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Crypto.Cipher.Types.Modes</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : Stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : Excellent</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- block cipher modes immutable interfaces</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Crypto.Cipher.Types.OfIO
+    (
+    </span><span class="hl_comment"><span class="mpre">-- * ECB</span></span><span class="mpre">
+      ecbEncryptOfIO
+    , ecbDecryptOfIO
+</span><span class="hl_comment"><span class="mpre">{-
+    -- * CBC
+    , cbcEncryptOfIO
+    , cbcDecryptOfIO
+    -- * CFB
+    , cfbEncryptOfIO
+    , cfbDecryptOfIO
+    , cfb8EncryptOfIO
+    , cfb8DecryptOfIO
+    -- * CTR
+    , ctrCombineOfIO
+    -- * XTS
+    , xtsEncryptOfIO
+    , xtsDecryptOfIO
+-}</span></span><span class="mpre">
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 32, srcSpanStartColumn = 8, srcSpanEndLine = 32, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> (ByteString)
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 18, srcSpanEndLine = 33, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> as B
+import qualified Data.ByteString.Internal as B
+import Data.Byteable
+</span><span class="hl_comment"><span class="mpre">--import Crypto.Cipher.Types.Base</span></span><span class="mpre">
+import Crypto.Cipher.Types.Block
+import Crypto.Cipher.Types.BlockIO
+</span><span class="hl_comment"><span class="mpre">--import Foreign.Storable (poke)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--import Foreign.Ptr</span></span><span class="mpre">
+
+</span><a href="#loc_43_1_43_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_13&#39;)"><span class="mpre">isBlockSized</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxTuple (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 42, srcSpanStartColumn = 17, srcSpanEndLine = 42, srcSpanEndColumn = 62}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 42, srcSpanStartColumn = 17, srcSpanEndLine = 42, srcSpanEndColumn = 18},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-type"><span class="mpre">(BlockCipher cipher, BlockCipherIO cipher) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">cipher</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_43_1_43_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_13&#39;)"><span class="hl_fundecl"><span class="mpre">isBlockSized</span></span></a><span class="mpre"> </span><a name="loc_43_14_43_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_14_43_20&#39;)"><span class="hl_vardecl"><span class="mpre">cipher</span></span></a><span class="mpre"> </span><a name="loc_43_21_43_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_21_43_26&#39;)"><span class="hl_vardecl"><span class="mpre">bsLen</span></span></a><span class="mpre"> = (</span><a href="#loc_43_21_43_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_21_43_26&#39;)"><span class="hl_varref"><span class="mpre">bsLen</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`mod`</span></span><span class="mpre"> </span><a href="Crypto.Cipher.Types.Block.html#loc_54_5_54_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.Types.Block.html#loc_54_5_54_14&#39;)"><span class="hl_varref"><span class="mpre">blockSize</span></span></a><span class="mpre"> </span><a href="#loc_43_14_43_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_14_43_20&#39;)"><span class="hl_varref"><span class="mpre">cipher</span></span></a><span class="mpre">) </span><span class="hl_infix"><span class="mpre">==</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">
+
+</span><a href="#loc_46_1_46_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_1_46_14&#39;)"><span class="mpre">notBlockSized</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxTuple (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 45, srcSpanStartColumn = 18, srcSpanEndLine = 45, srcSpanEndColumn = 63}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 45, srcSpanStartColumn = 18, srcSpanEndLine = 45, srcSpanEndColumn = 19},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-type"><span class="mpre">(BlockCipher cipher, BlockCipherIO cipher) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">cipher</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_46_1_46_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_1_46_14&#39;)"><span class="hl_vardecl"><span class="mpre">notBlockSized</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">undefined</span></span><span class="mpre">
+
+</span><a href="#loc_53_1_53_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_1_53_9&#39;)"><span class="mpre">withDest</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 48, srcSpanStartColumn = 13, srcSpanEndLine = 49, srcSpanEndColumn = 12}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 49, srcSpanStartColumn = 10, srcSpanEndLine = 49, srcSpanEndColumn = 12}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/hom"><span class="mpre">BlockCipherIO cipher
+         =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">cipher</span></span><span class="mpre">
+         -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+         -&gt; (</span><span class="hl_tyconref"><span class="mpre">PtrDest</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">PtrSource</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">BufferLength</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">)
+         -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_53_1_53_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_1_53_9&#39;)"><span class="hl_fundecl"><span class="mpre">withDest</span></span></a><span class="mpre"> </span><a name="loc_53_10_53_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_10_53_16&#39;)"><span class="hl_vardecl"><span class="mpre">cipher</span></span></a><span class="mpre"> </span><a name="loc_53_17_53_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_17_53_19&#39;)"><span class="hl_vardecl"><span class="mpre">bs</span></span></a><span class="mpre"> </span><a name="loc_53_20_53_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_20_53_21&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre">
+    | </span><span class="hl_varref"><span class="mpre">B.null</span></span><span class="mpre"> </span><a href="#loc_53_17_53_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_17_53_19&#39;)"><span class="hl_varref"><span class="mpre">bs</span></span></a><span class="mpre">                     = </span><span class="hl_varref"><span class="mpre">B.empty</span></span><span class="mpre">
+    | </span><span class="hl_varref"><span class="mpre">not</span></span><span class="mpre"> (</span><a href="#loc_43_1_43_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_13&#39;)"><span class="hl_varref"><span class="mpre">isBlockSized</span></span></a><span class="mpre"> </span><a href="#loc_53_10_53_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_10_53_16&#39;)"><span class="hl_varref"><span class="mpre">cipher</span></span></a><span class="mpre"> </span><a href="#loc_60_9_60_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_9_60_12&#39;)"><span class="hl_varref"><span class="mpre">len</span></span></a><span class="mpre">) = </span><a href="#loc_46_1_46_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_1_46_14&#39;)"><span class="hl_varref"><span class="mpre">notBlockSized</span></span></a><span class="mpre"> </span><a href="#loc_53_10_53_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_10_53_16&#39;)"><span class="hl_varref"><span class="mpre">cipher</span></span></a><span class="mpre">
+    | </span><span class="hl_varref"><span class="mpre">otherwise</span></span><span class="mpre">                     =
+        </span><a href="Data.ByteString.Internal.html#loc_411_1_411_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Internal.html#loc_411_1_411_13&#39;)"><span class="hl_varref"><span class="mpre">B.unsafeCreate</span></span></a><span class="mpre"> </span><a href="#loc_60_9_60_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_9_60_12&#39;)"><span class="hl_varref"><span class="mpre">len</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_57_31_57_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_31_57_34&#39;)"><span class="hl_vardecl"><span class="mpre">dst</span></span></a><span class="mpre"> -&gt;
+        </span><a href="Data.Byteable.html#loc_31_5_31_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Byteable.html#loc_31_5_31_16&#39;)"><span class="hl_varref"><span class="mpre">withBytePtr</span></span></a><span class="mpre"> </span><a href="#loc_53_17_53_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_17_53_19&#39;)"><span class="hl_varref"><span class="mpre">bs</span></span></a><span class="mpre">     </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_58_31_58_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_58_31_58_34&#39;)"><span class="hl_vardecl"><span class="mpre">src</span></span></a><span class="mpre"> -&gt;
+        </span><a href="#loc_53_20_53_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_20_53_21&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_57_31_57_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_31_57_34&#39;)"><span class="hl_varref"><span class="mpre">dst</span></span></a><span class="mpre"> </span><a href="#loc_58_31_58_34" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_58_31_58_34&#39;)"><span class="hl_varref"><span class="mpre">src</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><a href="#loc_60_9_60_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_9_60_12&#39;)"><span class="hl_varref"><span class="mpre">len</span></span></a><span class="mpre">)
+  where </span><a name="loc_60_9_60_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_9_60_12&#39;)"><span class="hl_vardecl"><span class="mpre">len</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">B.length</span></span><span class="mpre"> </span><a href="#loc_53_17_53_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_17_53_19&#39;)"><span class="hl_varref"><span class="mpre">bs</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-
+withDestIV :: BlockCipherIO cipher
+           =&gt; cipher
+           -&gt; IV cipher
+           -&gt; ByteString
+           -&gt; (PtrIV -&gt; PtrDest -&gt; PtrSource -&gt; BufferLength -&gt; IO ())
+           -&gt; ByteString
+withDestIV cipher (IV iv) bs f
+    | B.null bs                     = B.empty
+    | not (isBlockSized cipher len) = notBlockSized cipher
+    | otherwise                     =
+        B.unsafeCreate len $ \dst   -&gt;
+        withBytePtr iv     $ \ivPtr -&gt;
+        withBytePtr bs     $ \src   -&gt;
+        f ivPtr dst src (fromIntegral len)
+  where len = B.length bs
+
+withDestIVAnySize :: BlockCipherIO cipher
+                  =&gt; IV cipher
+                  -&gt; ByteString
+                  -&gt; (PtrIV -&gt; PtrDest -&gt; PtrSource -&gt; BufferLength -&gt; IO ())
+                  -&gt; ByteString
+withDestIVAnySize (IV iv) bs f
+    | B.null bs = B.empty
+    | otherwise =
+        B.unsafeCreate len $ \dst   -&gt;
+        withBytePtr iv     $ \ivPtr -&gt;
+        withBytePtr bs     $ \src   -&gt;
+        f ivPtr dst src (fromIntegral len)
+  where len = B.length bs
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encrypt using the ECB mode.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- input need to be a multiple of the blocksize</span></span><span class="mpre">
+</span><a href="#loc_98_1_98_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_1_98_15&#39;)"><span class="mpre">ecbEncryptOfIO</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 97, srcSpanStartColumn = 19, srcSpanEndLine = 97, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 97, srcSpanStartColumn = 40, srcSpanEndLine = 97, srcSpanEndColumn = 42}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/hom"><span class="mpre">BlockCipherIO cipher =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">cipher</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_98_1_98_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_1_98_15&#39;)"><span class="hl_fundecl"><span class="mpre">ecbEncryptOfIO</span></span></a><span class="mpre"> </span><a name="loc_98_16_98_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_16_98_22&#39;)"><span class="hl_vardecl"><span class="mpre">cipher</span></span></a><span class="mpre"> </span><a name="loc_98_23_98_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_23_98_25&#39;)"><span class="hl_vardecl"><span class="mpre">bs</span></span></a><span class="mpre"> = </span><a href="#loc_53_1_53_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_1_53_9&#39;)"><span class="hl_varref"><span class="mpre">withDest</span></span></a><span class="mpre"> </span><a href="#loc_98_16_98_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_16_98_22&#39;)"><span class="hl_varref"><span class="mpre">cipher</span></span></a><span class="mpre"> </span><a href="#loc_98_23_98_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_23_98_25&#39;)"><span class="hl_varref"><span class="mpre">bs</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Crypto.Cipher.Types.BlockIO.html#loc_51_5_51_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.Types.BlockIO.html#loc_51_5_51_22&#39;)"><span class="hl_varref"><span class="mpre">ecbEncryptMutable</span></span></a><span class="mpre"> </span><a href="#loc_98_16_98_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_98_16_98_22&#39;)"><span class="hl_varref"><span class="mpre">cipher</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Decrypt using the ECB mode.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- input need to be a multiple of the blocksize</span></span><span class="mpre">
+</span><a href="#loc_104_1_104_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_1_104_15&#39;)"><span class="mpre">ecbDecryptOfIO</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 103, srcSpanStartColumn = 19, srcSpanEndLine = 103, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-cipher-types-0.0.9/Crypto/Cipher/Types/OfIO.hs&quot;, srcSpanStartLine = 103, srcSpanStartColumn = 40, srcSpanEndLine = 103, srcSpanEndColumn = 42}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;"><span class="mpre">BlockCipherIO cipher =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">cipher</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_104_1_104_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_1_104_15&#39;)"><span class="hl_fundecl"><span class="mpre">ecbDecryptOfIO</span></span></a><span class="mpre"> </span><a name="loc_104_16_104_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_16_104_22&#39;)"><span class="hl_vardecl"><span class="mpre">cipher</span></span></a><span class="mpre"> </span><a name="loc_104_23_104_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_23_104_25&#39;)"><span class="hl_vardecl"><span class="mpre">bs</span></span></a><span class="mpre"> = </span><a href="#loc_53_1_53_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_1_53_9&#39;)"><span class="hl_varref"><span class="mpre">withDest</span></span></a><span class="mpre"> </span><a href="#loc_104_16_104_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_16_104_22&#39;)"><span class="hl_varref"><span class="mpre">cipher</span></span></a><span class="mpre"> </span><a href="#loc_104_23_104_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_23_104_25&#39;)"><span class="hl_varref"><span class="mpre">bs</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Crypto.Cipher.Types.BlockIO.html#loc_51_5_51_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Cipher.Types.BlockIO.html#loc_51_5_51_22&#39;)"><span class="hl_varref"><span class="mpre">ecbEncryptMutable</span></span></a><span class="mpre"> </span><a href="#loc_104_16_104_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_16_104_22&#39;)"><span class="hl_varref"><span class="mpre">cipher</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-
+-- | encrypt using the CBC mode.
+--
+-- input need to be a multiple of the blocksize
+cbcEncryptOfIO :: BlockCipherIO cipher =&gt; cipher -&gt; IV cipher -&gt; ByteString -&gt; ByteString
+cbcEncryptOfIO cipher iv bs = withDestIV cipher iv bs $ cbcEncryptMutable cipher
+
+-- | decrypt using the CBC mode.
+--
+-- input need to be a multiple of the blocksize
+cbcDecryptOfIO :: BlockCipherIO cipher =&gt; cipher -&gt; IV cipher -&gt; ByteString -&gt; ByteString
+cbcDecryptOfIO cipher iv bs = withDestIV cipher iv bs $ cbcDecryptMutable cipher
+
+-- | encrypt using the CFB mode.
+--
+-- input need to be a multiple of the blocksize
+cfbEncryptOfIO :: BlockCipherIO cipher =&gt; cipher -&gt; IV cipher -&gt; ByteString -&gt; ByteString
+cfbEncryptOfIO cipher iv bs = withDestIV cipher iv bs $ cfbEncryptMutable cipher
+
+-- | decrypt using the CFB mode.
+--
+-- input need to be a multiple of the blocksize
+cfbDecryptOfIO :: BlockCipherIO cipher =&gt; cipher -&gt; IV cipher -&gt; ByteString -&gt; ByteString
+cfbDecryptOfIO cipher iv bs = withDestIV cipher iv bs $ cfbDecryptMutable cipher
+
+-- | combine using the CTR mode.
+--
+-- CTR mode produce a stream of randomized data that is combined
+-- (by XOR operation) with the input stream.
+--
+-- encryption and decryption are the same operation.
+--
+-- input can be of any size
+ctrCombineOfIO :: BlockCipherIO cipher =&gt; cipher -&gt; IV cipher -&gt; ByteString -&gt; ByteString
+ctrCombineOfIO cipher iv bs = withDestIVAnySize iv bs $ cfbDecryptMutable cipher
+ 
+-- | encrypt using the XTS mode.
+--
+-- input need to be a multiple of the blocksize
+xtsEncryptOfIO :: BlockCipherIO cipher =&gt; (cipher, cipher) -&gt; IV cipher -&gt; DataUnitOffset -&gt; ByteString -&gt; ByteString
+xtsEncryptOfIO ciphers@(c1,_) iv ofs bs = withDestIV c1 iv bs $ \ivPtr -&gt; xtsEncryptMutable ciphers ivPtr ofs
+
+-- | decrypt using the XTS mode.
+--
+-- input need to be a multiple of the blocksize
+xtsDecryptOfIO :: BlockCipherIO cipher =&gt; (cipher, cipher) -&gt; IV cipher -&gt; DataUnitOffset -&gt; ByteString -&gt; ByteString
+xtsDecryptOfIO ciphers@(c1,_) iv ofs bs = withDestIV c1 iv bs $ \ivPtr -&gt; xtsDecryptMutable ciphers ivPtr ofs
+
+-- | Encrypt using CFB mode in 8 bit output
+--
+-- Effectively turn a Block cipher in CFB mode into a Stream cipher
+cfb8EncryptOfIO :: BlockCipherIO a =&gt; a -&gt; IV a -&gt; B.ByteString -&gt; B.ByteString
+cfb8EncryptOfIO ctx origIv msg = B.unsafeCreate (B.length msg) $ \dst -&gt; loop dst origIv msg
+  where loop d iv@(IV i) m
+            | B.null m  = return ()
+            | otherwise = poke d out &gt;&gt; loop (d `plusPtr` 1) ni (B.drop 1 m)
+          where m&#39;  = if B.length m &lt; blockSize ctx
+                            then m `B.append` B.replicate (blockSize ctx - B.length m) 0
+                            else B.take (blockSize ctx) m
+                r   = cfbEncryptOfIO ctx iv m&#39;
+                out = B.head r
+                ni  = IV (B.drop 1 i `B.snoc` out)
+
+-- | Decrypt using CFB mode in 8 bit output
+--
+-- Effectively turn a Block cipher in CFB mode into a Stream cipher
+cfb8DecryptOfIO :: BlockCipherIO a =&gt; a -&gt; IV a -&gt; B.ByteString -&gt; B.ByteString
+cfb8DecryptOfIO ctx origIv msg = B.unsafeCreate (B.length msg) $ \dst -&gt; loop dst origIv msg
+  where loop d iv@(IV i) m
+            | B.null m  = return ()
+            | otherwise = poke d out &gt;&gt; loop (d `plusPtr` 1) ni (B.drop 1 m)
+          where m&#39;  = if B.length m &lt; blockSize ctx
+                            then m `B.append` B.replicate (blockSize ctx - B.length m) 0
+                            else B.take (blockSize ctx) m
+                r   = cfbDecryptOfIO ctx iv m&#39;
+                out = B.head r
+                ni  = IV (B.drop 1 i `B.snoc` B.head m&#39;)
+-}</span></span><span class="mpre">
+</span></div></body></html>

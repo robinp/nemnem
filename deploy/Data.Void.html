@@ -1,0 +1,112 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if defined(__GLASGOW_HASKELL__) &amp;&amp; __GLASGOW_HASKELL__ &gt;= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+
+#ifdef LANGUAGE_DeriveDataTypeable
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
+
+#ifdef LANGUAGE_DeriveGeneric
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE StandaloneDeriving #-}
+#endif
+
+#ifndef MIN_VERSION_base
+#define MIN_VERSION_base(x,y,z) 1
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2008-2013 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Data.Void
+  ( Void
+  , absurd
+  , vacuous
+  , vacuousM
+  ) where
+
+import Control.Monad (</span><a href="Control.Monad.html#loc_274_1_274_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_274_1_274_6&#39;)"><span class="mpre">liftM</span></a><span class="mpre">)
+import Data.Ix
+import Data.Hashable
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 38, srcSpanStartColumn = 8, srcSpanEndLine = 38, srcSpanEndColumn = 22}, srcInfoPoints = []}) &quot;Data.Semigroup&quot;"><span class="mpre">Data.Semigroup</span></span><span class="mpre"> (Semigroup(..))
+
+#ifdef LANGUAGE_DeriveDataTypeable
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 41, srcSpanStartColumn = 8, srcSpanEndLine = 41, srcSpanEndColumn = 17}, srcInfoPoints = []}) &quot;Data.Data&quot;"><span class="mpre">Data.Data</span></span><span class="mpre">
+#endif
+
+#ifdef LANGUAGE_DeriveGeneric
+import GHC.Generics
+#endif
+
+#if MIN_VERSION_base(4,0,0)
+import Control.Exception
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | A logically uninhabited data type.</span></span><span class="mpre">
+#if __GLASGOW_HASKELL__ &lt; 700
+data </span><a name="loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tycondecl"><span class="mpre">Void</span></span></a><span class="mpre"> = </span><a name="loc_54_13_54_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_13_54_17&#39;)"><span class="hl_condecl"><span class="mpre">Void</span></span></a><span class="mpre"> !</span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre">
+#else
+newtype </span><span class="hl_tycondecl"><span class="mpre">Void</span></span><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">Void</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre">
+#endif
+#ifdef LANGUAGE_DeriveDataTypeable
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 59, srcSpanStartColumn = 3, srcSpanEndLine = 59, srcSpanEndColumn = 28}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 59, srcSpanStartColumn = 3, srcSpanEndLine = 59, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 59, srcSpanStartColumn"><span class="mpre">deriving (Data, Typeable)</span></span><span class="mpre">
+#endif
+
+#ifdef LANGUAGE_DeriveGeneric
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 63, srcSpanStartColumn = 1, srcSpanEndLine = 63, srcSpanEndColumn = 31}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 63, srcSpanStartColumn = 1, srcSpanEndLine = 63, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 63, srcSpanStartColumn"><span class="mpre">deriving instance Generic Void</span></span><span class="mpre">
+#endif
+
+instance </span><span class="hl_classref"><span class="mpre">Eq</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> where
+  _ </span><span class="hl_fundecl"><span class="mpre">==</span></span><span class="mpre"> _ = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Hashable</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> where
+  </span><span class="hl_fundecl"><span class="mpre">hashWithSalt</span></span><span class="mpre"> _ = </span><a href="#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_varref"><span class="mpre">absurd</span></span></a><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Ord</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> where
+  </span><span class="hl_fundecl"><span class="mpre">compare</span></span><span class="mpre"> _ _ = </span><span class="hl_conref"><span class="mpre">EQ</span></span><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Show</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> where
+  </span><span class="hl_fundecl"><span class="mpre">showsPrec</span></span><span class="mpre"> _ = </span><a href="#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_varref"><span class="mpre">absurd</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Reading a &#39;Void&#39; value is always a parse error, considering &#39;Void&#39; as</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a data type with no constructors.</span></span><span class="mpre">
+instance </span><span class="hl_classref"><span class="mpre">Read</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> where
+  </span><span class="hl_fundecl"><span class="mpre">readsPrec</span></span><span class="mpre"> _ _ = []
+
+</span><span class="hl_comment"><span class="mpre">-- | Since &#39;Void&#39; values logically don&#39;t exist, this witnesses the logical</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- reasoning tool of \&quot;ex falso quodlibet\&quot;.</span></span><span class="mpre">
+</span><a href="#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="mpre">absurd</span></a><span class="mpre"> :: </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_fundecl"><span class="mpre">absurd</span></span></a><span class="mpre"> </span><a name="loc_86_8_86_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_8_86_9&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> = </span><a href="#loc_86_8_86_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_8_86_9&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`seq`</span></span><span class="mpre"> </span><a href="#loc_87_4_87_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_4_87_8&#39;)"><span class="hl_varref"><span class="mpre">spin</span></span></a><span class="mpre"> </span><a href="#loc_86_8_86_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_8_86_9&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre"> where
+   </span><a name="loc_87_4_87_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_4_87_8&#39;)"><span class="hl_fundecl"><span class="mpre">spin</span></span></a><span class="mpre"> (</span><a href="#loc_54_13_54_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_13_54_17&#39;)"><span class="hl_conref"><span class="mpre">Void</span></span></a><span class="mpre"> </span><a name="loc_87_15_87_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_15_87_16&#39;)"><span class="hl_vardecl"><span class="mpre">b</span></span></a><span class="mpre">) = </span><a href="#loc_87_4_87_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_4_87_8&#39;)"><span class="hl_varref"><span class="mpre">spin</span></span></a><span class="mpre"> </span><a href="#loc_87_15_87_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_15_87_16&#39;)"><span class="hl_varref"><span class="mpre">b</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | If &#39;Void&#39; is uninhabited then any &#39;Functor&#39; that holds only values of type &#39;Void&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is holding no values.</span></span><span class="mpre">
+</span><a href="#loc_92_1_92_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_8&#39;)"><span class="mpre">vacuous</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 91, srcSpanStartColumn = 12, srcSpanEndLine = 91, srcSpanEndColumn = 24}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 91, srcSpanStartColumn = 22, srcSpanEndLine = 91, srcSpanEndColumn = 24}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, "><span class="mpre">Functor f =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_92_1_92_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_1_92_8&#39;)"><span class="hl_vardecl"><span class="mpre">vacuous</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fmap</span></span><span class="mpre"> </span><a href="#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_varref"><span class="mpre">absurd</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | If &#39;Void&#39; is uninhabited then any &#39;Monad&#39; that holds values of type &#39;Void&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is holding no values.</span></span><span class="mpre">
+</span><a href="#loc_97_1_97_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_1_97_9&#39;)"><span class="mpre">vacuousM</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 96, srcSpanStartColumn = 13, srcSpanEndLine = 96, srcSpanEndColumn = 23}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, srcSpanStartLine = 96, srcSpanStartColumn = 21, srcSpanEndLine = 96, srcSpanEndColumn = 23}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void.hs&quot;, "><span class="mpre">Monad m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_97_1_97_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_1_97_9&#39;)"><span class="hl_vardecl"><span class="mpre">vacuousM</span></span></a><span class="mpre"> = </span><a href="Control.Monad.html#loc_274_1_274_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_274_1_274_6&#39;)"><span class="hl_varref"><span class="mpre">liftM</span></span></a><span class="mpre"> </span><a href="#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_varref"><span class="mpre">absurd</span></span></a><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Semigroup</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> where
+  </span><a name="loc_100_3_100_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_3_100_4&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> </span><span class="hl_fundecl"><span class="mpre">&lt;&gt;</span></span><span class="mpre"> _ = </span><a href="#loc_100_3_100_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_3_100_4&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">
+  </span><span class="hl_fundecl"><span class="mpre">times1p</span></span><span class="mpre"> _ </span><a name="loc_101_13_101_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_13_101_14&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> = </span><a href="#loc_101_13_101_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_13_101_14&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">
+
+instance </span><span class="hl_classref"><span class="mpre">Ix</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> where
+  </span><span class="hl_fundecl"><span class="mpre">range</span></span><span class="mpre"> _ = []
+  </span><span class="hl_fundecl"><span class="mpre">index</span></span><span class="mpre"> _ = </span><a href="#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_varref"><span class="mpre">absurd</span></span></a><span class="mpre">
+  </span><span class="hl_fundecl"><span class="mpre">inRange</span></span><span class="mpre"> _ = </span><a href="#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_varref"><span class="mpre">absurd</span></span></a><span class="mpre">
+  </span><span class="hl_fundecl"><span class="mpre">rangeSize</span></span><span class="mpre"> _ = </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">
+
+#if MIN_VERSION_base(4,0,0)
+instance </span><span class="hl_classref"><span class="mpre">Exception</span></span><span class="mpre"> </span><a href="#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre">
+#endif
+</span></div></body></html>

@@ -1,0 +1,34 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+
+</span><span class="hl_comment"><span class="mpre">{-|
+This module makes the operations exported by @System.Posix.Time@
+available on all platforms. On POSIX systems it re-exports operations from
+@System.Posix.Time@, on other platforms it emulates the operations as far
+as possible.
+-}</span></span><span class="mpre">
+module System.PosixCompat.Time (
+      epochTime
+    ) where
+
+#ifndef mingw32_HOST_OS
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-compat-0.4.1.3/src/System/PosixCompat/Time.hs&quot;, srcSpanStartLine = 15, srcSpanStartColumn = 8, srcSpanEndLine = 15, srcSpanEndColumn = 25}, srcInfoPoints = []}) &quot;System.Posix.Time&quot;"><span class="mpre">System.Posix.Time</span></span><span class="mpre">
+
+#else
+
+import Control.Monad (</span><a href="Control.Monad.html#loc_274_1_274_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_274_1_274_6&#39;)"><span class="mpre">liftM</span></a><span class="mpre">)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-compat-0.4.1.3/src/System/PosixCompat/Time.hs&quot;, srcSpanStartLine = 20, srcSpanStartColumn = 8, srcSpanEndLine = 20, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;System.Posix.Types&quot;"><span class="mpre">System.Posix.Types</span></span><span class="mpre"> (EpochTime)
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-compat-0.4.1.3/src/System/PosixCompat/Time.hs&quot;, srcSpanStartLine = 22, srcSpanStartColumn = 8, srcSpanEndLine = 22, srcSpanEndColumn = 40}, srcInfoPoints = []}) &quot;System.PosixCompat.Internal.Time&quot;"><span class="mpre">System.PosixCompat.Internal.Time</span></span><span class="mpre"> (
+      getClockTime, clockTimeToEpochTime
+    )
+
+</span><span class="hl_comment"><span class="mpre">-- | The portable version of @epochTime@ calls &#39;getClockTime&#39; to obtain the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   number of seconds that have elapsed since the epoch (Jan 01 00:00:00 GMT</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   1970).</span></span><span class="mpre">
+</span><a href="#loc_30_1_30_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_1_30_10&#39;)"><span class="mpre">epochTime</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">EpochTime</span></span><span class="mpre">
+</span><a name="loc_30_1_30_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_1_30_10&#39;)"><span class="hl_vardecl"><span class="mpre">epochTime</span></span></a><span class="mpre"> = </span><a href="Control.Monad.html#loc_274_1_274_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_274_1_274_6&#39;)"><span class="hl_varref"><span class="mpre">liftM</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">clockTimeToEpochTime</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">getClockTime</span></span><span class="mpre">
+
+#endif
+
+</span></div></body></html>

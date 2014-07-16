@@ -1,0 +1,133 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE NoImplicitPrelude, ExistentialQuantification #-}
+{-# OPTIONS_GHC -funbox-strict-fields #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  GHC.IO.Encoding.Types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow, 2008-2009</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  see libraries/base/LICENSE</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  internal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Types for text encoding/decoding</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module GHC.IO.Encoding.Types (
+    BufferCodec(..),
+    TextEncoding(..),
+    TextEncoder, TextDecoder,
+    CodeBuffer, EncodeBuffer, DecodeBuffer,
+    CodingProgress(..)
+  ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 27, srcSpanStartColumn = 8, srcSpanEndLine = 27, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 28, srcSpanStartColumn = 8, srcSpanEndLine = 28, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Word&quot;"><span class="mpre">GHC.Word</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 29, srcSpanStartColumn = 8, srcSpanEndLine = 29, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Show&quot;"><span class="mpre">GHC.Show</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- import GHC.IO</span></span><span class="mpre">
+import GHC.IO.Buffer
+
+</span><span class="hl_comment"><span class="mpre">-- -----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Text encoders/decoders</span></span><span class="mpre">
+
+data </span><a name="loc_36_6_36_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_6_36_17&#39;)"><span class="hl_tycondecl"><span class="mpre">BufferCodec</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">from</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">to</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">state</span></span><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">BufferCodec</span></span><span class="mpre"> {
+  </span><a name="loc_37_3_37_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_3_37_9&#39;)"><span class="hl_fielddecl"><span class="mpre">encode</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">CodeBuffer</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">from</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">to</span></span><span class="mpre">,
+   </span><span class="hl_comment"><span class="mpre">-- ^ The @encode@ function translates elements of the buffer @from@</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- to the buffer @to@.  It should translate as many elements as possible</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- given the sizes of the buffers, including translating zero elements</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- if there is either not enough room in @to@, or @from@ does not</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- contain a complete multibyte sequence.</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- If multiple CodingProgress returns are possible, OutputUnderflow must be</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- preferred to InvalidSequence. This allows GHC&#39;s IO library to assume that</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- if we observe InvalidSequence there is at least a single element available</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- in the output buffer.</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- The fact that as many elements as possible are translated is used by the IO</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- library in order to report translation errors at the point they</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- actually occur, rather than when the buffer is translated.</span></span><span class="mpre">
+  
+  </span><a name="loc_53_3_53_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_3_53_10&#39;)"><span class="hl_fielddecl"><span class="mpre">recover</span></span></a><span class="mpre"> :: </span><a href="GHC.IO.Buffer.html#loc_180_6_180_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_180_6_180_12&#39;)"><span class="hl_tyconref"><span class="mpre">Buffer</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">from</span></span><span class="mpre"> -&gt; </span><a href="GHC.IO.Buffer.html#loc_180_6_180_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_180_6_180_12&#39;)"><span class="hl_tyconref"><span class="mpre">Buffer</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">to</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><a href="GHC.IO.Buffer.html#loc_180_6_180_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_180_6_180_12&#39;)"><span class="hl_tyconref"><span class="mpre">Buffer</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">from</span></span><span class="mpre">, </span><a href="GHC.IO.Buffer.html#loc_180_6_180_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Buffer.html#loc_180_6_180_12&#39;)"><span class="hl_tyconref"><span class="mpre">Buffer</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">to</span></span><span class="mpre">),
+   </span><span class="hl_comment"><span class="mpre">-- ^ The @recover@ function is used to continue decoding</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- in the presence of invalid or unrepresentable sequences. This includes</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- both those detected by @encode@ returning @InvalidSequence@ and those</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- that occur because the input byte sequence appears to be truncated.</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- Progress will usually be made by skipping the first element of the @from@</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- buffer. This function should only be called if you are certain that you</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- wish to do this skipping and if the @to@ buffer has at least one element</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- of free space. Because this function deals with decoding failure, it assumes</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- that the from buffer has at least one element.</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- @recover@ may raise an exception rather than skipping anything.</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- Currently, some implementations of @recover@ may mutate the input buffer.</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- In particular, this feature is used to implement transliteration.</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- /Since: 4.4.0.0/</span></span><span class="mpre">
+  
+  </span><a name="loc_72_3_72_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_3_72_8&#39;)"><span class="hl_fielddecl"><span class="mpre">close</span></span></a><span class="mpre">  :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">,
+   </span><span class="hl_comment"><span class="mpre">-- ^ Resources associated with the encoding may now be released.</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- The @encode@ function may not be called again after calling</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- @close@.</span></span><span class="mpre">
+
+  </span><a name="loc_77_3_77_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_3_77_11&#39;)"><span class="hl_fielddecl"><span class="mpre">getState</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">state</span></span><span class="mpre">,
+   </span><span class="hl_comment"><span class="mpre">-- ^ Return the current state of the codec.</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- Many codecs are not stateful, and in these case the state can be</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- represented as &#39;()&#39;.  Other codecs maintain a state.  For</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- example, UTF-16 recognises a BOM (byte-order-mark) character at</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- the beginning of the input, and remembers thereafter whether to</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- use big-endian or little-endian mode.  In this case, the state</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- of the codec would include two pieces of information: whether we</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- are at the beginning of the stream (the BOM only occurs at the</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- beginning), and if not, whether to use the big or little-endian</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- encoding.</span></span><span class="mpre">
+
+  </span><a name="loc_90_3_90_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_90_3_90_11&#39;)"><span class="hl_fielddecl"><span class="mpre">setState</span></span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">state</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- restore the state of the codec using the state from a previous</span></span><span class="mpre">
+   </span><span class="hl_comment"><span class="mpre">-- call to &#39;getState&#39;.</span></span><span class="mpre">
+ }
+
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 95, srcSpanStartColumn = 1, srcSpanEndLine = 95, srcSpanEndColumn = 98}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 95, srcSpanStartColumn = 1, srcSpanEndLine = 95, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStart"><span class="mpre">type CodeBuffer from to = Buffer from -&gt; Buffer to -&gt; IO (CodingProgress, Buffer from, Buffer to)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 96, srcSpanStartColumn = 1, srcSpanEndLine = 96, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 96, srcSpanStartColumn = 1, srcSpanEndLine = 96, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStart"><span class="mpre">type DecodeBuffer = CodeBuffer Word8 Char</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 97, srcSpanStartColumn = 1, srcSpanEndLine = 97, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 97, srcSpanStartColumn = 1, srcSpanEndLine = 97, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStart"><span class="mpre">type EncodeBuffer = CodeBuffer Char Word8</span></span><span class="mpre">
+
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 99, srcSpanStartColumn = 1, srcSpanEndLine = 99, srcSpanEndColumn = 61}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 99, srcSpanStartColumn = 1, srcSpanEndLine = 99, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStart"><span class="mpre">type TextDecoder state = BufferCodec Word8 CharBufElem state</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 100, srcSpanStartColumn = 1, srcSpanEndLine = 100, srcSpanEndColumn = 61}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 100, srcSpanStartColumn = 1, srcSpanEndLine = 100, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanS"><span class="mpre">type TextEncoder state = BufferCodec CharBufElem Word8 state</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;TextEncoding&#39; is a specification of a conversion scheme</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- between sequences of bytes and sequences of Unicode characters.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For example, UTF-8 is an encoding of Unicode characters into a sequence</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of bytes.  The &#39;TextEncoding&#39; for UTF-8 is &#39;utf8&#39;.</span></span><span class="mpre">
+data </span><a name="loc_107_6_107_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_6_107_18&#39;)"><span class="hl_tycondecl"><span class="mpre">TextEncoding</span></span></a><span class="mpre">
+  = forall dstate estate . </span><span class="hl_condecl"><span class="mpre">TextEncoding</span></span><span class="mpre">  {
+        </span><a name="loc_109_9_109_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_109_9_109_25&#39;)"><span class="hl_fielddecl"><span class="mpre">textEncodingName</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">,
+                   </span><span class="hl_comment"><span class="mpre">-- ^ a string that can be passed to &#39;mkTextEncoding&#39; to</span></span><span class="mpre">
+                   </span><span class="hl_comment"><span class="mpre">-- create an equivalent &#39;TextEncoding&#39;.</span></span><span class="mpre">
+        </span><a name="loc_112_9_112_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_9_112_22&#39;)"><span class="hl_fielddecl"><span class="mpre">mkTextDecoder</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">TextDecoder</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">dstate</span></span><span class="mpre">),
+                   </span><span class="hl_comment"><span class="mpre">-- ^ Creates a means of decoding bytes into characters: the result must not</span></span><span class="mpre">
+                   </span><span class="hl_comment"><span class="mpre">-- be shared between several byte sequences or simultaneously across threads</span></span><span class="mpre">
+        </span><a name="loc_115_9_115_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_9_115_22&#39;)"><span class="hl_fielddecl"><span class="mpre">mkTextEncoder</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">TextEncoder</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">estate</span></span><span class="mpre">)
+                   </span><span class="hl_comment"><span class="mpre">-- ^ Creates a means of encode characters into bytes: the result must not</span></span><span class="mpre">
+                   </span><span class="hl_comment"><span class="mpre">-- be shared between several character sequences or simultaneously across threads</span></span><span class="mpre">
+  }
+
+instance </span><span class="hl_classref"><span class="mpre">Show</span></span><span class="mpre"> </span><a href="#loc_107_6_107_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_107_6_107_18&#39;)"><span class="hl_tyconref"><span class="mpre">TextEncoding</span></span></a><span class="mpre"> where
+  </span><span class="hl_comment"><span class="mpre">-- | Returns the value of &#39;textEncodingName&#39;</span></span><span class="mpre">
+  </span><span class="hl_fundecl"><span class="mpre">show</span></span><span class="mpre"> </span><a name="loc_122_8_122_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_8_122_10&#39;)"><span class="hl_vardecl"><span class="mpre">te</span></span></a><span class="mpre"> = </span><a href="#loc_109_9_109_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_109_9_109_25&#39;)"><span class="hl_varref"><span class="mpre">textEncodingName</span></span></a><span class="mpre"> </span><a href="#loc_122_8_122_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_8_122_10&#39;)"><span class="hl_varref"><span class="mpre">te</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | /Since: 4.4.0.0/</span></span><span class="mpre">
+data </span><a name="loc_125_6_125_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_6_125_20&#39;)"><span class="hl_tycondecl"><span class="mpre">CodingProgress</span></span></a><span class="mpre"> = </span><a name="loc_125_23_125_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_23_125_37&#39;)"><span class="hl_condecl"><span class="mpre">InputUnderflow</span></span></a><span class="mpre">  </span><span class="hl_comment"><span class="mpre">-- ^ Stopped because the input contains insufficient available elements,</span></span><span class="mpre">
+                                      </span><span class="hl_comment"><span class="mpre">-- or all of the input sequence has been sucessfully translated.</span></span><span class="mpre">
+                    | </span><a name="loc_127_23_127_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_23_127_38&#39;)"><span class="hl_condecl"><span class="mpre">OutputUnderflow</span></span></a><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- ^ Stopped because the output contains insufficient free elements</span></span><span class="mpre">
+                    | </span><a name="loc_128_23_128_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_23_128_38&#39;)"><span class="hl_condecl"><span class="mpre">InvalidSequence</span></span></a><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- ^ Stopped because there are sufficient free elements in the output</span></span><span class="mpre">
+                                      </span><span class="hl_comment"><span class="mpre">-- to output at least one encoded ASCII character, but the input contains</span></span><span class="mpre">
+                                      </span><span class="hl_comment"><span class="mpre">-- an invalid or unrepresentable sequence</span></span><span class="mpre">
+                    </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 131, srcSpanStartColumn = 21, srcSpanEndLine = 131, srcSpanEndColumn = 40}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSpanStartLine = 131, srcSpanStartColumn = 21, srcSpanEndLine = 131, srcSpanEndColumn = 29},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/IO/Encoding/Types.hs&quot;, srcSp"><span class="mpre">deriving (Eq, Show)</span></span><span class="mpre">
+
+</span></div></body></html>

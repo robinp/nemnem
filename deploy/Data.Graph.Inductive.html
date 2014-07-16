@@ -1,0 +1,36 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  Inductive.hs -- Functional Graph Library</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  (c) 1999-2007 by Martin Erwig [see file COPYRIGHT]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Graph.Inductive(
+    module Data.Graph.Inductive.Graph,
+    module Data.Graph.Inductive.PatriciaTree,
+    module Data.Graph.Inductive.Basic,
+    module Data.Graph.Inductive.Monad,
+    module Data.Graph.Inductive.Monad.IOArray,
+    module Data.Graph.Inductive.Query,
+    module Data.Graph.Inductive.NodeMap,
+    </span><span class="hl_comment"><span class="mpre">-- * Version Information</span></span><span class="mpre">
+    version
+) where
+
+import Data.Graph.Inductive.Basic
+import Data.Graph.Inductive.Graph
+import Data.Graph.Inductive.Monad
+import Data.Graph.Inductive.Monad.IOArray
+import Data.Graph.Inductive.NodeMap
+import Data.Graph.Inductive.PatriciaTree
+import Data.Graph.Inductive.Query
+
+import           Data.Version (</span><a href="Data.Version.html#loc_106_1_106_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_106_1_106_12&#39;)"><span class="mpre">showVersion</span></a><span class="mpre">)
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/fgl-5.5.0.1/Data/Graph/Inductive.hs&quot;, srcSpanStartLine = 30, srcSpanStartColumn = 18, srcSpanEndLine = 30, srcSpanEndColumn = 27}, srcInfoPoints = []}) &quot;Paths_fgl&quot;"><span class="mpre">Paths_fgl</span></span><span class="mpre">    as Paths (version)
+
+</span><span class="hl_comment"><span class="mpre">-- | Version info</span></span><span class="mpre">
+</span><a href="#loc_34_1_34_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_34_1_34_8&#39;)"><span class="mpre">version</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_34_1_34_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_34_1_34_8&#39;)"><span class="hl_vardecl"><span class="mpre">version</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">putStrLn</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;\nFGL - Functional Graph Library, version &quot;</span></span><span class="mpre">
+                      </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><a href="Data.Version.html#loc_106_1_106_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_106_1_106_12&#39;)"><span class="hl_varref"><span class="mpre">showVersion</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Paths.version</span></span><span class="mpre">
+</span></div></body></html>

@@ -1,0 +1,95 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module         : Data.ByteString.Lazy.Search.KMP</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright      : Justin Bailey</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                  Chris Kuklewicz</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                  Daniel Fischer</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Licence        : BSD3</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer     : Daniel Fischer &lt;daniel.is.fischer@googlemail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability      : Provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability    : non-portable (BangPatterns)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Fast search of lazy &#39;L.ByteString&#39; values using the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Knuth-Morris-Pratt algorithm.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A description of the algorithm can be found at</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;http://en.wikipedia.org/wiki/Knuth-Morris-Pratt_algorithm&gt;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Original authors: Justin Bailey (jgbailey at gmail.com) and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Chris Kuklewicz (haskell at list.mightyreason.com).</span></span><span class="mpre">
+module Data.ByteString.Lazy.Search.KMP (</span><span class="hl_comment"><span class="mpre">-- * Overview</span></span><span class="mpre">
+                                        </span><span class="hl_comment"><span class="mpre">-- $overview</span></span><span class="mpre">
+
+                                        </span><span class="hl_comment"><span class="mpre">-- ** Complexity and Performance</span></span><span class="mpre">
+                                        </span><span class="hl_comment"><span class="mpre">-- $complexity</span></span><span class="mpre">
+
+                                        </span><span class="hl_comment"><span class="mpre">-- ** Partial application</span></span><span class="mpre">
+                                        </span><span class="hl_comment"><span class="mpre">-- $partial</span></span><span class="mpre">
+
+                                        </span><span class="hl_comment"><span class="mpre">-- * Functions</span></span><span class="mpre">
+                                          indices
+                                        , nonOverlappingIndices
+                                        </span><span class="hl_comment"><span class="mpre">-- ** Convenience</span></span><span class="mpre">
+                                        , strictify
+                                        ) where
+
+import Data.ByteString.Search.Internal.KnuthMorrisPratt (</span><a href="Data.ByteString.Search.Internal.KnuthMorrisPratt.html#loc_171_1_171_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.KnuthMorrisPratt.html#loc_171_1_171_8&#39;)"><span class="mpre">matchSL</span></a><span class="mpre">, </span><a href="Data.ByteString.Search.Internal.KnuthMorrisPratt.html#loc_113_1_113_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.KnuthMorrisPratt.html#loc_113_1_113_9&#39;)"><span class="mpre">indicesL</span></a><span class="mpre">)
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/stringsearch-0.3.6.5/Data/ByteString/Lazy/Search/KMP.hs&quot;, srcSpanStartLine = 36, srcSpanStartColumn = 18, srcSpanEndLine = 36, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> as S
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/stringsearch-0.3.6.5/Data/ByteString/Lazy/Search/KMP.hs&quot;, srcSpanStartLine = 37, srcSpanStartColumn = 18, srcSpanEndLine = 37, srcSpanEndColumn = 38}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy&quot;"><span class="mpre">Data.ByteString.Lazy</span></span><span class="mpre"> as L
+
+import Data.Int (</span><a href="GHC.Int.html#loc_551_30_551_35" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Int.html#loc_551_30_551_35&#39;)"><span class="mpre">Int64</span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- $overview</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module provides two functions for finding the occurrences of a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- pattern in a target string using the Knuth-Morris-Pratt algorithm.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- It exists mostly for systematic reasons, the functions from</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;Data.ByteString.Lazy.Search&quot; are much faster, except for very short</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- patterns or long patterns with a short period if overlap is allowed.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In the latter case, &#39;indices&#39; from this module may be the best choice</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- since the Boyer-Moore function&#39;s performance degrades if there are many</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- matches and the DFA function&#39;s automaton needs much space for long</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- patterns.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In the former case, for some pattern\/target combinations DFA has better</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- performance, for others KMP, usually the difference is small.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $complexity</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The preprocessing of the pattern is /O/(@patternLength@) in time and space.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The time complexity of the searching phase is /O/(@targetLength@) for both</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- functions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In most cases, these functions are considerably slower than the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Boyer-Moore variants, performance is close to that of those from</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;Data.ByteString.Search.DFA&quot;.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $partial</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Both functions can be usefully partially applied. Given only a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- pattern, the auxiliary data will be computed only once, allowing for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- efficient re-use.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;indices&#39;@ finds the starting indices of all possibly overlapping</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   occurrences of the pattern in the target string.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   If the pattern is empty, the result is @[0 .. &#39;length&#39; target]@.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_78_1_78_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_1_78_8&#39;)"><span class="mpre">indices</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_78_1_78_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_1_78_8&#39;)"><span class="mpre">indices</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">     </span><span class="hl_comment"><span class="mpre">-- ^ Strict pattern to find</span></span><span class="mpre">
+        -&gt; </span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre">     </span><span class="hl_comment"><span class="mpre">-- ^ Lazy string to search</span></span><span class="mpre">
+        -&gt; [</span><a href="GHC.Int.html#loc_551_30_551_35" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Int.html#loc_551_30_551_35&#39;)"><span class="hl_tyconref"><span class="mpre">Int64</span></span></a><span class="mpre">]          </span><span class="hl_comment"><span class="mpre">-- ^ Offsets of matches</span></span><span class="mpre">
+</span><a name="loc_78_1_78_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_78_1_78_8&#39;)"><span class="hl_vardecl"><span class="mpre">indices</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Search.Internal.KnuthMorrisPratt.html#loc_113_1_113_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.KnuthMorrisPratt.html#loc_113_1_113_9&#39;)"><span class="hl_varref"><span class="mpre">indicesL</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;nonOverlappingIndices&#39;@ finds the starting indices of all</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   non-overlapping occurrences of the pattern in the target string.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   It is more efficient than removing indices from the list produced</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   by &#39;indices&#39;.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_88_1_88_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_88_1_88_22&#39;)"><span class="mpre">nonOverlappingIndices</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_88_1_88_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_88_1_88_22&#39;)"><span class="mpre">nonOverlappingIndices</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- ^ Strict pattern to find</span></span><span class="mpre">
+                      -&gt; </span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- ^ Lazy string to search</span></span><span class="mpre">
+                      -&gt; [</span><a href="GHC.Int.html#loc_551_30_551_35" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Int.html#loc_551_30_551_35&#39;)"><span class="hl_tyconref"><span class="mpre">Int64</span></span></a><span class="mpre">]        </span><span class="hl_comment"><span class="mpre">-- ^ Offsets of matches</span></span><span class="mpre">
+</span><a name="loc_88_1_88_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_88_1_88_22&#39;)"><span class="hl_vardecl"><span class="mpre">nonOverlappingIndices</span></span></a><span class="mpre"> = </span><a href="Data.ByteString.Search.Internal.KnuthMorrisPratt.html#loc_171_1_171_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Search.Internal.KnuthMorrisPratt.html#loc_171_1_171_8&#39;)"><span class="hl_varref"><span class="mpre">matchSL</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;strictify&#39;@ transforms a lazy &#39;L.ByteString&#39; into a strict</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   &#39;S.ByteString&#39;, to make it a suitable pattern for the searching</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   functions.</span></span><span class="mpre">
+</span><a href="#loc_94_1_94_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_94_1_94_10&#39;)"><span class="mpre">strictify</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">S.ByteString</span></span><span class="mpre">
+</span><a name="loc_94_1_94_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_94_1_94_10&#39;)"><span class="hl_vardecl"><span class="mpre">strictify</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">S.concat</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">L.toChunks</span></span><span class="mpre">
+</span></div></body></html>

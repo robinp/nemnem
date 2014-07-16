@@ -1,0 +1,129 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveDataTypeable, StandaloneDeriving #-}
+{-# LANGUAGE MagicHash #-}
+#if !defined(__PARALLEL_HASKELL__)
+{-# LANGUAGE UnboxedTuples #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  System.Mem.StableName</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stable names are a way of performing fast (O(1)), not-quite-exact</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- comparison between objects.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stable names solve the following problem: suppose you want to build</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a hash table with Haskell objects as keys, but you want to use</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- pointer equality for comparison; maybe because the keys are large</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and hashing would be slow, or perhaps because the keys are infinite</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in size.  We can\&#39;t build a hash table using the address of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- object as the key, because objects get moved around by the garbage</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- collector, meaning a re-hash would be necessary after every garbage</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- collection.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+
+module System.Mem.StableName (
+  </span><span class="hl_comment"><span class="mpre">-- * Stable Names</span></span><span class="mpre">
+  StableName,
+  makeStableName,
+  hashStableName,
+  eqStableName
+  ) where
+
+import Prelude
+
+import Data.Typeable
+
+import GHC.IO           ( IO(..) )
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Mem/StableName.hs&quot;, srcSpanStartLine = 46, srcSpanStartColumn = 8, srcSpanEndLine = 46, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">                ( Int(..), StableName#, makeStableName#
+                        , eqStableName#, stableNameToInt# )
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stable Names</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-|
+  An abstract name for an object, that supports equality and hashing.
+
+  Stable names have the following property:
+
+  * If @sn1 :: StableName@ and @sn2 :: StableName@ and @sn1 == sn2@
+   then @sn1@ and @sn2@ were created by calls to @makeStableName@ on 
+   the same object.
+
+  The reverse is not necessarily true: if two stable names are not
+  equal, then the objects they name may still be equal.  Note in particular
+  that `mkStableName` may return a different `StableName` after an
+  object is evaluated.
+
+  Stable Names are similar to Stable Pointers (&quot;Foreign.StablePtr&quot;),
+  but differ in the following ways:
+
+  * There is no @freeStableName@ operation, unlike &quot;Foreign.StablePtr&quot;s.
+    Stable names are reclaimed by the runtime system when they are no
+    longer needed.
+
+  * There is no @deRefStableName@ operation.  You can\&#39;t get back from
+    a stable name to the original Haskell object.  The reason for
+    this is that the existence of a stable name for an object does not
+    guarantee the existence of the object itself; it can still be garbage
+    collected.
+-}</span></span><span class="mpre">
+
+data </span><a name="loc_80_6_80_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_6_80_16&#39;)"><span class="hl_tycondecl"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> = </span><a name="loc_80_21_80_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_21_80_31&#39;)"><span class="hl_condecl"><span class="mpre">StableName</span></span></a><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">StableName#</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+                    </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Mem/StableName.hs&quot;, srcSpanStartLine = 81, srcSpanStartColumn = 21, srcSpanEndLine = 81, srcSpanEndColumn = 38}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/System/Mem/StableName.hs&quot;, srcSpanStartLine = 81, srcSpanStartColumn = 21, srcSpanEndLine = 81, srcSpanEndColumn = 29}]}) [IHead (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0."><span class="mpre">deriving Typeable</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Makes a &#39;StableName&#39; for an arbitrary object.  The object passed as</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the first argument is not evaluated by &#39;makeStableName&#39;.</span></span><span class="mpre">
+</span><a href="#loc_87_1_87_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_1_87_15&#39;)"><span class="mpre">makeStableName</span></a><span class="mpre">  :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><a href="#loc_80_6_80_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_6_80_16&#39;)"><span class="hl_tyconref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+#if defined(__PARALLEL_HASKELL__)
+</span><a name="loc_87_1_87_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_1_87_15&#39;)"><span class="hl_fundecl"><span class="mpre">makeStableName</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">a</span></span><span class="mpre"> = 
+  </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;makeStableName not implemented in parallel Haskell&quot;</span></span><span class="mpre">
+#else
+</span><a href="#loc_87_1_87_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_1_87_15&#39;)"><span class="hl_fundecl"><span class="mpre">makeStableName</span></span></a><span class="mpre"> </span><a name="loc_90_16_90_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_90_16_90_17&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \ </span><a name="loc_90_27_90_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_90_27_90_28&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt;
+    case </span><span class="hl_varref"><span class="mpre">makeStableName#</span></span><span class="mpre"> </span><a href="#loc_90_16_90_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_90_16_90_17&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre"> </span><a href="#loc_90_27_90_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_90_27_90_28&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> of (# </span><a name="loc_91_36_91_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_36_91_38&#39;)"><span class="hl_vardecl"><span class="mpre">s&#39;</span></span></a><span class="mpre">, </span><a name="loc_91_40_91_42" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_40_91_42&#39;)"><span class="hl_vardecl"><span class="mpre">sn</span></span></a><span class="mpre"> #) -&gt; (# </span><a href="#loc_91_36_91_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_36_91_38&#39;)"><span class="hl_varref"><span class="mpre">s&#39;</span></span></a><span class="mpre">, </span><a href="#loc_80_21_80_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_21_80_31&#39;)"><span class="hl_conref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><a href="#loc_91_40_91_42" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_40_91_42&#39;)"><span class="hl_varref"><span class="mpre">sn</span></span></a><span class="mpre"> #)
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | Convert a &#39;StableName&#39; to an &#39;Int&#39;.  The &#39;Int&#39; returned is not</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- necessarily unique; several &#39;StableName&#39;s may map to the same &#39;Int&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (in practice however, the chances of this are small, so the result</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of &#39;hashStableName&#39; makes a good hash key).</span></span><span class="mpre">
+</span><a href="#loc_100_1_100_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_1_100_15&#39;)"><span class="mpre">hashStableName</span></a><span class="mpre"> :: </span><a href="#loc_80_6_80_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_6_80_16&#39;)"><span class="hl_tyconref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+#if defined(__PARALLEL_HASKELL__)
+</span><a name="loc_100_1_100_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_1_100_15&#39;)"><span class="hl_fundecl"><span class="mpre">hashStableName</span></span></a><span class="mpre"> (</span><a href="#loc_80_21_80_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_21_80_31&#39;)"><span class="hl_conref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">sn</span></span><span class="mpre">) = 
+  </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;hashStableName not implemented in parallel Haskell&quot;</span></span><span class="mpre">
+#else
+</span><a href="#loc_100_1_100_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_1_100_15&#39;)"><span class="hl_fundecl"><span class="mpre">hashStableName</span></span></a><span class="mpre"> (</span><a href="#loc_80_21_80_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_21_80_31&#39;)"><span class="hl_conref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><a name="loc_103_28_103_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_28_103_30&#39;)"><span class="hl_vardecl"><span class="mpre">sn</span></span></a><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">I#</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">stableNameToInt#</span></span><span class="mpre"> </span><a href="#loc_103_28_103_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_28_103_30&#39;)"><span class="hl_varref"><span class="mpre">sn</span></span></a><span class="mpre">)
+#endif
+
+instance </span><span class="hl_classref"><span class="mpre">Eq</span></span><span class="mpre"> (</span><a href="#loc_80_6_80_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_6_80_16&#39;)"><span class="hl_tyconref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) where 
+#if defined(__PARALLEL_HASKELL__)
+    (</span><a href="#loc_80_21_80_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_21_80_31&#39;)"><span class="hl_conref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">sn1</span></span><span class="mpre">) </span><a name="loc_108_22_108_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_22_108_24&#39;)"><span class="hl_fundecl"><span class="mpre">==</span></span></a><span class="mpre"> (</span><a href="#loc_80_21_80_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_21_80_31&#39;)"><span class="hl_conref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">sn2</span></span><span class="mpre">) = 
+      </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;eqStableName not implemented in parallel Haskell&quot;</span></span><span class="mpre">
+#else
+    (</span><a href="#loc_80_21_80_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_21_80_31&#39;)"><span class="hl_conref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><a name="loc_111_17_111_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_17_111_20&#39;)"><span class="hl_vardecl"><span class="mpre">sn1</span></span></a><span class="mpre">) </span><a href="#loc_108_22_108_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_22_108_24&#39;)"><span class="hl_fundecl"><span class="mpre">==</span></span></a><span class="mpre"> (</span><a href="#loc_80_21_80_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_21_80_31&#39;)"><span class="hl_conref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><a name="loc_111_37_111_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_37_111_40&#39;)"><span class="hl_vardecl"><span class="mpre">sn2</span></span></a><span class="mpre">) = 
+       case </span><span class="hl_varref"><span class="mpre">eqStableName#</span></span><span class="mpre"> </span><a href="#loc_111_17_111_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_17_111_20&#39;)"><span class="hl_varref"><span class="mpre">sn1</span></span></a><span class="mpre"> </span><a href="#loc_111_37_111_40" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_37_111_40&#39;)"><span class="hl_varref"><span class="mpre">sn2</span></span></a><span class="mpre"> of
+         0# -&gt; </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+         _  -&gt; </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | Equality on &#39;StableName&#39; that does not require that the types of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the arguments match.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.7.0.0/</span></span><span class="mpre">
+</span><a href="#loc_122_1_122_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_1_122_13&#39;)"><span class="mpre">eqStableName</span></a><span class="mpre"> :: </span><a href="#loc_80_6_80_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_6_80_16&#39;)"><span class="hl_tyconref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><a href="#loc_80_6_80_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_6_80_16&#39;)"><span class="hl_tyconref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_122_1_122_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_1_122_13&#39;)"><span class="hl_fundecl"><span class="mpre">eqStableName</span></span></a><span class="mpre"> (</span><a href="#loc_80_21_80_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_21_80_31&#39;)"><span class="hl_conref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><a name="loc_122_26_122_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_26_122_29&#39;)"><span class="hl_vardecl"><span class="mpre">sn1</span></span></a><span class="mpre">) (</span><a href="#loc_80_21_80_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_21_80_31&#39;)"><span class="hl_conref"><span class="mpre">StableName</span></span></a><span class="mpre"> </span><a name="loc_122_43_122_46" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_43_122_46&#39;)"><span class="hl_vardecl"><span class="mpre">sn2</span></span></a><span class="mpre">) =
+       case </span><span class="hl_varref"><span class="mpre">eqStableName#</span></span><span class="mpre"> </span><a href="#loc_122_26_122_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_26_122_29&#39;)"><span class="hl_varref"><span class="mpre">sn1</span></span></a><span class="mpre"> </span><a href="#loc_122_43_122_46" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_122_43_122_46&#39;)"><span class="hl_varref"><span class="mpre">sn2</span></span></a><span class="mpre"> of
+         0# -&gt; </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+         _  -&gt; </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- Requested by Emil Axelsson on glasgow-haskell-users, who wants to</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- use it for implementing observable sharing.</span></span><span class="mpre">
+
+</span></div></body></html>

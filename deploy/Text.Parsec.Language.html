@@ -1,0 +1,151 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.Parsec.Language</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Daan Leijen 1999-2001, (c) Paolo Martini 2007</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the LICENSE file)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  derek.a.elkins@gmail.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (uses non-portable module Text.Parsec.Token)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A helper module that defines some language definitions that can be used</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to instantiate a token parser (see &quot;Text.Parsec.Token&quot;).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Text.Parsec.Language
+    ( haskellDef, haskell
+    , mondrianDef, mondrian
+    , emptyDef
+    , haskellStyle
+    , javaStyle
+    , LanguageDef
+    , GenLanguageDef
+    ) where
+
+import Text.Parsec
+import Text.Parsec.Token
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Styles: haskellStyle, javaStyle</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | This is a minimal token definition for Haskell style languages. It</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- defines the style of comments, valid identifiers and case</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- sensitivity. It does not define any reserved words or operators.</span></span><span class="mpre">
+
+</span><a href="#loc_38_1_38_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_1_38_13&#39;)"><span class="mpre">haskellStyle</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">LanguageDef</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre">
+</span><a name="loc_38_1_38_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_1_38_13&#39;)"><span class="hl_vardecl"><span class="mpre">haskellStyle</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 38, srcSpanStartColumn = 16, srcSpanEndLine = 50, srcSpanEndColumn = 18}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 39, srcSpanStartColumn = 17, srcSpanEndLine = 39, srcSpanEndColumn = 18},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStar"><span class="mpre">emptyDef
+                { commentStart   = &quot;{-&quot;
+                , commentEnd     = &quot;-}&quot;
+                , commentLine    = &quot;--&quot;
+                , nestedComments = True
+                , identStart     = letter
+                , identLetter         = alphaNum &lt;|&gt; oneOf &quot;_&#39;&quot;
+                , opStart         = opLetter haskellStyle
+                , opLetter         = oneOf &quot;:!#$%&amp;*+./&lt;=&gt;?@\\^|-~&quot;
+                , reservedOpNames= []
+                , reservedNames  = []
+                , caseSensitive  = True
+                }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | This is a minimal token definition for Java style languages. It</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- defines the style of comments, valid identifiers and case</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- sensitivity. It does not define any reserved words or operators.</span></span><span class="mpre">
+
+</span><a href="#loc_57_1_57_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_1_57_10&#39;)"><span class="mpre">javaStyle</span></a><span class="mpre">  :: </span><span class="hl_tyconref"><span class="mpre">LanguageDef</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre">
+</span><a name="loc_57_1_57_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_1_57_10&#39;)"><span class="hl_vardecl"><span class="mpre">javaStyle</span></span></a><span class="mpre">   = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 57, srcSpanStartColumn = 15, srcSpanEndLine = 67, srcSpanEndColumn = 18}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 58, srcSpanStartColumn = 17, srcSpanEndLine = 58, srcSpanEndColumn = 18},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStar"><span class="mpre">emptyDef
+                { commentStart         = &quot;/*&quot;
+                , commentEnd         = &quot;*/&quot;
+                , commentLine         = &quot;//&quot;
+                , nestedComments = True
+                , identStart         = letter
+                , identLetter         = alphaNum &lt;|&gt; oneOf &quot;_&#39;&quot;
+                , reservedNames  = []
+                , reservedOpNames= []
+                , caseSensitive  = False
+                }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- minimal language definition</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- TODO: This seems wrong</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt; This is the most minimal token definition. It is recommended to use</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- this definition as the basis for other definitions. @emptyDef@ has</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- no reserved names or operators, is case sensitive and doesn&#39;t accept</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- comments, identifiers or operators.</span></span><span class="mpre">
+
+</span><a href="#loc_80_1_80_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_9&#39;)"><span class="mpre">emptyDef</span></a><span class="mpre">   :: </span><span class="hl_tyconref"><span class="mpre">LanguageDef</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre">
+</span><a name="loc_80_1_80_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_1_80_9&#39;)"><span class="hl_vardecl"><span class="mpre">emptyDef</span></span></a><span class="mpre">    = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 80, srcSpanStartColumn = 15, srcSpanEndLine = 92, srcSpanEndColumn = 17}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 81, srcSpanStartColumn = 16, srcSpanEndLine = 81, srcSpanEndColumn = 17},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStar"><span class="mpre">LanguageDef
+               { commentStart   = &quot;&quot;
+               , commentEnd     = &quot;&quot;
+               , commentLine    = &quot;&quot;
+               , nestedComments = True
+               , identStart     = letter &lt;|&gt; char &#39;_&#39;
+               , identLetter    = alphaNum &lt;|&gt; oneOf &quot;_&#39;&quot;
+               , opStart        = opLetter emptyDef
+               , opLetter       = oneOf &quot;:!#$%&amp;*+./&lt;=&gt;?@\\^|-~&quot;
+               , reservedOpNames= []
+               , reservedNames  = []
+               , caseSensitive  = True
+               }</span></span><span class="mpre">
+
+
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Haskell</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A lexer for the haskell language.</span></span><span class="mpre">
+
+</span><a href="#loc_103_1_103_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_8&#39;)"><span class="mpre">haskell</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">TokenParser</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre">
+</span><a name="loc_103_1_103_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_8&#39;)"><span class="hl_vardecl"><span class="mpre">haskell</span></span></a><span class="mpre">      = </span><a href="Text.Parsec.Token.html#loc_346_1_346_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Token.html#loc_346_1_346_16&#39;)"><span class="hl_varref"><span class="mpre">makeTokenParser</span></span></a><span class="mpre"> </span><a href="#loc_108_1_108_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_11&#39;)"><span class="hl_varref"><span class="mpre">haskellDef</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The language definition for the Haskell language.</span></span><span class="mpre">
+
+</span><a href="#loc_108_1_108_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_11&#39;)"><span class="mpre">haskellDef</span></a><span class="mpre">  :: </span><span class="hl_tyconref"><span class="mpre">LanguageDef</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre">
+</span><a name="loc_108_1_108_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_11&#39;)"><span class="hl_vardecl"><span class="mpre">haskellDef</span></span></a><span class="mpre">   = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 108, srcSpanStartColumn = 16, srcSpanEndLine = 115, srcSpanEndColumn = 18}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 109, srcSpanStartColumn = 17, srcSpanEndLine = 109, srcSpanEndColumn = 18},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpan"><span class="mpre">haskell98Def
+                { identLetter         = identLetter haskell98Def &lt;|&gt; char &#39;#&#39;
+                , reservedNames         = reservedNames haskell98Def ++
+                                       [&quot;foreign&quot;,&quot;import&quot;,&quot;export&quot;,&quot;primitive&quot;
+                                       ,&quot;_ccall_&quot;,&quot;_casm_&quot;
+                                       ,&quot;forall&quot;
+                                       ]
+                }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The language definition for the language Haskell98.</span></span><span class="mpre">
+
+</span><a href="#loc_120_1_120_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_1_120_13&#39;)"><span class="mpre">haskell98Def</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">LanguageDef</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre">
+</span><a name="loc_120_1_120_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_120_1_120_13&#39;)"><span class="hl_vardecl"><span class="mpre">haskell98Def</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 120, srcSpanStartColumn = 16, srcSpanEndLine = 130, srcSpanEndColumn = 18}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 121, srcSpanStartColumn = 17, srcSpanEndLine = 121, srcSpanEndColumn = 18},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpan"><span class="mpre">haskellStyle
+                { reservedOpNames= [&quot;::&quot;,&quot;..&quot;,&quot;=&quot;,&quot;\\&quot;,&quot;|&quot;,&quot;&lt;-&quot;,&quot;-&gt;&quot;,&quot;@&quot;,&quot;~&quot;,&quot;=&gt;&quot;]
+                , reservedNames  = [&quot;let&quot;,&quot;in&quot;,&quot;case&quot;,&quot;of&quot;,&quot;if&quot;,&quot;then&quot;,&quot;else&quot;,
+                                    &quot;data&quot;,&quot;type&quot;,
+                                    &quot;class&quot;,&quot;default&quot;,&quot;deriving&quot;,&quot;do&quot;,&quot;import&quot;,
+                                    &quot;infix&quot;,&quot;infixl&quot;,&quot;infixr&quot;,&quot;instance&quot;,&quot;module&quot;,
+                                    &quot;newtype&quot;,&quot;where&quot;,
+                                    &quot;primitive&quot;
+                                    </span><span class="hl_comment"><span class="mpre">-- &quot;as&quot;,&quot;qualified&quot;,&quot;hiding&quot;</span></span><span class="mpre">
+                                   ]
+                }</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Mondrian</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A lexer for the mondrian language.</span></span><span class="mpre">
+
+</span><a href="#loc_140_1_140_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_140_1_140_9&#39;)"><span class="mpre">mondrian</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">TokenParser</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre">
+</span><a name="loc_140_1_140_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_140_1_140_9&#39;)"><span class="hl_vardecl"><span class="mpre">mondrian</span></span></a><span class="mpre">    = </span><a href="Text.Parsec.Token.html#loc_346_1_346_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Token.html#loc_346_1_346_16&#39;)"><span class="hl_varref"><span class="mpre">makeTokenParser</span></span></a><span class="mpre"> </span><a href="#loc_145_1_145_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_145_1_145_12&#39;)"><span class="hl_varref"><span class="mpre">mondrianDef</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The language definition for the language Mondrian.</span></span><span class="mpre">
+
+</span><a href="#loc_145_1_145_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_145_1_145_12&#39;)"><span class="mpre">mondrianDef</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">LanguageDef</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre">
+</span><a name="loc_145_1_145_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_145_1_145_12&#39;)"><span class="hl_vardecl"><span class="mpre">mondrianDef</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 145, srcSpanStartColumn = 15, srcSpanEndLine = 150, srcSpanEndColumn = 18}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpanStartLine = 146, srcSpanStartColumn = 17, srcSpanEndLine = 146, srcSpanEndColumn = 18},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec/Language.hs&quot;, srcSpan"><span class="mpre">javaStyle
+                { reservedNames = [ &quot;case&quot;, &quot;class&quot;, &quot;default&quot;, &quot;extends&quot;
+                                  , &quot;import&quot;, &quot;in&quot;, &quot;let&quot;, &quot;new&quot;, &quot;of&quot;, &quot;package&quot;
+                                  ]
+                , caseSensitive  = True
+                }</span></span><span class="mpre">
+</span></div></body></html>

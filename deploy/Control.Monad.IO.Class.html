@@ -1,0 +1,36 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Monad.IO.Class</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Andy Gill 2001,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Oregon Graduate Institute of Science and Technology, 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  ross@soi.city.ac.uk</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Class of monads based on @IO@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Control.Monad.IO.Class (
+    MonadIO(..)
+  ) where
+
+</span><span class="hl_comment"><span class="mpre">-- | Monads in which &#39;IO&#39; computations may be embedded.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Any monad built by applying a sequence of monad transformers to the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;IO&#39; monad will be an instance of this class.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Instances should satisfy the following laws, which state that &#39;liftIO&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is a transformer of monads:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @&#39;liftIO&#39; . &#39;return&#39; = &#39;return&#39;@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @&#39;liftIO&#39; (m &gt;&gt;= f) = &#39;liftIO&#39; m &gt;&gt;= (&#39;liftIO&#39; . f)@</span></span><span class="mpre">
+
+class </span><span class="warning" data-warning="ClassDecl ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/IO/Class.hs&quot;, srcSpanStartLine = 30, srcSpanStartColumn = 7, srcSpanEndLine = 30, srcSpanEndColumn = 19}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/IO/Class.hs&quot;, srcSpanStartLine = 30, srcSpanStartColumn = 7, srcSpanEndLine = 30, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/transformers-0.4.1.0/Control/Monad/"><span class="mpre">(Monad m) =&gt;</span></span><span class="mpre"> </span><a name="loc_30_20_30_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_20_30_27&#39;)"><span class="hl_classdecl"><span class="mpre">MonadIO</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> where
+    </span><span class="hl_comment"><span class="mpre">-- | Lift a computation from the &#39;IO&#39; monad.</span></span><span class="mpre">
+    </span><a name="loc_32_5_32_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_5_32_11&#39;)"><span class="mpre">liftIO</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+
+instance </span><a href="#loc_30_20_30_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_20_30_27&#39;)"><span class="hl_classref"><span class="mpre">MonadIO</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> where
+    </span><a href="#loc_32_5_32_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_5_32_11&#39;)"><span class="hl_vardecl"><span class="mpre">liftIO</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">id</span></span><span class="mpre">
+</span></div></body></html>

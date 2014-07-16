@@ -1,0 +1,71 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Safe #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.PrettyPrint</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  David Terei &lt;dave.terei@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The default interface to the pretty-printing library. Provides a collection</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of pretty printer combinators.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module should be used as opposed to the &quot;Text.PrettyPrint.HughesPJ&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- module. Both are equivalent though as this module simply re-exports the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- other.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Text.PrettyPrint ( 
+
+        </span><span class="hl_comment"><span class="mpre">-- * The document type</span></span><span class="mpre">
+        Doc,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Constructing documents</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Converting values into documents</span></span><span class="mpre">
+        char, text, ptext, sizedText, zeroWidthText,
+        int, integer, float, double, rational,
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Simple derived documents</span></span><span class="mpre">
+        semi, comma, colon, space, equals,
+        lparen, rparen, lbrack, rbrack, lbrace, rbrace,
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Wrapping documents in delimiters</span></span><span class="mpre">
+        parens, brackets, braces, quotes, doubleQuotes,
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Combining documents</span></span><span class="mpre">
+        empty,
+        (&lt;&gt;), (&lt;+&gt;), hcat, hsep,
+        ($$), ($+$), vcat,
+        sep, cat,
+        fsep, fcat,
+        nest,
+        hang, punctuate,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Predicates on documents</span></span><span class="mpre">
+        isEmpty,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Rendering documents</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Default rendering</span></span><span class="mpre">
+        render,
+
+        </span><span class="hl_comment"><span class="mpre">-- ** Rendering with a particular style</span></span><span class="mpre">
+        Style(..),
+        style,
+        renderStyle,
+
+        </span><span class="hl_comment"><span class="mpre">-- ** General rendering</span></span><span class="mpre">
+        fullRender,
+        Mode(..), TextDetails(..)
+
+    ) where
+
+import Text.PrettyPrint.HughesPJ
+
+</span></div></body></html>

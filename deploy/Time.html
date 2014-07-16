@@ -1,0 +1,21 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Trustworthy #-}
+#endif
+
+module Time (
+        ClockTime,
+        Month(January,February,March,April,May,June,
+              July,August,September,October,November,December),
+        Day(Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday),
+        CalendarTime(CalendarTime, ctYear, ctMonth, ctDay, ctHour, ctMin,
+                     ctSec, ctPicosec, ctWDay, ctYDay, ctTZName, ctTZ, ctIsDST),
+        TimeDiff(TimeDiff, tdYear, tdMonth, tdDay, tdHour,
+                 tdMin, tdSec, tdPicosec),
+        getClockTime, addToClockTime, diffClockTimes,
+        toCalendarTime, toUTCTime, toClockTime,
+        calendarTimeToString, formatCalendarTime
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell98-2.0.0.3/Time.hs&quot;, srcSpanStartLine = 20, srcSpanStartColumn = 8, srcSpanEndLine = 20, srcSpanEndColumn = 19}, srcInfoPoints = []}) &quot;System.Time&quot;"><span class="mpre">System.Time</span></span><span class="mpre">
+</span></div></body></html>

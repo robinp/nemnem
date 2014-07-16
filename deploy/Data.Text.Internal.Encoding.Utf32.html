@@ -1,0 +1,27 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.Text.Internal.Encoding.Utf32</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : (c) 2008, 2009 Tom Harper,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--               (c) 2009, 2010 Bryan O&#39;Sullivan,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--               (c) 2009 Duncan Coutts</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : bos@serpentine.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Warning/: this is an internal module, and does not have a stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- API or name. Functions in this module may not check or enforce</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- preconditions expected by public modules. Use at your own risk!</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Basic UTF-32 validation.</span></span><span class="mpre">
+module Data.Text.Internal.Encoding.Utf32
+    (
+      validate
+    ) where
+
+import Data.Word (Word32)
+
+</span><a href="#loc_25_1_25_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_25_1_25_9&#39;)"><span class="mpre">validate</span></a><span class="mpre">    :: </span><span class="hl_tyconref"><span class="mpre">Word32</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_25_1_25_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_25_1_25_9&#39;)"><span class="hl_fundecl"><span class="mpre">validate</span></span></a><span class="mpre"> </span><a name="loc_25_10_25_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_25_10_25_12&#39;)"><span class="hl_vardecl"><span class="mpre">x1</span></span></a><span class="mpre"> = </span><a href="#loc_25_10_25_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_25_10_25_12&#39;)"><span class="hl_varref"><span class="mpre">x1</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0xD800</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">||</span></span><span class="mpre"> (</span><a href="#loc_25_10_25_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_25_10_25_12&#39;)"><span class="hl_varref"><span class="mpre">x1</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&gt;</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0xDFFF</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&amp;&amp;</span></span><span class="mpre"> </span><a href="#loc_25_10_25_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_25_10_25_12&#39;)"><span class="hl_varref"><span class="mpre">x1</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&lt;=</span></span><span class="mpre"> </span><span class="hl_num"><span class="mpre">0x10FFFF</span></span><span class="mpre">)
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_25_1_25_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_25_1_25_9&#39;)"><span class="mpre">validate</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span></div></body></html>

@@ -1,0 +1,101 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Lens</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2012-14 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Usage:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can derive lenses automatically for many data types:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- import Control.Lens</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data Foo a = Foo { _fooArgs :: [&#39;String&#39;], _fooValue :: a }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;makeLenses&#39; &#39;&#39;Foo</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This defines the following lenses:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- fooArgs :: &#39;Lens&#39;&#39; (Foo a) [&#39;String&#39;]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- fooValue :: &#39;Lens&#39; (Foo a) (Foo b) a b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can then access the value with (&#39;^.&#39;) and set the value of the field</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- with (&#39;.~&#39;) and can use almost any other combinator that is re-exported</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- here on those fields.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The combinators here have unusually specific type signatures, so for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- particularly tricky ones, the simpler type signatures you might want to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- pretend the combinators have are specified as well.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- More information on how to use lenses is available on the lens wiki:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;http://github.com/ekmett/lens/wiki&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;&lt;Hierarchy.png&gt;&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Control.Lens
+  ( module Control.Lens.Action
+  , module Control.Lens.At
+  , module Control.Lens.Cons
+  , module Control.Lens.Each
+  , module Control.Lens.Empty
+  , module Control.Lens.Equality
+  , module Control.Lens.Fold
+  , module Control.Lens.Getter
+  , module Control.Lens.Indexed
+  , module Control.Lens.Iso
+  , module Control.Lens.Lens
+  , module Control.Lens.Level
+  , module Control.Lens.Loupe
+  , module Control.Lens.Plated
+  , module Control.Lens.Prism
+  , module Control.Lens.Reified
+  , module Control.Lens.Review
+  , module Control.Lens.Setter
+#ifndef DISABLE_TEMPLATE_HASKELL
+  , module Control.Lens.TH
+#endif
+  , module Control.Lens.Traversal
+  , module Control.Lens.Tuple
+  , module Control.Lens.Type
+  , module Control.Lens.Wrapped
+  , module Control.Lens.Zoom
+  ) where
+
+import Control.Lens.Action
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens.hs&quot;, srcSpanStartLine = 72, srcSpanStartColumn = 8, srcSpanEndLine = 72, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;Control.Lens.At&quot;"><span class="mpre">Control.Lens.At</span></span><span class="mpre">
+import Control.Lens.Cons
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens.hs&quot;, srcSpanStartLine = 74, srcSpanStartColumn = 8, srcSpanEndLine = 74, srcSpanEndColumn = 25}, srcInfoPoints = []}) &quot;Control.Lens.Each&quot;"><span class="mpre">Control.Lens.Each</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens.hs&quot;, srcSpanStartLine = 75, srcSpanStartColumn = 8, srcSpanEndLine = 75, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;Control.Lens.Empty&quot;"><span class="mpre">Control.Lens.Empty</span></span><span class="mpre">
+import Control.Lens.Equality
+import Control.Lens.Fold
+import Control.Lens.Getter
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens.hs&quot;, srcSpanStartLine = 79, srcSpanStartColumn = 8, srcSpanEndLine = 79, srcSpanEndColumn = 28}, srcInfoPoints = []}) &quot;Control.Lens.Indexed&quot;"><span class="mpre">Control.Lens.Indexed</span></span><span class="mpre">
+import Control.Lens.Iso
+import Control.Lens.Lens
+import Control.Lens.Level
+import Control.Lens.Loupe
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens.hs&quot;, srcSpanStartLine = 84, srcSpanStartColumn = 8, srcSpanEndLine = 84, srcSpanEndColumn = 27}, srcInfoPoints = []}) &quot;Control.Lens.Plated&quot;"><span class="mpre">Control.Lens.Plated</span></span><span class="mpre">
+import Control.Lens.Prism
+import Control.Lens.Reified
+import Control.Lens.Review
+import Control.Lens.Setter
+#ifndef DISABLE_TEMPLATE_HASKELL
+import Control.Lens.TH
+#endif
+import Control.Lens.Traversal
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens.hs&quot;, srcSpanStartLine = 93, srcSpanStartColumn = 8, srcSpanEndLine = 93, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;Control.Lens.Tuple&quot;"><span class="mpre">Control.Lens.Tuple</span></span><span class="mpre">
+import Control.Lens.Type
+import Control.Lens.Wrapped
+import Control.Lens.Zoom
+
+#ifdef HLINT
+</span><span class="warning" data-warning="DeclAnnPragma (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens.hs&quot;, srcSpanStartLine = 99, srcSpanStartColumn = 1, srcSpanEndLine = 99, srcSpanEndColumn = 62}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens.hs&quot;, srcSpanStartLine = 99, srcSpanStartColumn = 1, srcSpanEndLine = 99, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens.hs&quot;, srcSpanStartLine = 99, srcSpanStartCol"><span class="mpre">{-# ANN module &quot;HLint: ignore Use import/export shortcut&quot; #-}</span></span><span class="mpre">
+#endif
+</span></div></body></html>

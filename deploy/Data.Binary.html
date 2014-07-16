@@ -1,0 +1,249 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Trustworthy #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.Binary</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   : Lennart Kolmodin</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD3-style (see LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Lennart Kolmodin &lt;kolmodin@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : unstable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : portable to Hugs and GHC. Requires the FFI and some flexible instances.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Binary serialisation of Haskell values to and from lazy &#39;ByteString&#39;s.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The Binary library provides methods for encoding Haskell values as</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- streams of bytes directly in memory. The resulting &#39;ByteString&#39; can</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- then be written to disk, sent over the network, or further processed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (for example, compressed with gzip).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The @binary@ package is notable in that it provides both pure, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- high performance serialisation.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Values encoded using the &#39;Binary&#39; class are always encoded in network order</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (big endian) form, and encoded data should be portable across</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- machine endianness, word size, or compiler version. For example,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data encoded using the &#39;Binary&#39; class could be written on any machine,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and read back on any another.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If the specifics of the data format is not important to you, for example,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- you are more interested in serializing and deserializing values than</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in which format will be used, it is possible to derive &#39;Binary&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instances using the generic support. See &#39;GBinary&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If you have specific requirements about the encoding format, you can use</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the encoding and decoding primitives directly, see the modules</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;Data.Binary.Get&quot; and &quot;Data.Binary.Put&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Binary (
+
+    </span><span class="hl_comment"><span class="mpre">-- * The Binary class</span></span><span class="mpre">
+      Binary(..)
+    </span><span class="hl_comment"><span class="mpre">-- ** Example</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $example</span></span><span class="mpre">
+
+#ifdef GENERICS
+    </span><span class="hl_comment"><span class="mpre">-- * Generic support</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $generics</span></span><span class="mpre">
+    , GBinary(..)
+#endif
+
+    </span><span class="hl_comment"><span class="mpre">-- * The Get and Put monads</span></span><span class="mpre">
+    , Get
+    , Put
+
+    </span><span class="hl_comment"><span class="mpre">-- * Useful helpers for writing instances</span></span><span class="mpre">
+    , putWord8
+    , getWord8
+
+    </span><span class="hl_comment"><span class="mpre">-- * Binary serialisation</span></span><span class="mpre">
+    , encode                    </span><span class="hl_comment"><span class="mpre">-- :: Binary a =&gt; a -&gt; ByteString</span></span><span class="mpre">
+    , decode                    </span><span class="hl_comment"><span class="mpre">-- :: Binary a =&gt; ByteString -&gt; a</span></span><span class="mpre">
+    , decodeOrFail
+
+    </span><span class="hl_comment"><span class="mpre">-- * IO functions for serialisation</span></span><span class="mpre">
+    , encodeFile                </span><span class="hl_comment"><span class="mpre">-- :: Binary a =&gt; FilePath -&gt; a -&gt; IO ()</span></span><span class="mpre">
+    , decodeFile                </span><span class="hl_comment"><span class="mpre">-- :: Binary a =&gt; FilePath -&gt; IO a</span></span><span class="mpre">
+    , decodeFileOrFail
+
+    , module Data.Word </span><span class="hl_comment"><span class="mpre">-- useful</span></span><span class="mpre">
+
+    ) where
+
+import Data.Word
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 78, srcSpanStartColumn = 8, srcSpanEndLine = 78, srcSpanEndColumn = 25}, srcInfoPoints = []}) &quot;Data.Binary.Class&quot;"><span class="mpre">Data.Binary.Class</span></span><span class="mpre">
+import Data.Binary.Put
+import Data.Binary.Get
+#ifdef GENERICS
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 82, srcSpanStartColumn = 8, srcSpanEndLine = 82, srcSpanEndColumn = 27}, srcInfoPoints = []}) &quot;Data.Binary.Generic&quot;"><span class="mpre">Data.Binary.Generic</span></span><span class="mpre"> ()
+#endif
+
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 85, srcSpanStartColumn = 18, srcSpanEndLine = 85, srcSpanEndColumn = 33}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> as B ( hGet, length )
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 86, srcSpanStartColumn = 8, srcSpanEndLine = 86, srcSpanEndColumn = 28}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy&quot;"><span class="mpre">Data.ByteString.Lazy</span></span><span class="mpre"> (ByteString)
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 87, srcSpanStartColumn = 18, srcSpanEndLine = 87, srcSpanEndColumn = 38}, srcInfoPoints = []}) &quot;Data.ByteString.Lazy&quot;"><span class="mpre">Data.ByteString.Lazy</span></span><span class="mpre"> as L
+import qualified Data.ByteString.Lazy.Internal as L ( </span><a href="Data.ByteString.Lazy.Internal.html#loc_208_1_208_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Lazy.Internal.html#loc_208_1_208_17&#39;)"><span class="mpre">defaultChunkSize</span></a><span class="mpre"> )
+import System.IO ( </span><a href="System.IO.html#loc_397_1_397_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.html#loc_397_1_397_15&#39;)"><span class="mpre">withBinaryFile</span></a><span class="mpre">, </span><a href="GHC.IO.IOMode.html#loc_28_6_28_12" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.IOMode.html#loc_28_6_28_12&#39;)"><span class="mpre">IOMode</span></a><span class="mpre">(</span><a href="GHC.IO.IOMode.html#loc_28_21_28_29" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.IOMode.html#loc_28_21_28_29&#39;)"><span class="mpre">ReadMode</span></a><span class="mpre">) )
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $example</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To serialise a custom type, an instance of Binary for that type is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- required. For example, suppose we have a data structure:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Exp = IntE Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;          | OpE  String Exp Exp</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;    deriving Show</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We can encode values of this type into bytestrings using the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- following instance, which proceeds by recursively breaking down the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- structure to serialise:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance Binary Exp where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;       put (IntE i)      = do put (0 :: Word8)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                              put i</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;       put (OpE s e1 e2) = do put (1 :: Word8)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                              put s</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                              put e1</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                              put e2</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;       get = do t &lt;- get :: Get Word8</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                case t of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                     0 -&gt; do i &lt;- get</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                             return (IntE i)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                     1 -&gt; do s  &lt;- get</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                             e1 &lt;- get</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                             e2 &lt;- get</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                             return (OpE s e1 e2)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note how we write an initial tag byte to indicate each variant of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data type.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We can simplify the writing of &#39;get&#39; instances using monadic</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- combinators:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;       get = do tag &lt;- getWord8</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                case tag of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                    0 -&gt; liftM  IntE get</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                    1 -&gt; liftM3 OpE  get get get</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To serialise this to a bytestring, we use &#39;encode&#39;, which packs the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data structure into a binary format, in a lazy bytestring</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt; let e = OpE &quot;*&quot; (IntE 7) (OpE &quot;/&quot; (IntE 4) (IntE 2))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt; let v = encode e</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Where &#39;v&#39; is a binary encoded data structure. To reconstruct the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- original data, we use &#39;decode&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt; decode v :: Exp</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; OpE &quot;*&quot; (IntE 7) (OpE &quot;/&quot; (IntE 4) (IntE 2))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The lazy ByteString that results from &#39;encode&#39; can be written to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- disk, and read from disk using Data.ByteString.Lazy IO functions,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- such as hPutStr or writeFile:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt; writeFile &quot;/tmp/exp.txt&quot; (encode e)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- And read back with:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt; readFile &quot;/tmp/exp.txt&quot; &gt;&gt;= return . decode :: IO Exp</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; OpE &quot;*&quot; (IntE 7) (OpE &quot;/&quot; (IntE 4) (IntE 2))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We can also directly serialise a value to and from a Handle, or a file:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt; v &lt;- decodeFile  &quot;/tmp/exp.txt&quot; :: IO Exp</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; OpE &quot;*&quot; (IntE 7) (OpE &quot;/&quot; (IntE 4) (IntE 2))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- And write a value to disk</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; &gt; encodeFile &quot;/tmp/a.txt&quot; v</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Wrappers to run the underlying monad</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Encode a value using binary serialisation to a lazy ByteString.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_172_1_172_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_172_1_172_7&#39;)"><span class="mpre">encode</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 171, srcSpanStartColumn = 11, srcSpanEndLine = 171, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 171, srcSpanStartColumn = 20, srcSpanEndLine = 171, srcSpanEndColumn = 22}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0"><span class="mpre">Binary a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_172_1_172_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_172_1_172_7&#39;)"><span class="hl_vardecl"><span class="mpre">encode</span></span></a><span class="mpre"> = </span><a href="Data.Binary.Put.html#loc_124_1_124_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Binary.Put.html#loc_124_1_124_7&#39;)"><span class="hl_varref"><span class="mpre">runPut</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">put</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_172_1_172_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_172_1_172_7&#39;)"><span class="mpre">encode</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Decode a value from a lazy ByteString, reconstructing the original structure.</span></span><span class="mpre">
+</span><a href="#loc_177_1_177_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_177_1_177_7&#39;)"><span class="mpre">decode</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 176, srcSpanStartColumn = 11, srcSpanEndLine = 176, srcSpanEndColumn = 22}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 176, srcSpanStartColumn = 20, srcSpanEndLine = 176, srcSpanEndColumn = 22}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0"><span class="mpre">Binary a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_177_1_177_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_177_1_177_7&#39;)"><span class="hl_vardecl"><span class="mpre">decode</span></span></a><span class="mpre"> = </span><a href="Data.Binary.Get.html#loc_300_1_300_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Binary.Get.html#loc_300_1_300_7&#39;)"><span class="hl_varref"><span class="mpre">runGet</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">get</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Decode a value from a lazy ByteString. Returning &#39;Left&#39; on failure and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Right&#39; on success. In both cases the unconsumed input and the number of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- consumed bytes is returned. In case of failure, a human-readable error</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- message will be returned as well.</span></span><span class="mpre">
+</span><a href="#loc_186_1_186_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_186_1_186_13&#39;)"><span class="mpre">decodeOrFail</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 183, srcSpanStartColumn = 17, srcSpanEndLine = 183, srcSpanEndColumn = 28}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 183, srcSpanStartColumn = 26, srcSpanEndLine = 183, srcSpanEndColumn = 28}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0"><span class="mpre">Binary a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre">
+             -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">ByteOffset</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">)
+                       (</span><span class="hl_tyconref"><span class="mpre">L.ByteString</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">ByteOffset</span></span><span class="mpre">, </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+</span><a name="loc_186_1_186_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_186_1_186_13&#39;)"><span class="hl_vardecl"><span class="mpre">decodeOrFail</span></span></a><span class="mpre"> = </span><a href="Data.Binary.Get.html#loc_288_1_288_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Binary.Get.html#loc_288_1_288_13&#39;)"><span class="hl_varref"><span class="mpre">runGetOrFail</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">get</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Convenience IO operations</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Lazily serialise a value to a file.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This is just a convenience function, it&#39;s defined simply as:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; encodeFile f = B.writeFile f . encode</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- So for example if you wanted to compress as well, you could use:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; B.writeFile f . compress . encode</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><a href="#loc_203_1_203_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_1_203_11&#39;)"><span class="mpre">encodeFile</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 202, srcSpanStartColumn = 15, srcSpanEndLine = 202, srcSpanEndColumn = 26}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 202, srcSpanStartColumn = 24, srcSpanEndLine = 202, srcSpanEndColumn = 26}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0"><span class="mpre">Binary a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_203_1_203_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_1_203_11&#39;)"><span class="hl_fundecl"><span class="mpre">encodeFile</span></span></a><span class="mpre"> </span><a name="loc_203_12_203_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_12_203_13&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> </span><a name="loc_203_14_203_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_14_203_15&#39;)"><span class="hl_vardecl"><span class="mpre">v</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">L.writeFile</span></span><span class="mpre"> </span><a href="#loc_203_12_203_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_12_203_13&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> (</span><a href="#loc_172_1_172_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_172_1_172_7&#39;)"><span class="hl_varref"><span class="mpre">encode</span></span></a><span class="mpre"> </span><a href="#loc_203_14_203_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_203_14_203_15&#39;)"><span class="hl_varref"><span class="mpre">v</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | Decode a value from a file. In case of errors, &#39;error&#39; will</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- be called with the error message.</span></span><span class="mpre">
+</span><a href="#loc_208_1_208_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_1_208_11&#39;)"><span class="mpre">decodeFile</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 207, srcSpanStartColumn = 15, srcSpanEndLine = 207, srcSpanEndColumn = 26}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 207, srcSpanStartColumn = 24, srcSpanEndLine = 207, srcSpanEndColumn = 26}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0"><span class="mpre">Binary a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_208_1_208_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_1_208_11&#39;)"><span class="hl_fundecl"><span class="mpre">decodeFile</span></span></a><span class="mpre"> </span><a name="loc_208_12_208_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_12_208_13&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = do
+  </span><a name="loc_209_3_209_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_3_209_9&#39;)"><span class="hl_vardecl"><span class="mpre">result</span></span></a><span class="mpre"> &lt;- </span><a href="#loc_218_1_218_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_218_1_218_17&#39;)"><span class="hl_varref"><span class="mpre">decodeFileOrFail</span></span></a><span class="mpre"> </span><a href="#loc_208_12_208_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_208_12_208_13&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre">
+  case </span><a href="#loc_209_3_209_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_209_3_209_9&#39;)"><span class="hl_varref"><span class="mpre">result</span></span></a><span class="mpre"> of
+    </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a name="loc_211_11_211_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_211_11_211_12&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> -&gt; </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_211_11_211_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_211_11_211_12&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+    </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> (_,</span><a name="loc_212_13_212_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_212_13_212_16&#39;)"><span class="hl_vardecl"><span class="mpre">str</span></span></a><span class="mpre">) -&gt; </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><a href="#loc_212_13_212_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_212_13_212_16&#39;)"><span class="hl_varref"><span class="mpre">str</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Decode a value from a file. In case of success, the value will be returned</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in &#39;Right&#39;. In case of decoder errors, the error message together with</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the byte offset will be returned.</span></span><span class="mpre">
+</span><a href="#loc_218_1_218_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_218_1_218_17&#39;)"><span class="mpre">decodeFileOrFail</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 217, srcSpanStartColumn = 21, srcSpanEndLine = 217, srcSpanEndColumn = 32}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0/src/Data/Binary.hs&quot;, srcSpanStartLine = 217, srcSpanStartColumn = 30, srcSpanEndLine = 217, srcSpanEndColumn = 32}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/binary-0.7.1.0"><span class="mpre">Binary a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">FilePath</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">ByteOffset</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">) </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+</span><a name="loc_218_1_218_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_218_1_218_17&#39;)"><span class="hl_fundecl"><span class="mpre">decodeFileOrFail</span></span></a><span class="mpre"> </span><a name="loc_218_18_218_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_218_18_218_19&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> =
+  </span><a href="System.IO.html#loc_397_1_397_15" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.html#loc_397_1_397_15&#39;)"><span class="hl_varref"><span class="mpre">withBinaryFile</span></span></a><span class="mpre"> </span><a href="#loc_218_18_218_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_218_18_218_19&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="GHC.IO.IOMode.html#loc_28_21_28_29" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.IOMode.html#loc_28_21_28_29&#39;)"><span class="hl_conref"><span class="mpre">ReadMode</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_219_32_219_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_219_32_219_33&#39;)"><span class="hl_vardecl"><span class="mpre">h</span></span></a><span class="mpre"> -&gt; do
+    </span><a href="#loc_222_5_222_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_5_222_9&#39;)"><span class="hl_varref"><span class="mpre">feed</span></span></a><span class="mpre"> (</span><a href="Data.Binary.Get.html#loc_241_1_241_18" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Binary.Get.html#loc_241_1_241_18&#39;)"><span class="hl_varref"><span class="mpre">runGetIncremental</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">get</span></span><span class="mpre">) </span><a href="#loc_219_32_219_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_219_32_219_33&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre">
+  where </span><span class="hl_comment"><span class="mpre">-- TODO: put in Data.Binary.Get and name pushFromHandle?</span></span><span class="mpre">
+    </span><a name="loc_222_5_222_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_5_222_9&#39;)"><span class="hl_fundecl"><span class="mpre">feed</span></span></a><span class="mpre"> (</span><a href="Data.Binary.Get.html#loc_231_17_231_21" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Binary.Get.html#loc_231_17_231_21&#39;)"><span class="hl_conref"><span class="mpre">Done</span></span></a><span class="mpre"> _ _ </span><a name="loc_222_20_222_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_20_222_21&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">) _ = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a href="#loc_222_20_222_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_20_222_21&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">)
+    </span><a href="#loc_222_5_222_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_5_222_9&#39;)"><span class="hl_fundecl"><span class="mpre">feed</span></span></a><span class="mpre"> (</span><a href="Data.Binary.Get.html#loc_223_18_223_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Binary.Get.html#loc_223_18_223_22&#39;)"><span class="hl_conref"><span class="mpre">Fail</span></span></a><span class="mpre"> _ </span><a name="loc_223_18_223_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_18_223_21&#39;)"><span class="hl_vardecl"><span class="mpre">pos</span></span></a><span class="mpre"> </span><a name="loc_223_22_223_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_22_223_25&#39;)"><span class="hl_vardecl"><span class="mpre">str</span></span></a><span class="mpre">) _ = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> (</span><a href="#loc_223_18_223_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_18_223_21&#39;)"><span class="hl_varref"><span class="mpre">pos</span></span></a><span class="mpre">, </span><a href="#loc_223_22_223_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_22_223_25&#39;)"><span class="hl_varref"><span class="mpre">str</span></span></a><span class="mpre">))
+    </span><a href="#loc_222_5_222_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_5_222_9&#39;)"><span class="hl_fundecl"><span class="mpre">feed</span></span></a><span class="mpre"> (</span><a href="Data.Binary.Get.html#loc_227_17_227_24" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Binary.Get.html#loc_227_17_227_24&#39;)"><span class="hl_conref"><span class="mpre">Partial</span></span></a><span class="mpre"> </span><a name="loc_224_19_224_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_224_19_224_20&#39;)"><span class="hl_vardecl"><span class="mpre">k</span></span></a><span class="mpre">) </span><a name="loc_224_22_224_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_224_22_224_23&#39;)"><span class="hl_vardecl"><span class="mpre">h</span></span></a><span class="mpre"> = do
+      </span><a name="loc_225_7_225_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_225_7_225_12&#39;)"><span class="hl_vardecl"><span class="mpre">chunk</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">B.hGet</span></span><span class="mpre"> </span><a href="#loc_224_22_224_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_224_22_224_23&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre"> </span><a href="Data.ByteString.Lazy.Internal.html#loc_208_1_208_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.ByteString.Lazy.Internal.html#loc_208_1_208_17&#39;)"><span class="hl_varref"><span class="mpre">L.defaultChunkSize</span></span></a><span class="mpre">
+      case </span><span class="hl_varref"><span class="mpre">B.length</span></span><span class="mpre"> </span><a href="#loc_225_7_225_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_225_7_225_12&#39;)"><span class="hl_varref"><span class="mpre">chunk</span></span></a><span class="mpre"> of
+        </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre"> -&gt; </span><a href="#loc_222_5_222_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_5_222_9&#39;)"><span class="hl_varref"><span class="mpre">feed</span></span></a><span class="mpre"> (</span><a href="#loc_224_19_224_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_224_19_224_20&#39;)"><span class="hl_varref"><span class="mpre">k</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre">) </span><a href="#loc_224_22_224_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_224_22_224_23&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre">
+        _ -&gt; </span><a href="#loc_222_5_222_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_222_5_222_9&#39;)"><span class="hl_varref"><span class="mpre">feed</span></span></a><span class="mpre"> (</span><a href="#loc_224_19_224_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_224_19_224_20&#39;)"><span class="hl_varref"><span class="mpre">k</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> </span><a href="#loc_225_7_225_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_225_7_225_12&#39;)"><span class="hl_varref"><span class="mpre">chunk</span></span></a><span class="mpre">)) </span><a href="#loc_224_22_224_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_224_22_224_23&#39;)"><span class="hl_varref"><span class="mpre">h</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- $generics</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Beginning with GHC 7.2, it is possible to use binary serialization</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- without writing any instance boilerplate code.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {-# LANGUAGE DeriveGeneric #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import Data.Binary</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import GHC.Generics (Generic)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Foo = Foo</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;          deriving (Generic)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; -- GHC will automatically fill out the instance</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance Binary Foo</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This mechanism makes use of GHC&#39;s efficient built-in generics</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- support.</span></span><span class="mpre">
+</span></div></body></html>

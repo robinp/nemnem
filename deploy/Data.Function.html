@@ -1,0 +1,89 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Safe #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Function</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  Nils Anders Danielsson 2006</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the LICENSE file in the distribution)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Simple combinators working solely on and with functions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Function
+  ( </span><span class="hl_comment"><span class="mpre">-- * &quot;Prelude&quot; re-exports</span></span><span class="mpre">
+    id, const, (.), flip, ($)
+    </span><span class="hl_comment"><span class="mpre">-- * Other combinators</span></span><span class="mpre">
+  , fix
+  , on
+  ) where
+
+import Prelude
+
+</span><span class="warning" data-warning="DeclInfixDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Function.hs&quot;, srcSpanStartLine = 27, srcSpanStartColumn = 1, srcSpanEndLine = 27, srcSpanEndColumn = 14}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Function.hs&quot;, srcSpanStartLine = 27, srcSpanStartColumn = 8, srcSpanEndLine = 27, srcSpanEndColumn = 9}]}) (AssocLeft (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Functio"><span class="mpre">infixl 0 `on`</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @&#39;fix&#39; f@ is the least fixed point of the function @f@,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- i.e. the least defined @x@ such that @f x = x@.</span></span><span class="mpre">
+</span><a href="#loc_32_1_32_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_1_32_4&#39;)"><span class="mpre">fix</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_32_1_32_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_1_32_4&#39;)"><span class="hl_fundecl"><span class="mpre">fix</span></span></a><span class="mpre"> </span><a name="loc_32_5_32_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_5_32_6&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = let </span><a name="loc_32_13_32_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_13_32_14&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="#loc_32_5_32_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_5_32_6&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_32_13_32_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_13_32_14&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> in </span><a href="#loc_32_13_32_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_13_32_14&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @(*) \`on\` f = \\x y -&gt; f x * f y@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Typical usage: @&#39;Data.List.sortBy&#39; (&#39;compare&#39; \`on\` &#39;fst&#39;)@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Algebraic properties:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @(*) \`on\` &#39;id&#39; = (*)@ (if @(*) &amp;#x2209; {&amp;#x22a5;, &#39;const&#39; &amp;#x22a5;}@)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @((*) \`on\` f) \`on\` g = (*) \`on\` (f . g)@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @&#39;flip&#39; on f . &#39;flip&#39; on g = &#39;flip&#39; on (g . f)@</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- Proofs (so that I don&#39;t have to edit the test-suite):</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">--   (*) `on` id</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   \x y -&gt; id x * id y</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   \x y -&gt; x * y</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- = { If (*) /= _|_ or const _|_. }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   (*)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">--   (*) `on` f `on` g</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   ((*) `on` f) `on` g</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   \x y -&gt; ((*) `on` f) (g x) (g y)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   \x y -&gt; (\x y -&gt; f x * f y) (g x) (g y)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   \x y -&gt; f (g x) * f (g y)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   \x y -&gt; (f . g) x * (f . g) y</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   (*) `on` (f . g)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   (*) `on` f . g</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">--   flip on f . flip on g</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   (\h (*) -&gt; (*) `on` h) f . (\h (*) -&gt; (*) `on` h) g</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   (\(*) -&gt; (*) `on` f) . (\(*) -&gt; (*) `on` g)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   \(*) -&gt; (*) `on` g `on` f</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- = { See above. }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   \(*) -&gt; (*) `on` g . f</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   (\h (*) -&gt; (*) `on` h) (g . f)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   flip on (g . f)</span></span><span class="mpre">
+
+</span><a href="#loc_87_7_87_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_7_87_11&#39;)"><span class="mpre">on</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre">) -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre">
+</span><a name="loc_87_1_87_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_1_87_6&#39;)"><span class="hl_vardecl"><span class="mpre">(.*.)</span></span></a><span class="mpre"> </span><a name="loc_87_7_87_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_7_87_11&#39;)"><span class="hl_fundecl"><span class="mpre">`on`</span></span></a><span class="mpre"> </span><a name="loc_87_12_87_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_12_87_13&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = \</span><a name="loc_87_17_87_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_17_87_18&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> </span><a name="loc_87_19_87_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_19_87_20&#39;)"><span class="hl_vardecl"><span class="mpre">y</span></span></a><span class="mpre"> -&gt; </span><a href="#loc_87_12_87_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_12_87_13&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_87_17_87_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_17_87_18&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="#loc_87_1_87_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_1_87_6&#39;)"><span class="hl_infix"><span class="mpre">.*.</span></span></a><span class="mpre"> </span><a href="#loc_87_12_87_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_12_87_13&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_87_19_87_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_19_87_20&#39;)"><span class="hl_varref"><span class="mpre">y</span></span></a><span class="mpre">
+
+</span></div></body></html>

@@ -1,0 +1,41 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Array.Storable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (uses Data.Array.MArray)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A storable array is an IO-mutable array which stores its</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- contents in a contiguous memory block living in the C</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- heap. Elements are stored according to the class &#39;Storable&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can obtain the pointer to the array contents to manipulate</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- elements from languages like C.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- It is similar to &#39;Data.Array.IO.IOUArray&#39; but slower.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Its advantage is that it&#39;s compatible with C.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Array.Storable (
+    </span><span class="hl_comment"><span class="mpre">-- * Arrays of &#39;Storable&#39; things.</span></span><span class="mpre">
+    StorableArray, </span><span class="hl_comment"><span class="mpre">-- data StorableArray index element</span></span><span class="mpre">
+                   </span><span class="hl_comment"><span class="mpre">--  + index type must be in class Ix</span></span><span class="mpre">
+                   </span><span class="hl_comment"><span class="mpre">--  + element type must be in class Storable</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Overloaded mutable array interface</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- | Module &quot;Data.Array.MArray&quot; provides the interface of storable arrays.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- They are instances of class &#39;MArray&#39; (with the &#39;IO&#39; monad).</span></span><span class="mpre">
+    module Data.Array.MArray,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Accessing the pointer to the array contents</span></span><span class="mpre">
+    withStorableArray,  </span><span class="hl_comment"><span class="mpre">-- :: StorableArray i e -&gt; (Ptr e -&gt; IO a) -&gt; IO a</span></span><span class="mpre">
+
+    touchStorableArray, </span><span class="hl_comment"><span class="mpre">-- :: StorableArray i e -&gt; IO ()</span></span><span class="mpre">
+  ) where
+
+import Data.Array.MArray
+import Data.Array.Storable.Internals
+</span></div></body></html>

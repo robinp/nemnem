@@ -1,0 +1,41 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE NoImplicitPrelude #-}
+
+</span><span class="hl_comment"><span class="mpre">-- | This modules provides access to the &#39;Integer&#39; constructors and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- exposes some highly optimized GMP-operations.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that since @integer-gmp@ does not depend on `base`, error</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- reporting via exceptions, &#39;error&#39;, or &#39;undefined&#39; is not</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- available. Instead, the low-level functions will crash the runtime</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- if called with invalid arguments.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- See also</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;https://ghc.haskell.org/trac/ghc/wiki/Commentary/Libraries/Integer GHC Commentary: Libraries/Integer&gt;.</span></span><span class="mpre">
+
+module GHC.Integer.GMP.Internals
+    ( </span><span class="hl_comment"><span class="mpre">-- * The &#39;Integer&#39; type</span></span><span class="mpre">
+      Integer(..)
+
+      </span><span class="hl_comment"><span class="mpre">-- * Number theoretic functions</span></span><span class="mpre">
+    , gcdInt
+    , gcdInteger
+    , gcdExtInteger
+    , lcmInteger
+    , nextPrimeInteger
+    , testPrimeInteger
+
+      </span><span class="hl_comment"><span class="mpre">-- * Exponentiation functions</span></span><span class="mpre">
+    , powInteger
+    , powModInteger
+    , powModSecInteger
+    , recipModInteger
+
+    </span><span class="hl_comment"><span class="mpre">-- * Import/export functions</span></span><span class="mpre">
+    , sizeInBaseInteger
+    , importIntegerFromByteArray
+    , importIntegerFromAddr
+    , exportIntegerToMutableByteArray
+    , exportIntegerToAddr
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/integer-gmp-0.5.1.0/GHC/Integer/GMP/Internals.hs&quot;, srcSpanStartLine = 40, srcSpanStartColumn = 8, srcSpanEndLine = 40, srcSpanEndColumn = 24}, srcInfoPoints = []}) &quot;GHC.Integer.Type&quot;"><span class="mpre">GHC.Integer.Type</span></span><span class="mpre">
+</span></div></body></html>

@@ -1,0 +1,206 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if defined(__GLASGOW_HASKELL__) &amp;&amp; __GLASGOW_HASKELL__ &gt;= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Hashable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Milan Straka 2010</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Johan Tibell 2011</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Bryan O&#39;Sullivan 2011, 2012</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  johan.tibell@gmail.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module defines a class, &#39;Hashable&#39;, for types that can be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- converted to a hash value.  This class exists for the benefit of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- hashing-based data structures.  The module provides instances for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- most standard types.  Efficient instances for other types can be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- generated automatically and effortlessly using the generics support</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in GHC 7.2 and above.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The easiest way to get started is to use the &#39;hash&#39; function. Here</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is an example session with @ghci@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; ghci&gt; import Data.Hashable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; ghci&gt; hash &quot;foo&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; 60853164</span></span><span class="mpre">
+
+module Data.Hashable
+    (
+      </span><span class="hl_comment"><span class="mpre">-- * Hashing and security</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- $security</span></span><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- * Computing hash values</span></span><span class="mpre">
+      Hashable(..)
+
+      </span><span class="hl_comment"><span class="mpre">-- * Creating new instances</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- | There are two ways to create new instances: by deriving</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- instances automatically using GHC&#39;s generic programming</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- support or by writing instances manually.</span></span><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- ** Generic instances</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- $generics</span></span><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- *** Understanding a compiler error</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- $generic_err</span></span><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- ** Writing instances by hand</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- $blocks</span></span><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- *** Hashing contructors with multiple fields</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- $multiple-fields</span></span><span class="mpre">
+
+      </span><span class="hl_comment"><span class="mpre">-- *** Hashing types with multiple constructors</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- $multiple-ctors</span></span><span class="mpre">
+
+    , hashUsing
+    , hashPtr
+    , hashPtrWithSalt
+#if defined(__GLASGOW_HASKELL__)
+    , hashByteArray
+    , hashByteArrayWithSalt
+#endif
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/hashable-1.2.2.0/Data/Hashable.hs&quot;, srcSpanStartLine = 68, srcSpanStartColumn = 8, srcSpanEndLine = 68, srcSpanEndColumn = 27}, srcInfoPoints = []}) &quot;Data.Hashable.Class&quot;"><span class="mpre">Data.Hashable.Class</span></span><span class="mpre">
+#ifdef GENERICS
+import Data.Hashable.Generic ()
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- $security</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- #security#</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Applications that use hash-based data structures to store input</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- from untrusted users can be susceptible to \&quot;hash DoS\&quot;, a class of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- denial-of-service attack that uses deliberately chosen colliding</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- inputs to force an application into unexpectedly behaving with</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- quadratic time complexity.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- At this time, the string hashing functions used in this library are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- susceptible to such attacks and users are recommended to either use</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a &#39;Data.Map&#39; to store keys derived from untrusted input or to use a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- hash function (e.g. SipHash) that&#39;s resistant to such attacks. A</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- future version of this library might ship with such hash functions.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $generics</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Beginning with GHC 7.2, the recommended way to make instances of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Hashable&#39; for most types is to use the compiler&#39;s support for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- automatically generating default instances.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {-# LANGUAGE DeriveGeneric #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import GHC.Generics (Generic)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import Data.Hashable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Foo a = Foo a String</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;              deriving (Eq, Generic)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance Hashable a =&gt; Hashable (Foo a)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Colour = Red | Green | Blue</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;               deriving Generic</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance Hashable Colour</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If you omit a body for the instance declaration, GHC will generate</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a default instance that correctly and efficiently hashes every</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- constructor and parameter.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $generic_err</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Suppose you intend to use the generic machinery to automatically</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- generate a &#39;Hashable&#39; instance.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Oops = Oops</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;      -- forgot to add &quot;deriving Generic&quot; here!</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance Hashable Oops</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- And imagine that, as in the example above, you forget to add a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- \&quot;@deriving &#39;Generic&#39;@\&quot; clause to your data type. At compile time,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- you will get an error message from GHC that begins roughly as</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- follows:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; No instance for (GHashable (Rep Oops))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This error can be confusing, as &#39;GHashable&#39; is not exported (it is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- an internal typeclass used by this library&#39;s generics machinery).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The correct fix is simply to add the missing \&quot;@deriving</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Generic&#39;@\&quot;.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $blocks</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To maintain high quality hashes, new &#39;Hashable&#39; instances should be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- built using existing &#39;Hashable&#39; instances, combinators, and hash</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- functions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The functions below can be used when creating new instances of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Hashable&#39;.  For example, for many string-like types the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;hashWithSalt&#39; method can be defined in terms of either</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;hashPtrWithSalt&#39; or &#39;hashByteArrayWithSalt&#39;.  Here&#39;s how you could</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- implement an instance for the &#39;B.ByteString&#39; data type, from the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @bytestring@ package:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import qualified Data.ByteString as B</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import qualified Data.ByteString.Internal as B</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import qualified Data.ByteString.Unsafe as B</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import Data.Hashable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import Foreign.Ptr (castPtr)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance Hashable B.ByteString where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     hashWithSalt salt bs = B.inlinePerformIO $</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                            B.unsafeUseAsCStringLen bs $ \(p, len) -&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                            hashPtrWithSalt p (fromIntegral len) salt</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $multiple-fields</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Hash constructors with multiple fields by chaining &#39;hashWithSalt&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Date = Date Int Int Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance Hashable Date where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     hashWithSalt s (Date yr mo dy) =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;         s `hashWithSalt`</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;         yr `hashWithSalt`</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;         mo `hashWithSalt` dy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If you need to chain hashes together, use &#39;hashWithSalt&#39; and follow</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- this recipe:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; combineTwo h1 h2 = h1 `hashWithSalt` h2</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $multiple-ctors</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For a type with several value constructors, there are a few</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- possible approaches to writing a &#39;Hashable&#39; instance.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If the type is an instance of &#39;Enum&#39;, the easiest path is to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- convert it to an &#39;Int&#39;, and use the existing &#39;Hashable&#39; instance</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for &#39;Int&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Color = Red | Green | Blue</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;              deriving Enum</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance Hashable Color where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     hashWithSalt = hashUsing fromEnum</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If the type&#39;s constructors accept parameters, it is important to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- distinguish the constructors. To distinguish the constructors, add</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a different integer to the hash computation of each constructor:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Time = Days Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;           | Weeks Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;           | Months Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; instance Hashable Time where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     hashWithSalt s (Days n)   = s `hashWithSalt`</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                                 (0::Int) `hashWithSalt` n</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     hashWithSalt s (Weeks n)  = s `hashWithSalt`</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                                 (1::Int) `hashWithSalt` n</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;     hashWithSalt s (Months n) = s `hashWithSalt`</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;                                 (2::Int) `hashWithSalt` n</span></span><span class="mpre">
+</span></div></body></html>

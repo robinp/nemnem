@@ -1,0 +1,272 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Distribution.Simple.Program.Builtin</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  Isaac Jones 2006, Duncan Coutts 2007-2009</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  cabal-devel@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The module defines all the known built-in &#39;Program&#39;s.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Where possible we try to find their version numbers.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Distribution.Simple.Program.Builtin (
+
+    </span><span class="hl_comment"><span class="mpre">-- * The collection of unconfigured and configured progams</span></span><span class="mpre">
+    builtinPrograms,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Programs that Cabal knows about</span></span><span class="mpre">
+    ghcProgram,
+    ghcPkgProgram,
+    lhcProgram,
+    lhcPkgProgram,
+    nhcProgram,
+    hmakeProgram,
+    jhcProgram,
+    hugsProgram,
+    ffihugsProgram,
+    uhcProgram,
+    gccProgram,
+    ranlibProgram,
+    arProgram,
+    stripProgram,
+    happyProgram,
+    alexProgram,
+    hsc2hsProgram,
+    c2hsProgram,
+    cpphsProgram,
+    hscolourProgram,
+    haddockProgram,
+    greencardProgram,
+    ldProgram,
+    tarProgram,
+    cppProgram,
+    pkgConfigProgram,
+    hpcProgram,
+  ) where
+
+import Distribution.Simple.Program.Types
+         ( </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="mpre">Program</span></a><span class="mpre">(..), </span><a href="Distribution.Simple.Program.Types.html#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_129_1_129_14&#39;)"><span class="mpre">simpleProgram</span></a><span class="mpre"> )
+import Distribution.Simple.Program.Find
+         ( </span><a href="Distribution.Simple.Program.Find.html#loc_69_1_69_24" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Find.html#loc_69_1_69_24&#39;)"><span class="mpre">findProgramOnSearchPath</span></a><span class="mpre"> )
+import Distribution.Simple.Utils
+         ( </span><a href="Distribution.Simple.Utils.html#loc_596_1_596_19" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Utils.html#loc_596_1_596_19&#39;)"><span class="mpre">findProgramVersion</span></a><span class="mpre"> )
+
+</span><span class="hl_comment"><span class="mpre">-- ------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * Known programs</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The default list of programs.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- These programs are typically used internally to Cabal.</span></span><span class="mpre">
+</span><a href="#loc_62_1_62_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_1_62_16&#39;)"><span class="mpre">builtinPrograms</span></a><span class="mpre"> :: [</span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">]
+</span><a name="loc_62_1_62_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_1_62_16&#39;)"><span class="hl_vardecl"><span class="mpre">builtinPrograms</span></span></a><span class="mpre"> =
+    [
+    </span><span class="hl_comment"><span class="mpre">-- compilers and related progs</span></span><span class="mpre">
+      </span><a href="#loc_97_1_97_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_1_97_11&#39;)"><span class="hl_varref"><span class="mpre">ghcProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_102_1_102_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_102_1_102_14&#39;)"><span class="hl_varref"><span class="mpre">ghcPkgProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_173_1_173_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_173_1_173_12&#39;)"><span class="hl_varref"><span class="mpre">hugsProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_176_1_176_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_176_1_176_15&#39;)"><span class="hl_varref"><span class="mpre">ffihugsProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_127_1_127_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_1_127_11&#39;)"><span class="hl_varref"><span class="mpre">nhcProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_137_1_137_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_1_137_13&#39;)"><span class="hl_varref"><span class="mpre">hmakeProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_147_1_147_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_147_1_147_11&#39;)"><span class="hl_varref"><span class="mpre">jhcProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_112_1_112_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_1_112_11&#39;)"><span class="hl_varref"><span class="mpre">lhcProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_117_1_117_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_1_117_14&#39;)"><span class="hl_varref"><span class="mpre">lhcPkgProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_158_1_158_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_158_1_158_11&#39;)"><span class="hl_varref"><span class="mpre">uhcProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_163_1_163_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_1_163_11&#39;)"><span class="hl_varref"><span class="mpre">hpcProgram</span></span></a><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- preprocessors</span></span><span class="mpre">
+    , </span><a href="#loc_237_1_237_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_237_1_237_16&#39;)"><span class="hl_varref"><span class="mpre">hscolourProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_247_1_247_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_247_1_247_15&#39;)"><span class="hl_varref"><span class="mpre">haddockProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_179_1_179_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_179_1_179_13&#39;)"><span class="hl_varref"><span class="mpre">happyProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_189_1_189_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_189_1_189_12&#39;)"><span class="hl_varref"><span class="mpre">alexProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_213_1_213_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_213_1_213_14&#39;)"><span class="hl_varref"><span class="mpre">hsc2hsProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_223_1_223_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_1_223_12&#39;)"><span class="hl_varref"><span class="mpre">c2hsProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_228_1_228_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_228_1_228_13&#39;)"><span class="hl_varref"><span class="mpre">cpphsProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_257_1_257_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_257_1_257_17&#39;)"><span class="hl_varref"><span class="mpre">greencardProgram</span></span></a><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- platform toolchain</span></span><span class="mpre">
+    , </span><a href="#loc_199_1_199_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_199_1_199_11&#39;)"><span class="hl_varref"><span class="mpre">gccProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_204_1_204_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_204_1_204_14&#39;)"><span class="hl_varref"><span class="mpre">ranlibProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_207_1_207_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_1_207_10&#39;)"><span class="hl_varref"><span class="mpre">arProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_210_1_210_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_210_1_210_13&#39;)"><span class="hl_varref"><span class="mpre">stripProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_260_1_260_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_260_1_260_10&#39;)"><span class="hl_varref"><span class="mpre">ldProgram</span></span></a><span class="mpre">
+    , </span><a href="#loc_263_1_263_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_263_1_263_11&#39;)"><span class="hl_varref"><span class="mpre">tarProgram</span></span></a><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- configuration tools</span></span><span class="mpre">
+    , </span><a href="#loc_269_1_269_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_269_1_269_17&#39;)"><span class="hl_varref"><span class="mpre">pkgConfigProgram</span></span></a><span class="mpre">
+    ]
+
+</span><a href="#loc_97_1_97_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_1_97_11&#39;)"><span class="mpre">ghcProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_97_1_97_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_1_97_11&#39;)"><span class="hl_vardecl"><span class="mpre">ghcProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 97, srcSpanStartColumn = 14, srcSpanEndLine = 99, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 97, srcSpanStartColumn = 36, srcSpanEndLine = 97, srcSpanEndColumn = 37},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Di"><span class="mpre">(simpleProgram &quot;ghc&quot;) {
+    programFindVersion = findProgramVersion &quot;--numeric-version&quot; id
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_102_1_102_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_102_1_102_14&#39;)"><span class="mpre">ghcPkgProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_102_1_102_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_102_1_102_14&#39;)"><span class="hl_vardecl"><span class="mpre">ghcPkgProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 102, srcSpanStartColumn = 17, srcSpanEndLine = 109, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 102, srcSpanStartColumn = 43, srcSpanEndLine = 102, srcSpanEndColumn = 44},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;ghc-pkg&quot;) {
+    programFindVersion = findProgramVersion &quot;--version&quot; $ \str -&gt;
+      </span><span class="hl_comment"><span class="mpre">-- Invoking &quot;ghc-pkg --version&quot; gives a string like</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- &quot;GHC package manager version 6.4.1&quot;</span></span><span class="mpre">
+      case words str of
+        (_:_:_:_:ver:_) -&gt; ver
+        _               -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_112_1_112_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_1_112_11&#39;)"><span class="mpre">lhcProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_112_1_112_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_1_112_11&#39;)"><span class="hl_vardecl"><span class="mpre">lhcProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 112, srcSpanStartColumn = 14, srcSpanEndLine = 114, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 112, srcSpanStartColumn = 36, srcSpanEndLine = 112, srcSpanEndColumn = 37},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;lhc&quot;) {
+    programFindVersion = findProgramVersion &quot;--numeric-version&quot; id
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_117_1_117_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_1_117_14&#39;)"><span class="mpre">lhcPkgProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_117_1_117_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_1_117_14&#39;)"><span class="hl_vardecl"><span class="mpre">lhcPkgProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 117, srcSpanStartColumn = 17, srcSpanEndLine = 124, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 117, srcSpanStartColumn = 43, srcSpanEndLine = 117, srcSpanEndColumn = 44},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;lhc-pkg&quot;) {
+    programFindVersion = findProgramVersion &quot;--version&quot; $ \str -&gt;
+      </span><span class="hl_comment"><span class="mpre">-- Invoking &quot;lhc-pkg --version&quot; gives a string like</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- &quot;LHC package manager version 0.7&quot;</span></span><span class="mpre">
+      case words str of
+        (_:_:_:_:ver:_) -&gt; ver
+        _               -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_127_1_127_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_1_127_11&#39;)"><span class="mpre">nhcProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_127_1_127_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_1_127_11&#39;)"><span class="hl_vardecl"><span class="mpre">nhcProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 127, srcSpanStartColumn = 14, srcSpanEndLine = 134, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 127, srcSpanStartColumn = 38, srcSpanEndLine = 127, srcSpanEndColumn = 39},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;nhc98&quot;) {
+    programFindVersion = findProgramVersion &quot;--version&quot; $ \str -&gt;
+      </span><span class="hl_comment"><span class="mpre">-- Invoking &quot;nhc98 --version&quot; gives a string like</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- &quot;/usr/local/bin/nhc98: v1.20 (2007-11-22)&quot;</span></span><span class="mpre">
+      case words str of
+        (_:(&#39;v&#39;:ver):_) -&gt; ver
+        _               -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_137_1_137_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_1_137_13&#39;)"><span class="mpre">hmakeProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_137_1_137_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_1_137_13&#39;)"><span class="hl_vardecl"><span class="mpre">hmakeProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 137, srcSpanStartColumn = 16, srcSpanEndLine = 144, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 137, srcSpanStartColumn = 40, srcSpanEndLine = 137, srcSpanEndColumn = 41},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;hmake&quot;) {
+    programFindVersion = findProgramVersion &quot;--version&quot; $ \str -&gt;
+    </span><span class="hl_comment"><span class="mpre">-- Invoking &quot;hmake --version&quot; gives a string line</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &quot;/usr/local/bin/hmake: 3.13 (2006-11-01)&quot;</span></span><span class="mpre">
+      case words str of
+        (_:ver:_) -&gt; ver
+        _         -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_147_1_147_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_147_1_147_11&#39;)"><span class="mpre">jhcProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_147_1_147_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_147_1_147_11&#39;)"><span class="hl_vardecl"><span class="mpre">jhcProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 147, srcSpanStartColumn = 14, srcSpanEndLine = 155, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 147, srcSpanStartColumn = 36, srcSpanEndLine = 147, srcSpanEndColumn = 37},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;jhc&quot;) {
+    programFindVersion = findProgramVersion &quot;--version&quot; $ \str -&gt;
+    </span><span class="hl_comment"><span class="mpre">-- invoking &quot;jhc --version&quot; gives a string like</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &quot;jhc 0.3.20080208 (wubgipkamcep-2)</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- compiled by ghc-6.8 on a x86_64 running linux&quot;</span></span><span class="mpre">
+      case words str of
+        (_:ver:_) -&gt; ver
+        _         -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_158_1_158_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_158_1_158_11&#39;)"><span class="mpre">uhcProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_158_1_158_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_158_1_158_11&#39;)"><span class="hl_vardecl"><span class="mpre">uhcProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 158, srcSpanStartColumn = 14, srcSpanEndLine = 160, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 158, srcSpanStartColumn = 36, srcSpanEndLine = 158, srcSpanEndColumn = 37},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;uhc&quot;) {
+    programFindVersion = findProgramVersion &quot;--version-dotted&quot; id
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_163_1_163_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_1_163_11&#39;)"><span class="mpre">hpcProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_163_1_163_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_163_1_163_11&#39;)"><span class="hl_vardecl"><span class="mpre">hpcProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 163, srcSpanStartColumn = 14, srcSpanEndLine = 169, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 164, srcSpanStartColumn = 5, srcSpanEndLine = 164, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/"><span class="mpre">(simpleProgram &quot;hpc&quot;)
+    {
+        programFindVersion = findProgramVersion &quot;version&quot; $ \str -&gt;
+            case words str of
+                (_ : _ : _ : ver : _) -&gt; ver
+                _ -&gt; &quot;&quot;
+    }</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- AArgh! Finding the version of hugs or ffihugs is almost impossible.</span></span><span class="mpre">
+</span><a href="#loc_173_1_173_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_173_1_173_12&#39;)"><span class="mpre">hugsProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_173_1_173_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_173_1_173_12&#39;)"><span class="hl_vardecl"><span class="mpre">hugsProgram</span></span></a><span class="mpre"> = </span><a href="Distribution.Simple.Program.Types.html#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_129_1_129_14&#39;)"><span class="hl_varref"><span class="mpre">simpleProgram</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;hugs&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_176_1_176_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_176_1_176_15&#39;)"><span class="mpre">ffihugsProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_176_1_176_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_176_1_176_15&#39;)"><span class="hl_vardecl"><span class="mpre">ffihugsProgram</span></span></a><span class="mpre"> = </span><a href="Distribution.Simple.Program.Types.html#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_129_1_129_14&#39;)"><span class="hl_varref"><span class="mpre">simpleProgram</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;ffihugs&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_179_1_179_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_179_1_179_13&#39;)"><span class="mpre">happyProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_179_1_179_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_179_1_179_13&#39;)"><span class="hl_vardecl"><span class="mpre">happyProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 179, srcSpanStartColumn = 16, srcSpanEndLine = 186, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 179, srcSpanStartColumn = 40, srcSpanEndLine = 179, srcSpanEndColumn = 41},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;happy&quot;) {
+    programFindVersion = findProgramVersion &quot;--version&quot; $ \str -&gt;
+      </span><span class="hl_comment"><span class="mpre">-- Invoking &quot;happy --version&quot; gives a string like</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- &quot;Happy Version 1.16 Copyright (c) ....&quot;</span></span><span class="mpre">
+      case words str of
+        (_:_:ver:_) -&gt; ver
+        _           -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_189_1_189_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_189_1_189_12&#39;)"><span class="mpre">alexProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_189_1_189_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_189_1_189_12&#39;)"><span class="hl_vardecl"><span class="mpre">alexProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 189, srcSpanStartColumn = 15, srcSpanEndLine = 196, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 189, srcSpanStartColumn = 38, srcSpanEndLine = 189, srcSpanEndColumn = 39},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;alex&quot;) {
+    programFindVersion = findProgramVersion &quot;--version&quot; $ \str -&gt;
+      </span><span class="hl_comment"><span class="mpre">-- Invoking &quot;alex --version&quot; gives a string like</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- &quot;Alex version 2.1.0, (c) 2003 Chris Dornan and Simon Marlow&quot;</span></span><span class="mpre">
+      case words str of
+        (_:_:ver:_) -&gt; takeWhile (`elem` (&#39;.&#39;:[&#39;0&#39;..&#39;9&#39;])) ver
+        _           -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_199_1_199_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_199_1_199_11&#39;)"><span class="mpre">gccProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_199_1_199_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_199_1_199_11&#39;)"><span class="hl_vardecl"><span class="mpre">gccProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 199, srcSpanStartColumn = 14, srcSpanEndLine = 201, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 199, srcSpanStartColumn = 36, srcSpanEndLine = 199, srcSpanEndColumn = 37},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;gcc&quot;) {
+    programFindVersion = findProgramVersion &quot;-dumpversion&quot; id
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_204_1_204_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_204_1_204_14&#39;)"><span class="mpre">ranlibProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_204_1_204_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_204_1_204_14&#39;)"><span class="hl_vardecl"><span class="mpre">ranlibProgram</span></span></a><span class="mpre"> = </span><a href="Distribution.Simple.Program.Types.html#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_129_1_129_14&#39;)"><span class="hl_varref"><span class="mpre">simpleProgram</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;ranlib&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_207_1_207_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_1_207_10&#39;)"><span class="mpre">arProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_207_1_207_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_207_1_207_10&#39;)"><span class="hl_vardecl"><span class="mpre">arProgram</span></span></a><span class="mpre"> = </span><a href="Distribution.Simple.Program.Types.html#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_129_1_129_14&#39;)"><span class="hl_varref"><span class="mpre">simpleProgram</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;ar&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_210_1_210_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_210_1_210_13&#39;)"><span class="mpre">stripProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_210_1_210_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_210_1_210_13&#39;)"><span class="hl_vardecl"><span class="mpre">stripProgram</span></span></a><span class="mpre"> = </span><a href="Distribution.Simple.Program.Types.html#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_129_1_129_14&#39;)"><span class="hl_varref"><span class="mpre">simpleProgram</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;strip&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_213_1_213_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_213_1_213_14&#39;)"><span class="mpre">hsc2hsProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_213_1_213_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_213_1_213_14&#39;)"><span class="hl_vardecl"><span class="mpre">hsc2hsProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 213, srcSpanStartColumn = 17, srcSpanEndLine = 220, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 213, srcSpanStartColumn = 42, srcSpanEndLine = 213, srcSpanEndColumn = 43},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;hsc2hs&quot;) {
+    programFindVersion =
+      findProgramVersion &quot;--version&quot; $ \str -&gt;
+        </span><span class="hl_comment"><span class="mpre">-- Invoking &quot;hsc2hs --version&quot; gives a string like &quot;hsc2hs version 0.66&quot;</span></span><span class="mpre">
+        case words str of
+          (_:_:ver:_) -&gt; ver
+          _           -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_223_1_223_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_1_223_12&#39;)"><span class="mpre">c2hsProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_223_1_223_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_1_223_12&#39;)"><span class="hl_vardecl"><span class="mpre">c2hsProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 223, srcSpanStartColumn = 15, srcSpanEndLine = 225, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 223, srcSpanStartColumn = 38, srcSpanEndLine = 223, srcSpanEndColumn = 39},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;c2hs&quot;) {
+    programFindVersion = findProgramVersion &quot;--numeric-version&quot; id
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_228_1_228_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_228_1_228_13&#39;)"><span class="mpre">cpphsProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_228_1_228_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_228_1_228_13&#39;)"><span class="hl_vardecl"><span class="mpre">cpphsProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 228, srcSpanStartColumn = 16, srcSpanEndLine = 234, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 228, srcSpanStartColumn = 40, srcSpanEndLine = 228, srcSpanEndColumn = 41},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;cpphs&quot;) {
+    programFindVersion = findProgramVersion &quot;--version&quot; $ \str -&gt;
+      </span><span class="hl_comment"><span class="mpre">-- Invoking &quot;cpphs --version&quot; gives a string like &quot;cpphs 1.3&quot;</span></span><span class="mpre">
+      case words str of
+        (_:ver:_) -&gt; ver
+        _         -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_237_1_237_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_237_1_237_16&#39;)"><span class="mpre">hscolourProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_237_1_237_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_237_1_237_16&#39;)"><span class="hl_vardecl"><span class="mpre">hscolourProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 237, srcSpanStartColumn = 19, srcSpanEndLine = 244, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 237, srcSpanStartColumn = 46, srcSpanEndLine = 237, srcSpanEndColumn = 47},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;hscolour&quot;) {
+    programFindLocation = \v p -&gt; findProgramOnSearchPath v p &quot;HsColour&quot;,
+    programFindVersion  = findProgramVersion &quot;-version&quot; $ \str -&gt;
+      </span><span class="hl_comment"><span class="mpre">-- Invoking &quot;HsColour -version&quot; gives a string like &quot;HsColour 1.7&quot;</span></span><span class="mpre">
+      case words str of
+        (_:ver:_) -&gt; ver
+        _         -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_247_1_247_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_247_1_247_15&#39;)"><span class="mpre">haddockProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_247_1_247_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_247_1_247_15&#39;)"><span class="hl_vardecl"><span class="mpre">haddockProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 247, srcSpanStartColumn = 18, srcSpanEndLine = 254, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 247, srcSpanStartColumn = 44, srcSpanEndLine = 247, srcSpanEndColumn = 45},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;haddock&quot;) {
+    programFindVersion = findProgramVersion &quot;--version&quot; $ \str -&gt;
+      </span><span class="hl_comment"><span class="mpre">-- Invoking &quot;haddock --version&quot; gives a string like</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- &quot;Haddock version 0.8, (c) Simon Marlow 2006&quot;</span></span><span class="mpre">
+      case words str of
+        (_:_:ver:_) -&gt; takeWhile (`elem` (&#39;.&#39;:[&#39;0&#39;..&#39;9&#39;])) ver
+        _           -&gt; &quot;&quot;
+  }</span></span><span class="mpre">
+
+</span><a href="#loc_257_1_257_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_257_1_257_17&#39;)"><span class="mpre">greencardProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_257_1_257_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_257_1_257_17&#39;)"><span class="hl_vardecl"><span class="mpre">greencardProgram</span></span></a><span class="mpre"> = </span><a href="Distribution.Simple.Program.Types.html#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_129_1_129_14&#39;)"><span class="hl_varref"><span class="mpre">simpleProgram</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;greencard&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_260_1_260_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_260_1_260_10&#39;)"><span class="mpre">ldProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_260_1_260_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_260_1_260_10&#39;)"><span class="hl_vardecl"><span class="mpre">ldProgram</span></span></a><span class="mpre"> = </span><a href="Distribution.Simple.Program.Types.html#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_129_1_129_14&#39;)"><span class="hl_varref"><span class="mpre">simpleProgram</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;ld&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_263_1_263_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_263_1_263_11&#39;)"><span class="mpre">tarProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_263_1_263_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_263_1_263_11&#39;)"><span class="hl_vardecl"><span class="mpre">tarProgram</span></span></a><span class="mpre"> = </span><a href="Distribution.Simple.Program.Types.html#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_129_1_129_14&#39;)"><span class="hl_varref"><span class="mpre">simpleProgram</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;tar&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_266_1_266_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_266_1_266_11&#39;)"><span class="mpre">cppProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_266_1_266_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_266_1_266_11&#39;)"><span class="hl_vardecl"><span class="mpre">cppProgram</span></span></a><span class="mpre"> = </span><a href="Distribution.Simple.Program.Types.html#loc_129_1_129_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_129_1_129_14&#39;)"><span class="hl_varref"><span class="mpre">simpleProgram</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;cpp&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_269_1_269_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_269_1_269_17&#39;)"><span class="mpre">pkgConfigProgram</span></a><span class="mpre"> :: </span><a href="Distribution.Simple.Program.Types.html#loc_46_6_46_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Distribution.Simple.Program.Types.html#loc_46_6_46_13&#39;)"><span class="hl_tyconref"><span class="mpre">Program</span></span></a><span class="mpre">
+</span><a name="loc_269_1_269_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_269_1_269_17&#39;)"><span class="hl_vardecl"><span class="mpre">pkgConfigProgram</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecUpdate (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 269, srcSpanStartColumn = 20, srcSpanEndLine = 271, srcSpanEndColumn = 4}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/Simple/Program/Builtin.hs&quot;, srcSpanStartLine = 269, srcSpanStartColumn = 49, srcSpanEndLine = 269, srcSpanEndColumn = 50},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1."><span class="mpre">(simpleProgram &quot;pkg-config&quot;) {
+    programFindVersion = findProgramVersion &quot;--version&quot; id
+  }</span></span><span class="mpre">
+</span></div></body></html>

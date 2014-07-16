@@ -1,0 +1,25 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Crypto.PubKey.Internal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : Good</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Crypto.PubKey.Internal
+    ( and&#39;
+    , (&amp;&amp;!)
+    ) where
+
+import Data.List (foldl&#39;)
+
+</span><span class="hl_comment"><span class="mpre">-- | This is a strict version of and</span></span><span class="mpre">
+</span><a href="#loc_17_1_17_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_1_17_5&#39;)"><span class="mpre">and&#39;</span></a><span class="mpre"> :: [</span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">] -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_17_1_17_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_1_17_5&#39;)"><span class="hl_fundecl"><span class="mpre">and&#39;</span></span></a><span class="mpre"> </span><a name="loc_17_6_17_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_6_17_7&#39;)"><span class="hl_vardecl"><span class="mpre">l</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">foldl&#39;</span></span><span class="mpre"> </span><a href="#loc_21_7_21_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_7_21_10&#39;)"><span class="hl_varref"><span class="mpre">(&amp;&amp;!)</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre"> </span><a href="#loc_17_6_17_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_6_17_7&#39;)"><span class="hl_varref"><span class="mpre">l</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | This is a strict version of &amp;&amp;.</span></span><span class="mpre">
+</span><a href="#loc_21_7_21_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_7_21_10&#39;)"><span class="mpre">(&amp;&amp;!)</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">  </span><a name="loc_21_7_21_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_7_21_10&#39;)"><span class="hl_fundecl"><span class="mpre">&amp;&amp;!</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">  = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+</span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">  </span><a href="#loc_21_7_21_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_7_21_10&#39;)"><span class="hl_fundecl"><span class="mpre">&amp;&amp;!</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+</span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre"> </span><a href="#loc_21_7_21_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_7_21_10&#39;)"><span class="hl_fundecl"><span class="mpre">&amp;&amp;!</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">  = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+</span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre"> </span><a href="#loc_21_7_21_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_7_21_10&#39;)"><span class="hl_fundecl"><span class="mpre">&amp;&amp;!</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre"> = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+</span></div></body></html>

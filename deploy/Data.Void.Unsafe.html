@@ -1,0 +1,48 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if !defined(SAFE) &amp;&amp; defined(__GLASGOW_HASKELL__) &amp;&amp; __GLASGOW_HASKELL__ &gt;= 704
+#define UNSAFE
+{-# LANGUAGE Unsafe #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2008-2013 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">----------------------------------------------------------------------------</span></span><span class="mpre">
+module Data.Void.Unsafe
+  ( unsafeVacuous
+  , unsafeVacuousM
+  ) where
+
+import Data.Void
+
+#ifdef UNSAFE
+import Unsafe.Coerce
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | If &#39;Void&#39; is uninhabited than any &#39;Functor&#39; that holds only values of the type &#39;Void&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is holding no values.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This is only safe for valid functors that do not perform GADT-like analysis on the argument.</span></span><span class="mpre">
+</span><a href="#loc_33_1_33_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_33_1_33_14&#39;)"><span class="mpre">unsafeVacuous</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void/Unsafe.hs&quot;, srcSpanStartLine = 31, srcSpanStartColumn = 18, srcSpanEndLine = 31, srcSpanEndColumn = 30}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void/Unsafe.hs&quot;, srcSpanStartLine = 31, srcSpanStartColumn = 28, srcSpanEndLine = 31, srcSpanEndColumn = 30}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/D"><span class="mpre">Functor f =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><a href="Data.Void.html#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Void.html#loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+#ifdef UNSAFE
+</span><a name="loc_33_1_33_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_33_1_33_14&#39;)"><span class="hl_vardecl"><span class="mpre">unsafeVacuous</span></span></a><span class="mpre"> = </span><a href="Unsafe.Coerce.html#loc_59_1_59_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Unsafe.Coerce.html#loc_59_1_59_13&#39;)"><span class="hl_varref"><span class="mpre">unsafeCoerce</span></span></a><span class="mpre">
+#else
+</span><span class="hl_vardecl"><span class="mpre">unsafeVacuous</span></span><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fmap</span></span><span class="mpre"> </span><a href="Data.Void.html#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Void.html#loc_86_1_86_7&#39;)"><span class="hl_varref"><span class="mpre">absurd</span></span></a><span class="mpre">
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-- | If &#39;Void&#39; is uninhabited then any &#39;Monad&#39; that holds values of type &#39;Void&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is holding no values.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This is only safe for valid monads that do not perform GADT-like analysis on the argument.</span></span><span class="mpre">
+</span><a href="#loc_44_1_44_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_15&#39;)"><span class="mpre">unsafeVacuousM</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void/Unsafe.hs&quot;, srcSpanStartLine = 42, srcSpanStartColumn = 19, srcSpanEndLine = 42, srcSpanEndColumn = 29}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/Data/Void/Unsafe.hs&quot;, srcSpanStartLine = 42, srcSpanStartColumn = 27, srcSpanEndLine = 42, srcSpanEndColumn = 29}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/void-0.6.1/src/D"><span class="mpre">Monad m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><a href="Data.Void.html#loc_54_6_54_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Void.html#loc_54_6_54_10&#39;)"><span class="hl_tyconref"><span class="mpre">Void</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+#ifdef UNSAFE
+</span><a name="loc_44_1_44_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_15&#39;)"><span class="hl_vardecl"><span class="mpre">unsafeVacuousM</span></span></a><span class="mpre"> = </span><a href="Unsafe.Coerce.html#loc_59_1_59_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Unsafe.Coerce.html#loc_59_1_59_13&#39;)"><span class="hl_varref"><span class="mpre">unsafeCoerce</span></span></a><span class="mpre">
+#else
+</span><span class="hl_fundecl"><span class="mpre">unsafeVacuousM</span></span><span class="mpre"> </span><a name="loc_46_16_46_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_16_46_17&#39;)"><span class="hl_vardecl"><span class="mpre">m</span></span></a><span class="mpre"> = </span><a href="#loc_46_16_46_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_46_16_46_17&#39;)"><span class="hl_varref"><span class="mpre">m</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">&gt;&gt;=</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Data.Void.html#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Void.html#loc_86_1_86_7&#39;)"><span class="hl_varref"><span class="mpre">absurd</span></span></a><span class="mpre">
+#endif
+</span></div></body></html>

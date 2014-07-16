@@ -1,0 +1,67 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Ix</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;Ix&#39; class is used to map a contiguous subrange of values in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type onto integers.  It is used primarily for array indexing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (see the array package).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Ix
+    (
+    </span><span class="hl_comment"><span class="mpre">-- * The &#39;Ix&#39; class</span></span><span class="mpre">
+        Ix
+          ( range
+          , index
+          , inRange
+          , rangeSize
+          )
+    </span><span class="hl_comment"><span class="mpre">-- Ix instances:</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--  Ix Char</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--  Ix Int</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--  Ix Integer</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--  Ix Bool</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--  Ix Ordering</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--  Ix ()</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--  (Ix a, Ix b) =&gt; Ix (a, b)</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--  ...</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Deriving Instances of &#39;Ix&#39;</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- | Derived instance declarations for the class &#39;Ix&#39; are only possible</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- for enumerations (i.e. datatypes having only nullary constructors)</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- and single-constructor datatypes, including arbitrarily large tuples,</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- whose constituent types are instances of &#39;Ix&#39;. </span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- * For an enumeration, the nullary constructors are assumed to be</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- numbered left-to-right with the indices being 0 to n-1 inclusive. This</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- is the same numbering defined by the &#39;Enum&#39; class. For example, given</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- the datatype: </span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &gt;        data Colour = Red | Orange | Yellow | Green | Blue | Indigo | Violet</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- we would have: </span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &gt;        range   (Yellow,Blue)        ==  [Yellow,Green,Blue]</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &gt;        index   (Yellow,Blue) Green  ==  1</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &gt;        inRange (Yellow,Blue) Red    ==  False</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- * For single-constructor datatypes, the derived instance declarations</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- are as shown for tuples in Figure 1</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- &lt;http://www.haskell.org/onlinelibrary/ix.html#prelude-index&gt;.</span></span><span class="mpre">
+
+    ) where
+
+</span><span class="hl_comment"><span class="mpre">-- import Prelude</span></span><span class="mpre">
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Ix.hs&quot;, srcSpanStartLine = 66, srcSpanStartColumn = 8, srcSpanEndLine = 66, srcSpanEndColumn = 15}, srcInfoPoints = []}) &quot;GHC.Arr&quot;"><span class="mpre">GHC.Arr</span></span><span class="mpre">
+</span></div></body></html>

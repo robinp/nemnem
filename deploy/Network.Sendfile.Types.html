@@ -1,0 +1,11 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">module Network.Sendfile.Types where
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  File range for &#39;sendfile&#39;.</span></span><span class="mpre">
+
+data </span><a name="loc_6_6_6_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_6_6_6_15&#39;)"><span class="hl_tycondecl"><span class="mpre">FileRange</span></span></a><span class="mpre"> = </span><a name="loc_6_18_6_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_6_18_6_28&#39;)"><span class="hl_condecl"><span class="mpre">EntireFile</span></span></a><span class="mpre">
+               | </span><a name="loc_7_18_7_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_7_18_7_28&#39;)"><span class="hl_condecl"><span class="mpre">PartOfFile</span></span></a><span class="mpre"> {
+                   </span><a name="loc_8_20_8_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_8_20_8_31&#39;)"><span class="hl_fielddecl"><span class="mpre">rangeOffset</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Integer</span></span><span class="mpre">
+                 , </span><a name="loc_9_20_9_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_9_20_9_31&#39;)"><span class="hl_fielddecl"><span class="mpre">rangeLength</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Integer</span></span><span class="mpre">
+                 }
+</span></div></body></html>

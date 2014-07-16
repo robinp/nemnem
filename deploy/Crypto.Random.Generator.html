@@ -1,0 +1,51 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Crypto.Random.Generator</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : Good</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Crypto.Random.Generator
+    ( CPRG(..)
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/crypto-random-0.0.7/Crypto/Random/Generator.hs&quot;, srcSpanStartLine = 12, srcSpanStartColumn = 8, srcSpanEndLine = 12, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> (ByteString)
+import Crypto.Random.Entropy (</span><a href="Crypto.Random.Entropy.html#loc_82_6_82_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Random.Entropy.html#loc_82_6_82_17&#39;)"><span class="mpre">EntropyPool</span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | Cryptographic Pseudo Random Generator</span></span><span class="mpre">
+class </span><a name="loc_16_7_16_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_16_7_16_11&#39;)"><span class="hl_classdecl"><span class="mpre">CPRG</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre"> where
+    </span><span class="hl_comment"><span class="mpre">-- | Create a new CPRG using an object of the CryptoGenerator class</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- and with an explicit reference to an EntropyPool.</span></span><span class="mpre">
+    </span><a name="loc_19_5_19_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_19_5_19_15&#39;)"><span class="mpre">cprgCreate</span></a><span class="mpre"> :: </span><a href="Crypto.Random.Entropy.html#loc_82_6_82_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Crypto.Random.Entropy.html#loc_82_6_82_17&#39;)"><span class="hl_tyconref"><span class="mpre">EntropyPool</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- | Give the ability to set a threshold of byte generated that after</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- being exceeded will result in a reseed with some stateful entropy</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- after a call to &#39;cprgGenerate&#39;</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- If this threshold is exceeded during the set operation, the</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- rng should be reseeded here.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- If this value is set to 0, no reseeding will be done and the</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- output will be completely predicable. This is not a recommended</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- level except for debugging and testing purpose.</span></span><span class="mpre">
+    </span><a name="loc_31_5_31_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_31_5_31_27&#39;)"><span class="mpre">cprgSetReseedThreshold</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- | Fork a CPRG into a new independent CPRG.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- As entropy is mixed to generate safely a new generator,</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- 2 calls with the same CPRG will not produce the same output.</span></span><span class="mpre">
+    </span><a name="loc_37_5_37_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_37_5_37_13&#39;)"><span class="mpre">cprgFork</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre">, </span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre">)
+
+    </span><span class="hl_comment"><span class="mpre">-- | Generate a number of bytes using the CPRG.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- Given one CPRG, the generated bytes will always be the same.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- However the returned CPRG might have been reseeded with entropy bits,</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- so 2 calls with the same CPRG will not necessarily result in the same next CPRG.</span></span><span class="mpre">
+    </span><a name="loc_45_5_45_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_45_5_45_17&#39;)"><span class="mpre">cprgGenerate</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">, </span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre">)
+
+    </span><span class="hl_comment"><span class="mpre">-- | Similar to cprgGenerate except that the random data is mixed with pure entropy,</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- so the result is not reproducible after use, but it provides more guarantee,</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- theorically speaking, in term of the randomness generated.</span></span><span class="mpre">
+    </span><a name="loc_50_5_50_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_50_5_50_28&#39;)"><span class="mpre">cprgGenerateWithEntropy</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">, </span><span class="hl_tyvar"><span class="mpre">gen</span></span><span class="mpre">)
+</span></div></body></html>

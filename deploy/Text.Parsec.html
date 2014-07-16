@@ -1,0 +1,37 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.Parsec</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Daan Leijen 1999-2001, (c) Paolo Martini 2007</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the LICENSE file)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  derek.a.elkins@gmail.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Text.Parsec
+    ( module Text.Parsec.Prim
+    , module Text.Parsec.Char
+    , module Text.Parsec.Combinator
+    , module Text.Parsec.String
+    , module Text.Parsec.ByteString
+    , module Text.Parsec.ByteString.Lazy
+    , ParseError
+    , errorPos
+    , SourcePos
+    , SourceName, Line, Column
+    , sourceName, sourceLine, sourceColumn
+    , incSourceLine, incSourceColumn
+    , setSourceLine, setSourceColumn, setSourceName
+    ) where
+
+import Text.Parsec.Pos
+import Text.Parsec.Error
+import Text.Parsec.Prim
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/parsec-3.1.5/Text/Parsec.hs&quot;, srcSpanStartLine = 32, srcSpanStartColumn = 8, srcSpanEndLine = 32, srcSpanEndColumn = 24}, srcInfoPoints = []}) &quot;Text.Parsec.Char&quot;"><span class="mpre">Text.Parsec.Char</span></span><span class="mpre">
+import Text.Parsec.Combinator
+import Text.Parsec.String           hiding ( Parser, GenParser, </span><a href="Text.Parsec.String.html#loc_43_1_43_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.String.html#loc_43_1_43_14&#39;)"><span class="mpre">parseFromFile</span></a><span class="mpre"> )
+import Text.Parsec.ByteString       hiding ( Parser, GenParser, </span><a href="Text.Parsec.ByteString.html#loc_44_1_44_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.ByteString.html#loc_44_1_44_14&#39;)"><span class="mpre">parseFromFile</span></a><span class="mpre"> )
+import Text.Parsec.ByteString.Lazy  hiding ( Parser, GenParser, </span><a href="Text.Parsec.ByteString.Lazy.html#loc_43_1_43_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.ByteString.Lazy.html#loc_43_1_43_14&#39;)"><span class="mpre">parseFromFile</span></a><span class="mpre"> )
+</span></div></body></html>

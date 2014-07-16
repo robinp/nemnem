@@ -1,0 +1,52 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Foreign.Concurrent</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2003</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  ffi@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (requires concurrency)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- FFI datatypes and operations that use or require concurrency (GHC only).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Foreign.Concurrent
+  (
+        </span><span class="hl_comment"><span class="mpre">-- * Concurrency-based &#39;ForeignPtr&#39; operations</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- | These functions generalize their namesakes in the portable</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- &quot;Foreign.ForeignPtr&quot; module by allowing arbitrary &#39;IO&#39; actions</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- as finalizers.  These finalizers necessarily run in a separate</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- thread, cf. /Destructors, Finalizers and Synchronization/,</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- by Hans Boehm, /POPL/, 2003.</span></span><span class="mpre">
+
+        newForeignPtr,
+        addForeignPtrFinalizer,
+  ) where
+
+import GHC.IO         ( IO )
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Foreign/Concurrent.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 8, srcSpanEndLine = 33, srcSpanEndColumn = 15}, srcInfoPoints = []}) &quot;GHC.Ptr&quot;"><span class="mpre">GHC.Ptr</span></span><span class="mpre">        ( Ptr )
+import GHC.ForeignPtr ( </span><a href="GHC.ForeignPtr.html#loc_73_6_73_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.ForeignPtr.html#loc_73_6_73_16&#39;)"><a href="GHC.ForeignPtr.html#loc_73_21_73_31" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.ForeignPtr.html#loc_73_21_73_31&#39;)"><span class="mpre">ForeignPtr</span></a></a><span class="mpre"> )
+import qualified GHC.ForeignPtr
+
+</span><a href="#loc_44_1_44_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_14&#39;)"><span class="mpre">newForeignPtr</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Ptr</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><a href="GHC.ForeignPtr.html#loc_73_6_73_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.ForeignPtr.html#loc_73_6_73_16&#39;)"><span class="hl_tyconref"><span class="mpre">ForeignPtr</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">)
+</span><span class="hl_comment"><span class="mpre">-- ^Turns a plain memory reference into a foreign object by associating</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a finalizer - given by the monadic operation - with the reference.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The finalizer will be executed after the last reference to the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- foreign object is dropped.  There is no guarantee of promptness, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in fact there is no guarantee that the finalizer will eventually</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- run at all.</span></span><span class="mpre">
+</span><a name="loc_44_1_44_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_14&#39;)"><span class="hl_vardecl"><span class="mpre">newForeignPtr</span></span></a><span class="mpre"> = </span><a href="GHC.ForeignPtr.html#loc_131_1_131_18" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.ForeignPtr.html#loc_131_1_131_18&#39;)"><span class="hl_varref"><span class="mpre">GHC.ForeignPtr.newConcForeignPtr</span></span></a><span class="mpre">
+
+</span><a href="#loc_51_1_51_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_51_1_51_23&#39;)"><span class="mpre">addForeignPtrFinalizer</span></a><span class="mpre"> :: </span><a href="GHC.ForeignPtr.html#loc_73_6_73_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.ForeignPtr.html#loc_73_6_73_16&#39;)"><span class="hl_tyconref"><span class="mpre">ForeignPtr</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ^This function adds a finalizer to the given &#39;ForeignPtr&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The finalizer will run after the last reference to the foreign object</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is dropped, but /before/ all previously registered finalizers for the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- same object.</span></span><span class="mpre">
+</span><a name="loc_51_1_51_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_51_1_51_23&#39;)"><span class="hl_vardecl"><span class="mpre">addForeignPtrFinalizer</span></span></a><span class="mpre"> = </span><a href="GHC.ForeignPtr.html#loc_287_1_287_27" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.ForeignPtr.html#loc_287_1_287_27&#39;)"><span class="hl_varref"><span class="mpre">GHC.ForeignPtr.addForeignPtrConcFinalizer</span></span></a><span class="mpre">
+</span></div></body></html>

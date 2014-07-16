@@ -1,0 +1,63 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Unsafe #-}
+{-# LANGUAGE NoImplicitPrelude, MagicHash #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Unsafe.Coerce</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  Malcolm Wallace 2006</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the LICENSE file in the distribution)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The highly unsafe primitive &#39;unsafeCoerce&#39; converts a value from any</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type to any other type.  Needless to say, if you use this function,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- it is your responsibility to ensure that the old and new types have</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- identical internal representations, in order to prevent runtime corruption.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The types for which &#39;unsafeCoerce&#39; is representation-safe may differ</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- from compiler to compiler (and version to version).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   * Documentation for correct usage in GHC will be found under</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     &#39;unsafeCoerce#&#39; in GHC.Base (around which &#39;unsafeCoerce&#39; is just a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     trivial wrapper).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   * In nhc98, the only representation-safe coercions are between Enum</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     types with the same range (e.g. Int, Int32, Char, Word32),</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     or between a newtype and the type that it wraps.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Unsafe.Coerce (unsafeCoerce) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Unsafe/Coerce.hs&quot;, srcSpanStartLine = 34, srcSpanStartColumn = 8, srcSpanEndLine = 34, srcSpanEndColumn = 19}, srcInfoPoints = []}) &quot;GHC.Integer&quot;"><span class="mpre">GHC.Integer</span></span><span class="mpre"> () </span><span class="hl_comment"><span class="mpre">-- for build ordering</span></span><span class="mpre">
+import GHC.Prim (</span><a href="GHC.Prim.html#loc_2912_1_2912_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Prim.html#loc_2912_1_2912_14&#39;)"><span class="mpre">unsafeCoerce#</span></a><span class="mpre">)
+
+</span><a href="#loc_38_1_38_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_1_38_9&#39;)"><span class="mpre">local_id</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_38_1_38_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_1_38_9&#39;)"><span class="hl_fundecl"><span class="mpre">local_id</span></span></a><span class="mpre"> </span><a name="loc_38_10_38_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_10_38_11&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="#loc_38_10_38_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_10_38_11&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- See Note [Mega-hack for coerce]</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- Note [Mega-hack for coerce]
+
+If we just say
+  unsafeCoerce x = unsafeCoerce# x
+then the simple-optimiser that the desugarer runs will eta-reduce to
+  unsafeCoerce :: forall (a:*) (b:*). a -&gt; b
+  unsafeCoerce = unsafeCoerce#
+And that, sadly, is ill-typed because unsafeCoerce# has OpenKind type variables
+And rightly so, because we shouldn&#39;t be calling unsafeCoerce# in a higher
+order way; it has a compulsory unfolding 
+   unsafeCoerce# a b x = x |&gt; UnsafeCo a b
+and we really rely on it being inlined pronto. But the simple-optimiser doesn&#39;t.
+The identity function local_id delays the eta reduction just long enough
+for unsafeCoerce# to get inlined.
+
+Sigh. This is horrible, but then so is unsafeCoerce.
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_59_1_59_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_1_59_13&#39;)"><span class="mpre">unsafeCoerce</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_59_1_59_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_1_59_13&#39;)"><span class="hl_fundecl"><span class="mpre">unsafeCoerce</span></span></a><span class="mpre"> </span><a name="loc_59_14_59_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_14_59_15&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="#loc_38_1_38_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_38_1_38_9&#39;)"><span class="hl_varref"><span class="mpre">local_id</span></span></a><span class="mpre"> (</span><a href="GHC.Prim.html#loc_2912_1_2912_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Prim.html#loc_2912_1_2912_14&#39;)"><span class="hl_varref"><span class="mpre">unsafeCoerce#</span></span></a><span class="mpre"> </span><a href="#loc_59_14_59_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_14_59_15&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">)
+  </span><span class="hl_comment"><span class="mpre">-- See Note [Unsafe coerce magic] in basicTypes/MkId</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- NB: Do not eta-reduce this definition, else the type checker </span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- give usafeCoerce the same (dangerous) type as unsafeCoerce#</span></span><span class="mpre">
+</span></div></body></html>

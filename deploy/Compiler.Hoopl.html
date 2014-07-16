@@ -1,0 +1,39 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Safe #-}
+#endif
+
+module Compiler.Hoopl
+  ( module Compiler.Hoopl.Graph
+  , module Compiler.Hoopl.Block
+  , module Compiler.Hoopl.MkGraph
+  , module Compiler.Hoopl.XUtil
+  , module Compiler.Hoopl.Collections
+  , module Compiler.Hoopl.Checkpoint
+  , module Compiler.Hoopl.Dataflow
+  , module Compiler.Hoopl.Label
+  , module Compiler.Hoopl.Pointed
+  , module Compiler.Hoopl.Combinators
+  , module Compiler.Hoopl.Fuel
+  , module Compiler.Hoopl.Unique
+  , module Compiler.Hoopl.Debug
+  , module Compiler.Hoopl.Show
+  )
+where
+
+import Compiler.Hoopl.Checkpoint
+import Compiler.Hoopl.Collections
+import Compiler.Hoopl.Combinators
+import Compiler.Hoopl.Dataflow hiding ( </span><a href="Compiler.Hoopl.Dataflow.html#loc_116_1_116_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Dataflow.html#loc_116_1_116_7&#39;)"><span class="mpre">wrapFR</span></a><span class="mpre">, </span><a href="Compiler.Hoopl.Dataflow.html#loc_129_1_129_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Dataflow.html#loc_129_1_129_8&#39;)"><span class="mpre">wrapFR2</span></a><span class="mpre">, </span><a href="Compiler.Hoopl.Dataflow.html#loc_353_1_353_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Dataflow.html#loc_353_1_353_7&#39;)"><span class="mpre">wrapBR</span></a><span class="mpre">, </span><a href="Compiler.Hoopl.Dataflow.html#loc_366_1_366_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Dataflow.html#loc_366_1_366_8&#39;)"><span class="mpre">wrapBR2</span></a><span class="mpre">
+                                      )
+import Compiler.Hoopl.Debug
+import Compiler.Hoopl.Fuel hiding (</span><a href="Compiler.Hoopl.Fuel.html#loc_45_1_45_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Fuel.html#loc_45_1_45_9&#39;)"><span class="mpre">withFuel</span></a><span class="mpre">, </span><a href="Compiler.Hoopl.Fuel.html#loc_28_3_28_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Fuel.html#loc_28_3_28_10&#39;)"><span class="mpre">getFuel</span></a><span class="mpre">, </span><a href="Compiler.Hoopl.Fuel.html#loc_29_3_29_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Fuel.html#loc_29_3_29_10&#39;)"><span class="mpre">setFuel</span></a><span class="mpre">, </span><a href="Compiler.Hoopl.Fuel.html#loc_37_3_37_14" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Fuel.html#loc_37_3_37_14&#39;)"><span class="mpre">runWithFuel</span></a><span class="mpre">)
+import Compiler.Hoopl.Block
+import Compiler.Hoopl.Graph hiding (</span><a href="Compiler.Hoopl.Graph.html#loc_175_1_175_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Graph.html#loc_175_1_175_7&#39;)"><span class="mpre">splice</span></a><span class="mpre">, </span><a href="Compiler.Hoopl.Graph.html#loc_199_1_199_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Graph.html#loc_199_1_199_8&#39;)"><span class="mpre">gSplice</span></a><span class="mpre">)
+import Compiler.Hoopl.Label hiding (</span><a href="Compiler.Hoopl.Label.html#loc_29_1_29_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Label.html#loc_29_1_29_12&#39;)"><span class="mpre">uniqueToLbl</span></a><span class="mpre">, </span><a href="Compiler.Hoopl.Label.html#loc_25_25_25_36" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Label.html#loc_25_25_25_36&#39;)"><span class="mpre">lblToUnique</span></a><span class="mpre">)
+import Compiler.Hoopl.MkGraph
+import Compiler.Hoopl.Pointed
+import Compiler.Hoopl.Show
+import Compiler.Hoopl.Unique hiding (</span><a href="Compiler.Hoopl.Unique.html#loc_34_1_34_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Compiler.Hoopl.Unique.html#loc_34_1_34_12&#39;)"><span class="mpre">uniqueToInt</span></a><span class="mpre">)
+import Compiler.Hoopl.XUtil
+</span></div></body></html>

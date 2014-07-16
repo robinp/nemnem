@@ -1,0 +1,126 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Distribution.TestSuite</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  Thomas Tuegel 2010</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  cabal-devel@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module defines the detailed test suite interface which makes it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- possible to expose individual tests to Cabal or other test agents.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Isaac Jones nor the names of other
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+&quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. -}</span></span><span class="mpre">
+
+module Distribution.TestSuite
+    ( TestInstance(..)
+    , OptionDescr(..)
+    , OptionType(..)
+    , Test(..)
+    , Options
+    , Progress(..)
+    , Result(..)
+    , testGroup
+    ) where
+
+data </span><a name="loc_53_6_53_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_6_53_18&#39;)"><span class="hl_tycondecl"><span class="mpre">TestInstance</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">TestInstance</span></span><span class="mpre">
+    { </span><a name="loc_54_7_54_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_54_7_54_10&#39;)"><span class="hl_fielddecl"><span class="mpre">run</span></span></a><span class="mpre">       :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><a href="#loc_114_6_114_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_114_6_114_14&#39;)"><span class="hl_tyconref"><span class="mpre">Progress</span></span></a><span class="mpre">      </span><span class="hl_comment"><span class="mpre">-- ^ Perform the test.</span></span><span class="mpre">
+    , </span><a name="loc_55_7_55_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_7_55_11&#39;)"><span class="hl_fielddecl"><span class="mpre">name</span></span></a><span class="mpre">      :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">           </span><span class="hl_comment"><span class="mpre">-- ^ A name for the test, unique within a</span></span><span class="mpre">
+                                    </span><span class="hl_comment"><span class="mpre">-- test suite.</span></span><span class="mpre">
+    , </span><a name="loc_57_7_57_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_57_7_57_11&#39;)"><span class="hl_fielddecl"><span class="mpre">tags</span></span></a><span class="mpre">      :: [</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">]         </span><span class="hl_comment"><span class="mpre">-- ^ Users can select groups of tests by</span></span><span class="mpre">
+                                    </span><span class="hl_comment"><span class="mpre">-- their tags.</span></span><span class="mpre">
+    , </span><a name="loc_59_7_59_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_7_59_14&#39;)"><span class="hl_fielddecl"><span class="mpre">options</span></span></a><span class="mpre">   :: [</span><a href="#loc_68_6_68_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_6_68_17&#39;)"><span class="hl_tyconref"><span class="mpre">OptionDescr</span></span></a><span class="mpre">]    </span><span class="hl_comment"><span class="mpre">-- ^ Descriptions of the options recognized</span></span><span class="mpre">
+                                    </span><span class="hl_comment"><span class="mpre">-- by this test.</span></span><span class="mpre">
+    , </span><a name="loc_61_7_61_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_7_61_16&#39;)"><span class="hl_fielddecl"><span class="mpre">setOption</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><a href="#loc_53_6_53_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_6_53_18&#39;)"><span class="hl_tyconref"><span class="mpre">TestInstance</span></span></a><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- ^ Try to set the named option to the given value. Returns an error</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- message if the option is not supported or the value could not be</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- correctly parsed; otherwise, a &#39;TestInstance&#39; with the option set to</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- the given value is returned.</span></span><span class="mpre">
+    }
+
+data </span><a name="loc_68_6_68_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_6_68_17&#39;)"><span class="hl_tycondecl"><span class="mpre">OptionDescr</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">OptionDescr</span></span><span class="mpre">
+    { </span><a name="loc_69_7_69_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_69_7_69_17&#39;)"><span class="hl_fielddecl"><span class="mpre">optionName</span></span></a><span class="mpre">        :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+    , </span><a name="loc_70_7_70_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_7_70_24&#39;)"><span class="hl_fielddecl"><span class="mpre">optionDescription</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">       </span><span class="hl_comment"><span class="mpre">-- ^ A human-readable description of the</span></span><span class="mpre">
+                                        </span><span class="hl_comment"><span class="mpre">-- option to guide the user setting it.</span></span><span class="mpre">
+    , </span><a name="loc_72_7_72_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_7_72_17&#39;)"><span class="hl_fielddecl"><span class="mpre">optionType</span></span></a><span class="mpre">        :: </span><a href="#loc_77_6_77_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_6_77_16&#39;)"><span class="hl_tyconref"><span class="mpre">OptionType</span></span></a><span class="mpre">
+    , </span><a name="loc_73_7_73_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_7_73_20&#39;)"><span class="hl_fielddecl"><span class="mpre">optionDefault</span></span></a><span class="mpre">     :: </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+    }
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, srcSpanStartLine = 75, srcSpanStartColumn = 3, srcSpanEndLine = 75, srcSpanEndColumn = 28}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, srcSpanStartLine = 75, srcSpanStartColumn = 3, srcSpanEndLine = 75, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, sr"><span class="mpre">deriving (Eq, Read, Show)</span></span><span class="mpre">
+
+data </span><a name="loc_77_6_77_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_77_6_77_16&#39;)"><span class="hl_tycondecl"><span class="mpre">OptionType</span></span></a><span class="mpre">
+    = </span><span class="hl_condecl"><span class="mpre">OptionFile</span></span><span class="mpre">
+        { </span><a name="loc_79_11_79_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_79_11_79_30&#39;)"><span class="hl_fielddecl"><span class="mpre">optionFileMustExist</span></span></a><span class="mpre">   :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+        , </span><a name="loc_80_11_80_26" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_80_11_80_26&#39;)"><span class="hl_fielddecl"><span class="mpre">optionFileIsDir</span></span></a><span class="mpre">       :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+        , </span><a name="loc_81_11_81_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_11_81_31&#39;)"><span class="hl_fielddecl"><span class="mpre">optionFileExtensions</span></span></a><span class="mpre">  :: [</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">]
+        }
+    | </span><span class="hl_condecl"><span class="mpre">OptionString</span></span><span class="mpre">
+        { </span><a name="loc_84_11_84_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_11_84_32&#39;)"><span class="hl_fielddecl"><span class="mpre">optionStringMultiline</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+        }
+    | </span><span class="hl_condecl"><span class="mpre">OptionNumber</span></span><span class="mpre">
+        { </span><a name="loc_87_11_87_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_11_87_28&#39;)"><span class="hl_fielddecl"><span class="mpre">optionNumberIsInt</span></span></a><span class="mpre">     :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+        , </span><a name="loc_88_11_88_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_88_11_88_29&#39;)"><span class="hl_fielddecl"><span class="mpre">optionNumberBounds</span></span></a><span class="mpre">    :: (</span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">)
+        }
+    | </span><a name="loc_90_7_90_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_90_7_90_17&#39;)"><span class="hl_condecl"><span class="mpre">OptionBool</span></span></a><span class="mpre">
+    | </span><a name="loc_91_7_91_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_7_91_17&#39;)"><span class="hl_condecl"><span class="mpre">OptionEnum</span></span></a><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">]
+    | </span><a name="loc_92_7_92_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_92_7_92_16&#39;)"><span class="hl_condecl"><span class="mpre">OptionSet</span></span></a><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">]
+    | </span><a name="loc_93_7_93_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_93_7_93_20&#39;)"><span class="hl_condecl"><span class="mpre">OptionRngSeed</span></span></a><span class="mpre">
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, srcSpanStartLine = 94, srcSpanStartColumn = 3, srcSpanEndLine = 94, srcSpanEndColumn = 28}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, srcSpanStartLine = 94, srcSpanStartColumn = 3, srcSpanEndLine = 94, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, sr"><span class="mpre">deriving (Eq, Read, Show)</span></span><span class="mpre">
+
+data </span><a name="loc_96_6_96_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_6_96_10&#39;)"><span class="hl_tycondecl"><span class="mpre">Test</span></span></a><span class="mpre">
+    = </span><a name="loc_97_7_97_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_7_97_11&#39;)"><span class="hl_condecl"><span class="mpre">Test</span></span></a><span class="mpre"> </span><a href="#loc_53_6_53_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_53_6_53_18&#39;)"><span class="hl_tyconref"><span class="mpre">TestInstance</span></span></a><span class="mpre">
+    | </span><span class="hl_condecl"><span class="mpre">Group</span></span><span class="mpre">
+        { </span><a name="loc_99_11_99_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_99_11_99_20&#39;)"><span class="hl_fielddecl"><span class="mpre">groupName</span></span></a><span class="mpre">     :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+        , </span><a name="loc_100_11_100_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_100_11_100_23&#39;)"><span class="hl_fielddecl"><span class="mpre">concurrently</span></span></a><span class="mpre">  :: </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+            </span><span class="hl_comment"><span class="mpre">-- ^ If true, then children of this group may be run in parallel.</span></span><span class="mpre">
+            </span><span class="hl_comment"><span class="mpre">-- Note that this setting is not inherited by children. In</span></span><span class="mpre">
+            </span><span class="hl_comment"><span class="mpre">-- particular, consider a group F with &quot;concurrently = False&quot; that</span></span><span class="mpre">
+            </span><span class="hl_comment"><span class="mpre">-- has some children, including a group T with &quot;concurrently =</span></span><span class="mpre">
+            </span><span class="hl_comment"><span class="mpre">-- True&quot;. The children of group T may be run concurrently with each</span></span><span class="mpre">
+            </span><span class="hl_comment"><span class="mpre">-- other, as long as none are run at the same time as any of the</span></span><span class="mpre">
+            </span><span class="hl_comment"><span class="mpre">-- direct children of group F.</span></span><span class="mpre">
+        , </span><a name="loc_108_11_108_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_11_108_21&#39;)"><span class="hl_fielddecl"><span class="mpre">groupTests</span></span></a><span class="mpre">    :: [</span><a href="#loc_96_6_96_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_6_96_10&#39;)"><span class="hl_tyconref"><span class="mpre">Test</span></span></a><span class="mpre">]
+        }
+    | </span><a name="loc_110_7_110_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_7_110_19&#39;)"><span class="hl_condecl"><span class="mpre">ExtraOptions</span></span></a><span class="mpre"> [</span><a href="#loc_68_6_68_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_68_6_68_17&#39;)"><span class="hl_tyconref"><span class="mpre">OptionDescr</span></span></a><span class="mpre">] </span><a href="#loc_96_6_96_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_6_96_10&#39;)"><span class="hl_tyconref"><span class="mpre">Test</span></span></a><span class="mpre">
+
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, srcSpanStartLine = 112, srcSpanStartColumn = 1, srcSpanEndLine = 112, srcSpanEndColumn = 34}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, srcSpanStartLine = 112, srcSpanStartColumn = 1, srcSpanEndLine = 112, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;,"><span class="mpre">type Options = [(String, String)]</span></span><span class="mpre">
+
+data </span><a name="loc_114_6_114_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_114_6_114_14&#39;)"><span class="hl_tycondecl"><span class="mpre">Progress</span></span></a><span class="mpre"> = </span><a name="loc_114_17_114_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_114_17_114_25&#39;)"><span class="hl_condecl"><span class="mpre">Finished</span></span></a><span class="mpre"> </span><a href="#loc_117_6_117_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_6_117_12&#39;)"><span class="hl_tyconref"><span class="mpre">Result</span></span></a><span class="mpre">
+              | </span><a name="loc_115_17_115_25" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_17_115_25&#39;)"><span class="hl_condecl"><span class="mpre">Progress</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><a href="#loc_114_6_114_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_114_6_114_14&#39;)"><span class="hl_tyconref"><span class="mpre">Progress</span></span></a><span class="mpre">)
+
+data </span><a name="loc_117_6_117_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_6_117_12&#39;)"><span class="hl_tycondecl"><span class="mpre">Result</span></span></a><span class="mpre"> = </span><a name="loc_117_15_117_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_15_117_19&#39;)"><span class="hl_condecl"><span class="mpre">Pass</span></span></a><span class="mpre">
+            | </span><a name="loc_118_15_118_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_118_15_118_19&#39;)"><span class="hl_condecl"><span class="mpre">Fail</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+            | </span><a name="loc_119_15_119_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_119_15_119_20&#39;)"><span class="hl_condecl"><span class="mpre">Error</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, srcSpanStartLine = 120, srcSpanStartColumn = 3, srcSpanEndLine = 120, srcSpanEndColumn = 28}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, srcSpanStartLine = 120, srcSpanStartColumn = 3, srcSpanEndLine = 120, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;"><span class="mpre">deriving (Eq, Read, Show)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Create a named group of tests, which are assumed to be safe to run in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- parallel.</span></span><span class="mpre">
+</span><a href="#loc_125_1_125_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_10&#39;)"><span class="mpre">testGroup</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; [</span><a href="#loc_96_6_96_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_6_96_10&#39;)"><span class="hl_tyconref"><span class="mpre">Test</span></span></a><span class="mpre">] -&gt; </span><a href="#loc_96_6_96_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_96_6_96_10&#39;)"><span class="hl_tyconref"><span class="mpre">Test</span></span></a><span class="mpre">
+</span><a name="loc_125_1_125_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_10&#39;)"><span class="hl_fundecl"><span class="mpre">testGroup</span></span></a><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">n</span></span><span class="mpre"> </span><span class="hl_vardecl"><span class="mpre">ts</span></span><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, srcSpanStartLine = 125, srcSpanStartColumn = 18, srcSpanEndLine = 125, srcSpanEndColumn = 79}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite.hs&quot;, srcSpanStartLine = 125, srcSpanStartColumn = 24, srcSpanEndLine = 125, srcSpanEndColumn = 25},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/Cabal-1.18.1.3/Distribution/TestSuite."><span class="mpre">Group { groupName = n, concurrently = True, groupTests = ts }</span></span><span class="mpre">
+</span></div></body></html>

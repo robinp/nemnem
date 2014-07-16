@@ -1,0 +1,53 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Array.IArray</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (uses Data.Array.Base)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Immutable arrays, with an overloaded interface.  For array types which</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- can be used with this interface, see the &#39;Array&#39; type exported by this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- module and the &quot;Data.Array.Unboxed&quot; module. Other packages, such as</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- diffarray, also provide arrays using this interface.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Array.IArray (
+    </span><span class="hl_comment"><span class="mpre">-- * Array classes</span></span><span class="mpre">
+    IArray,     </span><span class="hl_comment"><span class="mpre">-- :: (* -&gt; * -&gt; *) -&gt; * -&gt; class</span></span><span class="mpre">
+
+    module Data.Ix,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Immutable non-strict (boxed) arrays</span></span><span class="mpre">
+    Array,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Array construction</span></span><span class="mpre">
+    array,      </span><span class="hl_comment"><span class="mpre">-- :: (IArray a e, Ix i) =&gt; (i,i) -&gt; [(i, e)] -&gt; a i e</span></span><span class="mpre">
+    listArray,  </span><span class="hl_comment"><span class="mpre">-- :: (IArray a e, Ix i) =&gt; (i,i) -&gt; [e] -&gt; a i e</span></span><span class="mpre">
+    accumArray, </span><span class="hl_comment"><span class="mpre">-- :: (IArray a e, Ix i) =&gt; (e -&gt; e&#39; -&gt; e) -&gt; e -&gt; (i,i) -&gt; [(i, e&#39;)] -&gt; a i e</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Accessing arrays</span></span><span class="mpre">
+    (!),        </span><span class="hl_comment"><span class="mpre">-- :: (IArray a e, Ix i) =&gt; a i e -&gt; i -&gt; e</span></span><span class="mpre">
+    bounds,     </span><span class="hl_comment"><span class="mpre">-- :: (HasBounds a, Ix i) =&gt; a i e -&gt; (i,i)</span></span><span class="mpre">
+    indices,    </span><span class="hl_comment"><span class="mpre">-- :: (HasBounds a, Ix i) =&gt; a i e -&gt; [i]</span></span><span class="mpre">
+    elems,      </span><span class="hl_comment"><span class="mpre">-- :: (IArray a e, Ix i) =&gt; a i e -&gt; [e]</span></span><span class="mpre">
+    assocs,     </span><span class="hl_comment"><span class="mpre">-- :: (IArray a e, Ix i) =&gt; a i e -&gt; [(i, e)]</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Incremental array updates</span></span><span class="mpre">
+    (//),       </span><span class="hl_comment"><span class="mpre">-- :: (IArray a e, Ix i) =&gt; a i e -&gt; [(i, e)] -&gt; a i e</span></span><span class="mpre">
+    accum,      </span><span class="hl_comment"><span class="mpre">-- :: (IArray a e, Ix i) =&gt; (e -&gt; e&#39; -&gt; e) -&gt; a i e -&gt; [(i, e&#39;)] -&gt; a i e</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Derived arrays</span></span><span class="mpre">
+    amap,       </span><span class="hl_comment"><span class="mpre">-- :: (IArray a e&#39;, IArray a e, Ix i) =&gt; (e&#39; -&gt; e) -&gt; a i e&#39; -&gt; a i e</span></span><span class="mpre">
+    ixmap,      </span><span class="hl_comment"><span class="mpre">-- :: (IArray a e, Ix i, Ix j) =&gt; (i,i) -&gt; (i -&gt; j) -&gt; a j e -&gt; a i e</span></span><span class="mpre">
+  ) where
+
+import Data.Ix
+import Data.Array (Array)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/array-0.5.0.0/Data/Array/IArray.hs&quot;, srcSpanStartLine = 51, srcSpanStartColumn = 8, srcSpanEndLine = 51, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;Data.Array.Base&quot;"><span class="mpre">Data.Array.Base</span></span><span class="mpre">
+
+</span></div></body></html>

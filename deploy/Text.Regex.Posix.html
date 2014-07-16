@@ -1,0 +1,74 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{- OPTIONS_GHC -fno-warn-unused-imports -}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.Regex.Posix</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Chris Kuklewicz 2006</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org, textregexlazy@personal.mightyreason.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (regex-base needs MPTC+FD)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module that provides the Regex backend that wraps the c posix regex api.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This is the backend being used by the regex-compat package to replace</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Text.Regex</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &quot;Text.Regex.Posix&quot; module provides a backend for regular</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- expressions. If you import this along with other backends, then</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- you should do so with qualified imports, perhaps renamed for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- convenience.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If the &#39;=~&#39; and &#39;=~~&#39; functions are too high level, you can use the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- compile, regexec, and execute functions from importing either</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;Text.Regex.Posix.String&quot; or &quot;Text.Regex.Posix.ByteString&quot;.  If you</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- want to use a low-level &#39;Foreign.C.CString&#39; interface to the library,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- then import &quot;Text.Regex.Posix.Wrap&quot; and use the wrap* functions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module is only efficient with &#39;Data.ByteString.ByteString&#39; only</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- if it is null terminated, i.e. @(Bytestring.last bs)==0@.  Otherwise the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- library must make a temporary copy of the &#39;Data.ByteString.ByteString&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and append the NUL byte.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A &#39;String&#39; will be converted into a &#39;Foreign.C.CString&#39; for processing.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Doing this repeatedly will be very inefficient.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that the posix library works with single byte characters, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- does not understand Unicode.  If you need Unicode support you will</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- have to use a different backend.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- When offsets are reported for subexpression captures, a subexpression</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that did not match anything (as opposed to matching an empty string)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- will have its offset set to the &#39;unusedRegOffset&#39; value, which is (-1).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Benchmarking shows the default regex library on many platforms is very</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- inefficient.  You might increase performace by an order of magnitude</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- by obtaining libpcre and regex-pcre or libtre and regex-tre.  If you</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- do not need the captured substrings then you can also get great</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- performance from regex-dfa.  If you do need the capture substrings</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- then you may be able to use regex-parsec to improve performance.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Text.Regex.Posix(getVersion_Text_Regex_Posix
+ ,module Text.Regex.Base
+  </span><span class="hl_comment"><span class="mpre">-- ** Wrap, for &#39;=~&#39; and &#39;=~~&#39;, types and constants</span></span><span class="mpre">
+ ,module Text.Regex.Posix.Wrap) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-posix-0.95.2/Text/Regex/Posix.hs&quot;, srcSpanStartLine = 57, srcSpanStartColumn = 8, srcSpanEndLine = 57, srcSpanEndColumn = 29}, srcInfoPoints = []}) &quot;Text.Regex.Posix.Wrap&quot;"><span class="mpre">Text.Regex.Posix.Wrap</span></span><span class="mpre">(Regex, CompOption(CompOption),
+  ExecOption(ExecOption), (=~), (=~~),
+  unusedRegOffset,
+  compBlank, compExtended, compIgnoreCase, compNoSub, compNewline,
+  execBlank, execNotBOL, execNotEOL)
+import Text.Regex.Posix.String()
+import Text.Regex.Posix.Sequence()
+import Text.Regex.Posix.ByteString()
+import Text.Regex.Posix.ByteString.Lazy()
+import Data.Version(</span><a href="Data.Version.html#loc_68_6_68_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_68_6_68_13&#39;)"><span class="mpre">Version</span></a><span class="mpre">(..))
+import Text.Regex.Base
+
+</span><a href="#loc_70_1_70_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_1_70_28&#39;)"><span class="mpre">getVersion_Text_Regex_Posix</span></a><span class="mpre"> :: </span><a href="Data.Version.html#loc_68_6_68_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Version.html#loc_68_6_68_13&#39;)"><span class="hl_tyconref"><span class="mpre">Version</span></span></a><span class="mpre">
+</span><a name="loc_70_1_70_28" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_70_1_70_28&#39;)"><span class="hl_vardecl"><span class="mpre">getVersion_Text_Regex_Posix</span></span></a><span class="mpre"> =
+  </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-posix-0.95.2/Text/Regex/Posix.hs&quot;, srcSpanStartLine = 71, srcSpanStartColumn = 3, srcSpanEndLine = 73, srcSpanEndColumn = 12}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-posix-0.95.2/Text/Regex/Posix.hs&quot;, srcSpanStartLine = 71, srcSpanStartColumn = 11, srcSpanEndLine = 71, srcSpanEndColumn = 12},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/regex-posix-0.95.2/Text/Regex/Posix.hs&quot;, srcSpa"><span class="mpre">Version { versionBranch = [0,94,4]  </span><span class="hl_comment"><span class="mpre">-- Keep in sync with regex-posix.cabal</span></span><span class="mpre">
+          , versionTags = [&quot;unstable&quot;]
+          }</span></span><span class="mpre">
+</span></div></body></html>

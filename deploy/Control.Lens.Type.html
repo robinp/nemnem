@@ -1,0 +1,634 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE KindSignatures #-}
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Lens.Type</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2012-14 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  Rank2Types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module exports the majority of the types that need to appear in user</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- signatures or in documentation when talking about lenses. The remaining types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for consuming lenses are distributed across various modules in the hierarchy.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+module Control.Lens.Type
+  (
+  </span><span class="hl_comment"><span class="mpre">-- * Other</span></span><span class="mpre">
+    Equality, Equality&#39;, As
+  , Iso, Iso&#39;
+  , Prism , Prism&#39;
+  </span><span class="hl_comment"><span class="mpre">-- * Lenses, Folds and Traversals</span></span><span class="mpre">
+  , Lens, Lens&#39;
+  , Traversal, Traversal&#39;
+  , Traversal1, Traversal1&#39;
+  , Setter, Setter&#39;
+  , Getter, Fold
+  , Fold1
+  , Action, MonadicFold, RelevantMonadicFold
+  </span><span class="hl_comment"><span class="mpre">-- * Indexed</span></span><span class="mpre">
+  , IndexedLens, IndexedLens&#39;
+  , IndexedTraversal, IndexedTraversal&#39;
+  , IndexedTraversal1, IndexedTraversal1&#39;
+  , IndexedSetter, IndexedSetter&#39;
+  , IndexedGetter, IndexedFold
+  , IndexedFold1
+  , IndexedAction, IndexedMonadicFold
+  , IndexedRelevantMonadicFold
+  </span><span class="hl_comment"><span class="mpre">-- * Index-Preserving</span></span><span class="mpre">
+  , IndexPreservingLens, IndexPreservingLens&#39;
+  , IndexPreservingTraversal, IndexPreservingTraversal&#39;
+  , IndexPreservingTraversal1, IndexPreservingTraversal1&#39;
+  , IndexPreservingSetter, IndexPreservingSetter&#39;
+  , IndexPreservingGetter, IndexPreservingFold
+  , IndexPreservingFold1
+  , IndexPreservingAction, IndexPreservingMonadicFold
+  , IndexPreservingRelevantMonadicFold
+  </span><span class="hl_comment"><span class="mpre">-- * Common</span></span><span class="mpre">
+  , Simple
+  , LensLike, LensLike&#39;
+  , Over, Over&#39;
+  , IndexedLensLike, IndexedLensLike&#39;
+  , Optical, Optical&#39;
+  , Optic, Optic&#39;
+  ) where
+
+import Control.Applicative
+import Control.Lens.Internal.Action
+import Control.Lens.Internal.Setter
+import Control.Lens.Internal.Indexed
+import Data.Functor.Contravariant
+import Data.Functor.Apply
+import Data.Profunctor
+
+</span><span class="hl_comment"><span class="mpre">-- $setup</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; :set -XNoOverloadedStrings</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; import Control.Lens</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; import Debug.SimpleReflect.Expr</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; import Debug.SimpleReflect.Vars as Vars hiding (f,g,h)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; let f :: Expr -&gt; Expr; f = Debug.SimpleReflect.Vars.f</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; let g :: Expr -&gt; Expr; g = Debug.SimpleReflect.Vars.g</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; let h :: Expr -&gt; Expr -&gt; Expr; h = Debug.SimpleReflect.Vars.h</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; let getter :: Expr -&gt; Expr; getter = fun &quot;getter&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; let setter :: Expr -&gt; Expr -&gt; Expr; setter = fun &quot;setter&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; import Numeric.Natural</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; let nat :: Prism&#39; Integer Natural; nat = prism toInteger $ \i -&gt; if i &lt; 0 then Left i else Right (fromInteger i)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Lenses</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;Lens&#39; is actually a lens family as described in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;http://comonad.com/reader/2012/mirrored-lenses/&gt;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- With great power comes great responsibility and a &#39;Lens&#39; is subject to the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- three common sense &#39;Lens&#39; laws:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 1) You get back what you put in:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Getter.view&#39; l (&#39;Control.Lens.Setter.set&#39; l v s)  ≡ v</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 2) Putting back what you got doesn&#39;t change anything:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Setter.set&#39; l (&#39;Control.Lens.Getter.view&#39; l s) s  ≡ s</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 3) Setting twice is the same as setting once:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Setter.set&#39; l v&#39; (&#39;Control.Lens.Setter.set&#39; l v s) ≡ &#39;Control.Lens.Setter.set&#39; l v&#39; s</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- These laws are strong enough that the 4 type parameters of a &#39;Lens&#39; cannot</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- vary fully independently. For more on how they interact, read the \&quot;Why is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- it a Lens Family?\&quot; section of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;http://comonad.com/reader/2012/mirrored-lenses/&gt;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- There are some emergent properties of these laws:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 1) @&#39;Control.Lens.Setter.set&#39; l s@ must be injective for every @s@ This is a consequence of law #1</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 2) @&#39;Control.Lens.Setter.set&#39; l@ must be surjective, because of law #2, which indicates that it is possible to obtain any &#39;v&#39; from some &#39;s&#39; such that @&#39;Control.Lens.Setter.set&#39; s v = s@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 3) Given just the first two laws you can prove a weaker form of law #3 where the values @v@ that you are setting match:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Setter.set&#39; l v (&#39;Control.Lens.Setter.set&#39; l v s) ≡ &#39;Control.Lens.Setter.set&#39; l v s</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Every &#39;Lens&#39; can be used directly as a &#39;Control.Lens.Setter.Setter&#39; or &#39;Traversal&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can also use a &#39;Lens&#39; for &#39;Control.Lens.Getter.Getting&#39; as if it were a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Fold&#39; or &#39;Getter&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Since every &#39;Lens&#39; is a valid &#39;Traversal&#39;, the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Traversal&#39; laws are required of any &#39;Lens&#39; you create:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- l &#39;pure&#39; ≡ &#39;pure&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;fmap&#39; (l f) &#39;.&#39; l g ≡ &#39;Data.Functor.Compose.getCompose&#39; &#39;.&#39; l (&#39;Data.Functor.Compose.Compose&#39; &#39;.&#39; &#39;fmap&#39; f &#39;.&#39; g)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Lens&#39; s t a b = forall f. &#39;Functor&#39; f =&gt; &#39;LensLike&#39; f s t a b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 145, srcSpanStartColumn = 1, srcSpanEndLine = 145, srcSpanEndColumn = 66}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 145, srcSpanStartColumn = 1, srcSpanEndLine = 145, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 1"><span class="mpre">type Lens s t a b = forall f. Functor f =&gt; (a -&gt; f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Lens&#39;&#39; = &#39;Simple&#39; &#39;Lens&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 150, srcSpanStartColumn = 1, srcSpanEndLine = 150, srcSpanEndColumn = 30}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 150, srcSpanStartColumn = 1, srcSpanEndLine = 150, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 1"><span class="mpre">type Lens&#39; s a = Lens s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Every &#39;IndexedLens&#39; is a valid &#39;Lens&#39; and a valid &#39;Control.Lens.Traversal.IndexedTraversal&#39;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 153, srcSpanStartColumn = 1, srcSpanEndLine = 153, srcSpanEndColumn = 93}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 153, srcSpanStartColumn = 1, srcSpanEndLine = 153, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 1"><span class="mpre">type IndexedLens i s t a b = forall f p. (Indexable i p, Functor f) =&gt; p a (f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;IndexedLens&#39;&#39; i = &#39;Simple&#39; (&#39;IndexedLens&#39; i)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 158, srcSpanStartColumn = 1, srcSpanEndLine = 158, srcSpanEndColumn = 48}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 158, srcSpanStartColumn = 1, srcSpanEndLine = 158, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 1"><span class="mpre">type IndexedLens&#39; i s a = IndexedLens i s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;IndexPreservingLens&#39; leaves any index it is composed with alone.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 161, srcSpanStartColumn = 1, srcSpanEndLine = 161, srcSpanEndColumn = 98}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 161, srcSpanStartColumn = 1, srcSpanEndLine = 161, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 1"><span class="mpre">type IndexPreservingLens s t a b = forall p f. (Conjoined p, Functor f) =&gt; p a (f b) -&gt; p s (f t)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;IndexPreservingLens&#39;&#39; = &#39;Simple&#39; &#39;IndexPreservingLens&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 166, srcSpanStartColumn = 1, srcSpanEndLine = 166, srcSpanEndColumn = 60}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 166, srcSpanStartColumn = 1, srcSpanEndLine = 166, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 1"><span class="mpre">type IndexPreservingLens&#39; s a = IndexPreservingLens s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Traversals</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;Traversal&#39; can be used directly as a &#39;Control.Lens.Setter.Setter&#39; or a &#39;Fold&#39; (but not as a &#39;Lens&#39;) and provides</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the ability to both read and update multiple fields, subject to some relatively weak &#39;Traversal&#39; laws.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- These have also been known as multilenses, but they have the signature and spirit of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.Traversable.traverse&#39; :: &#39;Data.Traversable.Traversable&#39; f =&gt; &#39;Traversal&#39; (f a) (f b) a b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and the more evocative name suggests their application.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Most of the time the &#39;Traversal&#39; you will want to use is just &#39;Data.Traversable.traverse&#39;, but you can also pass any</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Lens&#39; or &#39;Iso&#39; as a &#39;Traversal&#39;, and composition of a &#39;Traversal&#39; (or &#39;Lens&#39; or &#39;Iso&#39;) with a &#39;Traversal&#39; (or &#39;Lens&#39; or &#39;Iso&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- using (&#39;.&#39;) forms a valid &#39;Traversal&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The laws for a &#39;Traversal&#39; @t@ follow from the laws for &#39;Data.Traversable.Traversable&#39; as stated in \&quot;The Essence of the Iterator Pattern\&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- t &#39;pure&#39; ≡ &#39;pure&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;fmap&#39; (t f) &#39;.&#39; t g ≡ &#39;Data.Functor.Compose.getCompose&#39; &#39;.&#39; t (&#39;Data.Functor.Compose.Compose&#39; &#39;.&#39; &#39;fmap&#39; f &#39;.&#39; g)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- One consequence of this requirement is that a &#39;Traversal&#39; needs to leave the same number of elements as a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- candidate for subsequent &#39;Traversal&#39; that it started with. Another testament to the strength of these laws</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is that the caveat expressed in section 5.5 of the \&quot;Essence of the Iterator Pattern\&quot; about exotic</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.Traversable.Traversable&#39; instances that &#39;Data.Traversable.traverse&#39; the same entry multiple times was actually already ruled out by the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- second law in that same paper!</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 199, srcSpanStartColumn = 1, srcSpanEndLine = 199, srcSpanEndColumn = 75}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 199, srcSpanStartColumn = 1, srcSpanEndLine = 199, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 1"><span class="mpre">type Traversal s t a b = forall f. Applicative f =&gt; (a -&gt; f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Traversal&#39;&#39; = &#39;Simple&#39; &#39;Traversal&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 204, srcSpanStartColumn = 1, srcSpanEndLine = 204, srcSpanEndColumn = 40}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 204, srcSpanStartColumn = 1, srcSpanEndLine = 204, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 2"><span class="mpre">type Traversal&#39; s a = Traversal s s a a</span></span><span class="mpre">
+
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 206, srcSpanStartColumn = 1, srcSpanEndLine = 206, srcSpanEndColumn = 70}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 206, srcSpanStartColumn = 1, srcSpanEndLine = 206, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 2"><span class="mpre">type Traversal1 s t a b = forall f. Apply f =&gt; (a -&gt; f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 207, srcSpanStartColumn = 1, srcSpanEndLine = 207, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 207, srcSpanStartColumn = 1, srcSpanEndLine = 207, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 2"><span class="mpre">type Traversal1&#39; s a = Traversal1 s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Every &#39;IndexedTraversal&#39; is a valid &#39;Control.Lens.Traversal.Traversal&#39; or</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Fold.IndexedFold&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;Indexed&#39; constraint is used to allow an &#39;IndexedTraversal&#39; to be used</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- directly as a &#39;Control.Lens.Traversal.Traversal&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;Control.Lens.Traversal.Traversal&#39; laws are still required to hold.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In addition, the index @i@ should satisfy the requirement that it stays</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- unchanged even when modifying the value @a@, otherwise traversals like</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;indices&#39; break the &#39;Traversal&#39; laws.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 220, srcSpanStartColumn = 1, srcSpanEndLine = 220, srcSpanEndColumn = 102}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 220, srcSpanStartColumn = 1, srcSpanEndLine = 220, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexedTraversal i s t a b = forall p f. (Indexable i p, Applicative f) =&gt; p a (f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;IndexedTraversal&#39;&#39; i = &#39;Simple&#39; (&#39;IndexedTraversal&#39; i)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 225, srcSpanStartColumn = 1, srcSpanEndLine = 225, srcSpanEndColumn = 58}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 225, srcSpanStartColumn = 1, srcSpanEndLine = 225, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 2"><span class="mpre">type IndexedTraversal&#39; i s a = IndexedTraversal i s s a a</span></span><span class="mpre">
+
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 227, srcSpanStartColumn = 1, srcSpanEndLine = 227, srcSpanEndColumn = 97}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 227, srcSpanStartColumn = 1, srcSpanEndLine = 227, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 2"><span class="mpre">type IndexedTraversal1 i s t a b = forall p f. (Indexable i p, Apply f) =&gt; p a (f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 228, srcSpanStartColumn = 1, srcSpanEndLine = 228, srcSpanEndColumn = 60}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 228, srcSpanStartColumn = 1, srcSpanEndLine = 228, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 2"><span class="mpre">type IndexedTraversal1&#39; i s a = IndexedTraversal1 i s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;IndexPreservingLens&#39; leaves any index it is composed with alone.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 231, srcSpanStartColumn = 1, srcSpanEndLine = 231, srcSpanEndColumn = 107}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 231, srcSpanStartColumn = 1, srcSpanEndLine = 231, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexPreservingTraversal s t a b = forall p f. (Conjoined p, Applicative f) =&gt; p a (f b) -&gt; p s (f t)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;IndexPreservingTraversal&#39;&#39; = &#39;Simple&#39; &#39;IndexPreservingTraversal&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 236, srcSpanStartColumn = 1, srcSpanEndLine = 236, srcSpanEndColumn = 70}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 236, srcSpanStartColumn = 1, srcSpanEndLine = 236, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 2"><span class="mpre">type IndexPreservingTraversal&#39; s a = IndexPreservingTraversal s s a a</span></span><span class="mpre">
+
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 238, srcSpanStartColumn = 1, srcSpanEndLine = 238, srcSpanEndColumn = 102}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 238, srcSpanStartColumn = 1, srcSpanEndLine = 238, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexPreservingTraversal1 s t a b = forall p f. (Conjoined p, Apply f) =&gt; p a (f b) -&gt; p s (f t)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 239, srcSpanStartColumn = 1, srcSpanEndLine = 239, srcSpanEndColumn = 72}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 239, srcSpanStartColumn = 1, srcSpanEndLine = 239, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 2"><span class="mpre">type IndexPreservingTraversal1&#39; s a = IndexPreservingTraversal1 s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Setters</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The only &#39;LensLike&#39; law that can apply to a &#39;Setter&#39; @l@ is that</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Setter.set&#39; l y (&#39;Control.Lens.Setter.set&#39; l x a) ≡ &#39;Control.Lens.Setter.set&#39; l y a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can&#39;t &#39;Control.Lens.Getter.view&#39; a &#39;Setter&#39; in general, so the other two laws are irrelevant.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- However, two &#39;Functor&#39; laws apply to a &#39;Setter&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Setter.over&#39; l &#39;id&#39; ≡ &#39;id&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Setter.over&#39; l f &#39;.&#39; &#39;Control.Lens.Setter.over&#39; l g ≡ &#39;Control.Lens.Setter.over&#39; l (f &#39;.&#39; g)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- These can be stated more directly:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- l &#39;pure&#39; ≡ &#39;pure&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- l f &#39;.&#39; &#39;untainted&#39; &#39;.&#39; l g ≡ l (f &#39;.&#39; &#39;untainted&#39; &#39;.&#39; g)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can compose a &#39;Setter&#39; with a &#39;Lens&#39; or a &#39;Traversal&#39; using (&#39;.&#39;) from the @Prelude@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and the result is always only a &#39;Setter&#39; and nothing more.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; over traverse f [a,b,c,d]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- [f a,f b,f c,f d]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; over _1 f (a,b)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (f a,b)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; over (traverse._1) f [(a,b),(c,d)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- [(f a,b),(f c,d)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; over both f (a,b)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (f a,f b)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; over (traverse.both) f [(a,b),(c,d)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- [(f a,f b),(f c,f d)]</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 284, srcSpanStartColumn = 1, srcSpanEndLine = 284, srcSpanEndColumn = 69}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 284, srcSpanStartColumn = 1, srcSpanEndLine = 284, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 2"><span class="mpre">type Setter s t a b = forall f. Settable f =&gt; (a -&gt; f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;Setter&#39;&#39; is just a &#39;Setter&#39; that doesn&#39;t change the types.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- These are particularly common when talking about monomorphic containers. /e.g./</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;sets&#39; Data.Text.map :: &#39;Setter&#39;&#39; &#39;Data.Text.Internal.Text&#39; &#39;Char&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Setter&#39;&#39; = &#39;Setter&#39;&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 297, srcSpanStartColumn = 1, srcSpanEndLine = 297, srcSpanEndColumn = 34}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 297, srcSpanStartColumn = 1, srcSpanEndLine = 297, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 2"><span class="mpre">type Setter&#39; s a = Setter s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Every &#39;IndexedSetter&#39; is a valid &#39;Setter&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;Setter&#39; laws are still required to hold.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 302, srcSpanStartColumn = 1, srcSpanEndLine = 303, srcSpanEndColumn = 55}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 302, srcSpanStartColumn = 1, srcSpanEndLine = 302, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 3"><span class="mpre">type IndexedSetter i s t a b = forall f p.
+  (Indexable i p, Settable f) =&gt; p a (f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;IndexedSetter&#39;&#39; i = &#39;Simple&#39; (&#39;IndexedSetter&#39; i)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 308, srcSpanStartColumn = 1, srcSpanEndLine = 308, srcSpanEndColumn = 52}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 308, srcSpanStartColumn = 1, srcSpanEndLine = 308, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 3"><span class="mpre">type IndexedSetter&#39; i s a = IndexedSetter i s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;IndexPreservingSetter&#39; can be composed with a &#39;IndexedSetter&#39;, &#39;IndexedTraversal&#39; or &#39;IndexedLens&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and leaves the index intact, yielding an &#39;IndexedSetter&#39;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 312, srcSpanStartColumn = 1, srcSpanEndLine = 312, srcSpanEndColumn = 101}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 312, srcSpanStartColumn = 1, srcSpanEndLine = 312, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexPreservingSetter s t a b = forall p f. (Conjoined p, Settable f) =&gt; p a (f b) -&gt; p s (f t)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;IndexedPreservingSetter&#39;&#39; i = &#39;Simple&#39; &#39;IndexedPreservingSetter&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 317, srcSpanStartColumn = 1, srcSpanEndLine = 317, srcSpanEndColumn = 64}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 317, srcSpanStartColumn = 1, srcSpanEndLine = 317, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 3"><span class="mpre">type IndexPreservingSetter&#39; s a = IndexPreservingSetter s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Isomorphisms</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Isomorphism families can be composed with another &#39;Lens&#39; using (&#39;.&#39;) and &#39;id&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note: Composition with an &#39;Iso&#39; is index- and measure- preserving.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 326, srcSpanStartColumn = 1, srcSpanEndLine = 326, srcSpanEndColumn = 83}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 326, srcSpanStartColumn = 1, srcSpanEndLine = 326, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 3"><span class="mpre">type Iso s t a b = forall p f. (Profunctor p, Functor f) =&gt; p a (f b) -&gt; p s (f t)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Iso&#39;&#39; = &#39;Control.Lens.Type.Simple&#39; &#39;Iso&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 331, srcSpanStartColumn = 1, srcSpanEndLine = 331, srcSpanEndColumn = 28}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 331, srcSpanStartColumn = 1, srcSpanEndLine = 331, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 3"><span class="mpre">type Iso&#39; s a = Iso s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Prism Internals</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;Prism&#39; @l@ is a &#39;Traversal&#39; that can also be turned</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- around with &#39;Control.Lens.Review.re&#39; to obtain a &#39;Getter&#39; in the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- opposite direction.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- There are two laws that a &#39;Prism&#39; should satisfy:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- First, if I &#39;Control.Lens.Review.re&#39; or &#39;Control.Lens.Prism.review&#39; a value with a &#39;Prism&#39; and then &#39;Control.Lens.Fold.preview&#39; or use (&#39;Control.Lens.Fold.^?&#39;), I will get it back:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Fold.preview&#39; l (&#39;Control.Lens.Prism.review&#39; l b) ≡ &#39;Just&#39; b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Second, if you can extract a value @a@ using a &#39;Prism&#39; @l@ from a value @s@, then the value @s@ is completely described by @l@ and @a@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If @&#39;Control.Lens.Fold.preview&#39; l s ≡ &#39;Just&#39; a@ then @&#39;Control.Lens.Prism.review&#39; l a ≡ s@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- These two laws imply that the &#39;Traversal&#39; laws hold for every &#39;Prism&#39; and that we &#39;Data.Traversable.traverse&#39; at most 1 element:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Fold.lengthOf&#39; l x &#39;&lt;=&#39; 1</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- It may help to think of this as a &#39;Iso&#39; that can be partial in one direction.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Every &#39;Prism&#39; is a valid &#39;Traversal&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Every &#39;Iso&#39; is a valid &#39;Prism&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For example, you might have a @&#39;Prism&#39;&#39; &#39;Integer&#39; &#39;Numeric.Natural.Natural&#39;@ allows you to always</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- go from a &#39;Numeric.Natural.Natural&#39; to an &#39;Integer&#39;, and provide you with tools to check if an &#39;Integer&#39; is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a &#39;Numeric.Natural.Natural&#39; and/or to edit one if it is.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;nat&#39; :: &#39;Prism&#39;&#39; &#39;Integer&#39; &#39;Numeric.Natural.Natural&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;nat&#39; = &#39;Control.Lens.Prism.prism&#39; &#39;toInteger&#39; &#39;$&#39; \\ i -&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    if i &#39;&lt;&#39; 0</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    then &#39;Left&#39; i</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    else &#39;Right&#39; (&#39;fromInteger&#39; i)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Now we can ask if an &#39;Integer&#39; is a &#39;Numeric.Natural.Natural&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; 5^?nat</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Just 5</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; (-5)^?nat</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Nothing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We can update the ones that are:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; (-3,4) &amp; both.nat *~ 2</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (-3,8)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- And we can then convert from a &#39;Numeric.Natural.Natural&#39; to an &#39;Integer&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; 5 ^. re nat -- :: Natural</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 5</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Similarly we can use a &#39;Prism&#39; to &#39;Data.Traversable.traverse&#39; the &#39;Left&#39; half of an &#39;Either&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; Left &quot;hello&quot; &amp; _Left %~ length</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Left 5</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- or to construct an &#39;Either&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; 5^.re _Left</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Left 5</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- such that if you query it with the &#39;Prism&#39;, you will get your original input back.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; 5^.re _Left ^? _Left</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Just 5</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Another interesting way to think of a &#39;Prism&#39; is as the categorical dual of a &#39;Lens&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- -- a co-&#39;Lens&#39;, so to speak. This is what permits the construction of &#39;Control.Lens.Prism.outside&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note: Composition with a &#39;Prism&#39; is index-preserving.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 415, srcSpanStartColumn = 1, srcSpanEndLine = 415, srcSpanEndColumn = 85}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 415, srcSpanStartColumn = 1, srcSpanEndLine = 415, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 4"><span class="mpre">type Prism s t a b = forall p f. (Choice p, Applicative f) =&gt; p a (f b) -&gt; p s (f t)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;Simple&#39; &#39;Prism&#39;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 418, srcSpanStartColumn = 1, srcSpanEndLine = 418, srcSpanEndColumn = 32}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 418, srcSpanStartColumn = 1, srcSpanEndLine = 418, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 4"><span class="mpre">type Prism&#39; s a = Prism s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Equality</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A witness that @(a ~ s, b ~ t)@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note: Composition with an &#39;Equality&#39; is index-preserving.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 427, srcSpanStartColumn = 1, srcSpanEndLine = 427, srcSpanEndColumn = 71}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 427, srcSpanStartColumn = 1, srcSpanEndLine = 427, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 4"><span class="mpre">type Equality s t a b = forall p (f :: * -&gt; *). p a (f b) -&gt; p s (f t)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;Simple&#39; &#39;Equality&#39;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 430, srcSpanStartColumn = 1, srcSpanEndLine = 430, srcSpanEndColumn = 38}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 430, srcSpanStartColumn = 1, srcSpanEndLine = 430, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 4"><span class="mpre">type Equality&#39; s a = Equality s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Composable `asTypeOf`. Useful for constraining excess</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- polymorphism, @foo . (id :: As Int) . bar@.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 434, srcSpanStartColumn = 1, srcSpanEndLine = 434, srcSpanEndColumn = 26}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 434, srcSpanStartColumn = 1, srcSpanEndLine = 434, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 4"><span class="mpre">type As a = Equality&#39; a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Getters</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;Getter&#39; describes how to retrieve a single value in a way that can be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- composed with other &#39;LensLike&#39; constructions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Unlike a &#39;Lens&#39; a &#39;Getter&#39; is read-only. Since a &#39;Getter&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- cannot be used to write back there are no &#39;Lens&#39; laws that can be applied to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- it. In fact, it is isomorphic to an arbitrary function from @(s -&gt; a)@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Moreover, a &#39;Getter&#39; can be used directly as a &#39;Control.Lens.Fold.Fold&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- since it just ignores the &#39;Applicative&#39;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 449, srcSpanStartColumn = 1, srcSpanEndLine = 449, srcSpanEndColumn = 83}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 449, srcSpanStartColumn = 1, srcSpanEndLine = 449, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 4"><span class="mpre">type Getter s a = forall f. (Contravariant f, Functor f) =&gt; (a -&gt; f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Every &#39;IndexedGetter&#39; is a valid &#39;Control.Lens.Fold.IndexedFold&#39; and can be used for &#39;Control.Lens.Getter.Getting&#39; like a &#39;Getter&#39;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 452, srcSpanStartColumn = 1, srcSpanEndLine = 452, srcSpanEndColumn = 108}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 452, srcSpanStartColumn = 1, srcSpanEndLine = 452, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexedGetter i s a = forall p f. (Indexable i p, Contravariant f, Functor f) =&gt; p a (f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;IndexPreservingGetter&#39; can be used as a &#39;Getter&#39;, but when composed with an &#39;IndexedTraversal&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;IndexedFold&#39;, or &#39;IndexedLens&#39; yields an &#39;IndexedFold&#39;, &#39;IndexedFold&#39; or &#39;IndexedGetter&#39; respectively.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 456, srcSpanStartColumn = 1, srcSpanEndLine = 456, srcSpanEndColumn = 113}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 456, srcSpanStartColumn = 1, srcSpanEndLine = 456, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexPreservingGetter s a = forall p f. (Conjoined p, Contravariant f, Functor f) =&gt; p a (f a) -&gt; p s (f s)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">--------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Folds</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;Fold&#39; describes how to retrieve multiple values in a way that can be composed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- with other &#39;LensLike&#39; constructions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A @&#39;Fold&#39; s a@ provides a structure with operations very similar to those of the &#39;Data.Foldable.Foldable&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- typeclass, see &#39;Control.Lens.Fold.foldMapOf&#39; and the other &#39;Fold&#39; combinators.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- By convention, if there exists a &#39;foo&#39; method that expects a @&#39;Data.Foldable.Foldable&#39; (f a)@, then there should be a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @fooOf@ method that takes a @&#39;Fold&#39; s a@ and a value of type @s@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A &#39;Getter&#39; is a legal &#39;Fold&#39; that just ignores the supplied &#39;Data.Monoid.Monoid&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Unlike a &#39;Control.Lens.Traversal.Traversal&#39; a &#39;Fold&#39; is read-only. Since a &#39;Fold&#39; cannot be used to write back</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- there are no &#39;Lens&#39; laws that apply.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 475, srcSpanStartColumn = 1, srcSpanEndLine = 475, srcSpanEndColumn = 85}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 475, srcSpanStartColumn = 1, srcSpanEndLine = 475, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 4"><span class="mpre">type Fold s a = forall f. (Contravariant f, Applicative f) =&gt; (a -&gt; f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Every &#39;IndexedFold&#39; is a valid &#39;Control.Lens.Fold.Fold&#39; and can be used for &#39;Control.Lens.Getter.Getting&#39;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 478, srcSpanStartColumn = 1, srcSpanEndLine = 478, srcSpanEndColumn = 111}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 478, srcSpanStartColumn = 1, srcSpanEndLine = 478, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexedFold i s a = forall p f.  (Indexable i p, Contravariant f, Applicative f) =&gt; p a (f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;IndexPreservingFold&#39; can be used as a &#39;Fold&#39;, but when composed with an &#39;IndexedTraversal&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;IndexedFold&#39;, or &#39;IndexedLens&#39; yields an &#39;IndexedFold&#39; respectively.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 482, srcSpanStartColumn = 1, srcSpanEndLine = 482, srcSpanEndColumn = 115}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 482, srcSpanStartColumn = 1, srcSpanEndLine = 482, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexPreservingFold s a = forall p f. (Conjoined p, Contravariant f, Applicative f) =&gt; p a (f a) -&gt; p s (f s)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A relevant Fold (aka &#39;Fold1&#39;) has one or more targets.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 485, srcSpanStartColumn = 1, srcSpanEndLine = 485, srcSpanEndColumn = 80}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 485, srcSpanStartColumn = 1, srcSpanEndLine = 485, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 4"><span class="mpre">type Fold1 s a = forall f. (Contravariant f, Apply f) =&gt; (a -&gt; f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 486, srcSpanStartColumn = 1, srcSpanEndLine = 486, srcSpanEndColumn = 106}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 486, srcSpanStartColumn = 1, srcSpanEndLine = 486, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexedFold1 i s a = forall p f.  (Indexable i p, Contravariant f, Apply f) =&gt; p a (f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 487, srcSpanStartColumn = 1, srcSpanEndLine = 487, srcSpanEndColumn = 110}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 487, srcSpanStartColumn = 1, srcSpanEndLine = 487, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexPreservingFold1 s a = forall p f. (Conjoined p, Contravariant f, Apply f) =&gt; p a (f a) -&gt; p s (f s)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Actions</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;Action&#39; is a &#39;Getter&#39; enriched with access to a &#39;Monad&#39; for side-effects.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Every &#39;Getter&#39; can be used as an &#39;Action&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can compose an &#39;Action&#39; with another &#39;Action&#39; using (&#39;Prelude..&#39;) from the @Prelude@.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 498, srcSpanStartColumn = 1, srcSpanEndLine = 498, srcSpanEndColumn = 74}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 498, srcSpanStartColumn = 1, srcSpanEndLine = 498, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 4"><span class="mpre">type Action m s a = forall f r. Effective m r f =&gt; (a -&gt; f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;IndexedAction&#39; is an &#39;IndexedGetter&#39; enriched with access to a &#39;Monad&#39; for side-effects.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Every &#39;Getter&#39; can be used as an &#39;Action&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can compose an &#39;Action&#39; with another &#39;Action&#39; using (&#39;Prelude..&#39;) from the @Prelude@.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 505, srcSpanStartColumn = 1, srcSpanEndLine = 505, srcSpanEndColumn = 101}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 505, srcSpanStartColumn = 1, srcSpanEndLine = 505, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexedAction i m s a = forall p f r. (Indexable i p, Effective m r f) =&gt; p a (f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;IndexPreservingAction&#39; can be used as a &#39;Action&#39;, but when composed with an &#39;IndexedTraversal&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;IndexedFold&#39;, or &#39;IndexedLens&#39; yields an &#39;IndexedMonadicFold&#39;, &#39;IndexedMonadicFold&#39; or &#39;IndexedAction&#39; respectively.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 509, srcSpanStartColumn = 1, srcSpanEndLine = 509, srcSpanEndColumn = 106}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 509, srcSpanStartColumn = 1, srcSpanEndLine = 509, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexPreservingAction m s a = forall p f r. (Conjoined p, Effective m r f) =&gt; p a (f a) -&gt; p s (f s)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- MonadicFolds</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;MonadicFold&#39; is a &#39;Fold&#39; enriched with access to a &#39;Monad&#39; for side-effects.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A &#39;MonadicFold&#39; can use side-effects to produce parts of the structure being folded (e.g. reading them from file).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Every &#39;Fold&#39; can be used as a &#39;MonadicFold&#39;, that simply ignores the access to the &#39;Monad&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can compose a &#39;MonadicFold&#39; with another &#39;MonadicFold&#39; using (&#39;Prelude..&#39;) from the @Prelude@.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 522, srcSpanStartColumn = 1, srcSpanEndLine = 522, srcSpanEndColumn = 96}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 522, srcSpanStartColumn = 1, srcSpanEndLine = 522, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 5"><span class="mpre">type MonadicFold m s a = forall f r. (Effective m r f, Applicative f) =&gt; (a -&gt; f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 523, srcSpanStartColumn = 1, srcSpanEndLine = 523, srcSpanEndColumn = 98}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 523, srcSpanStartColumn = 1, srcSpanEndLine = 523, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 5"><span class="mpre">type RelevantMonadicFold m s a = forall f r. (Effective m r f, Apply f) =&gt; (a -&gt; f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;IndexedMonadicFold&#39; is an &#39;IndexedFold&#39; enriched with access to a &#39;Monad&#39; for side-effects.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Every &#39;IndexedFold&#39; can be used as an &#39;IndexedMonadicFold&#39;, that simply ignores the access to the &#39;Monad&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can compose an &#39;IndexedMonadicFold&#39; with another &#39;IndexedMonadicFold&#39; using (&#39;Prelude..&#39;) from the @Prelude@.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 530, srcSpanStartColumn = 1, srcSpanEndLine = 530, srcSpanEndColumn = 121}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 530, srcSpanStartColumn = 1, srcSpanEndLine = 530, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexedMonadicFold i m s a = forall p f r. (Indexable i p, Effective m r f, Applicative f) =&gt; p a (f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 531, srcSpanStartColumn = 1, srcSpanEndLine = 531, srcSpanEndColumn = 123}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 531, srcSpanStartColumn = 1, srcSpanEndLine = 531, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexedRelevantMonadicFold i m s a = forall p f r. (Indexable i p, Effective m r f, Apply f) =&gt; p a (f a) -&gt; s -&gt; f s</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | An &#39;IndexPreservingFold&#39; can be used as a &#39;Fold&#39;, but when composed with an &#39;IndexedTraversal&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;IndexedFold&#39;, or &#39;IndexedLens&#39; yields an &#39;IndexedFold&#39; respectively.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 535, srcSpanStartColumn = 1, srcSpanEndLine = 535, srcSpanEndColumn = 126}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 535, srcSpanStartColumn = 1, srcSpanEndLine = 535, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexPreservingMonadicFold m s a = forall p f r. (Conjoined p, Effective m r f, Applicative f) =&gt; p a (f a) -&gt; p s (f s)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 536, srcSpanStartColumn = 1, srcSpanEndLine = 536, srcSpanEndColumn = 128}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 536, srcSpanStartColumn = 1, srcSpanEndLine = 536, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = "><span class="mpre">type IndexPreservingRelevantMonadicFold m s a = forall p f r. (Conjoined p, Effective m r f, Apply f) =&gt; p a (f a) -&gt; p s (f s)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Simple Overloading</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A &#39;Simple&#39; &#39;Lens&#39;, &#39;Simple&#39; &#39;Traversal&#39;, ... can</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- be used instead of a &#39;Lens&#39;,&#39;Traversal&#39;, ...</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- whenever the type variables don&#39;t change upon setting a value.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.Complex.Lens._imagPart&#39; :: &#39;Simple&#39; &#39;Lens&#39; (&#39;Data.Complex.Complex&#39; a) a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Lens.Traversal.traversed&#39; :: &#39;Simple&#39; (&#39;IndexedTraversal&#39; &#39;Int&#39;) [a] a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note: To use this alias in your own code with @&#39;LensLike&#39; f@ or</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Setter&#39;, you may have to turn on @LiberalTypeSynonyms@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This is commonly abbreviated as a \&quot;prime\&quot; marker, /e.g./ &#39;Lens&#39;&#39; = &#39;Simple&#39; &#39;Lens&#39;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 555, srcSpanStartColumn = 1, srcSpanEndLine = 555, srcSpanEndColumn = 30}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 555, srcSpanStartColumn = 1, srcSpanEndLine = 555, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 5"><span class="mpre">type Simple f s a = f s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Optics</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A valid &#39;Optic&#39; @l@ should satisfy the laws:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- l &#39;pure&#39; ≡ &#39;pure&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- l (&#39;Procompose&#39; f g) = &#39;Procompose&#39; (l f) (l g)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This gives rise to the laws for &#39;Equality&#39;, &#39;Iso&#39;, &#39;Prism&#39;, &#39;Lens&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Traversal&#39;, &#39;Traversal1&#39;, &#39;Setter&#39;, &#39;Fold&#39;, &#39;Fold1&#39;, and &#39;Getter&#39; as well</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- along with their index-preserving variants.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;LensLike&#39; f s t a b = &#39;Optic&#39; (-&gt;) f s t a b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 575, srcSpanStartColumn = 1, srcSpanEndLine = 575, srcSpanEndColumn = 48}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 575, srcSpanStartColumn = 1, srcSpanEndLine = 575, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 5"><span class="mpre">type Optic p f s t a b = p a (f b) -&gt; p s (f t)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Optic&#39;&#39; p q f s a = &#39;Simple&#39; (&#39;Optic&#39; p q f) s a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 580, srcSpanStartColumn = 1, srcSpanEndLine = 580, srcSpanEndColumn = 40}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 580, srcSpanStartColumn = 1, srcSpanEndLine = 580, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 5"><span class="mpre">type Optic&#39; p f s a = Optic p f s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;LensLike&#39; f s t a b = &#39;Optical&#39; (-&gt;) (-&gt;) f s t a b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Over&#39; p f s t a b = &#39;Optical&#39; p (-&gt;) f s t a b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Optic&#39; p f s t a b = &#39;Optical&#39; p p f s t a b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 593, srcSpanStartColumn = 1, srcSpanEndLine = 593, srcSpanEndColumn = 52}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 593, srcSpanStartColumn = 1, srcSpanEndLine = 593, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 5"><span class="mpre">type Optical p q f s t a b = p a (f b) -&gt; q s (f t)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Optical&#39;&#39; p q f s a = &#39;Simple&#39; (&#39;Optical&#39; p q f) s a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 598, srcSpanStartColumn = 1, srcSpanEndLine = 598, srcSpanEndColumn = 48}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 598, srcSpanStartColumn = 1, srcSpanEndLine = 598, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 5"><span class="mpre">type Optical&#39; p q f s a = Optical p q f s s a a</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Many combinators that accept a &#39;Lens&#39; can also accept a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Traversal&#39; in limited situations.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- They do so by specializing the type of &#39;Functor&#39; that they require of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- caller.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If a function accepts a @&#39;LensLike&#39; f s t a b@ for some &#39;Functor&#39; @f@,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- then they may be passed a &#39;Lens&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Further, if @f@ is an &#39;Applicative&#39;, they may also be passed a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Traversal&#39;.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 612, srcSpanStartColumn = 1, srcSpanEndLine = 612, srcSpanEndColumn = 49}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 612, srcSpanStartColumn = 1, srcSpanEndLine = 612, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 6"><span class="mpre">type LensLike f s t a b = (a -&gt; f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;LensLike&#39;&#39; f = &#39;Simple&#39; (&#39;LensLike&#39; f)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 617, srcSpanStartColumn = 1, srcSpanEndLine = 617, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 617, srcSpanStartColumn = 1, srcSpanEndLine = 617, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 6"><span class="mpre">type LensLike&#39; f s a = LensLike f s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Convenient alias for constructing indexed lenses and their ilk.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 620, srcSpanStartColumn = 1, srcSpanEndLine = 620, srcSpanEndColumn = 84}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 620, srcSpanStartColumn = 1, srcSpanEndLine = 620, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 6"><span class="mpre">type IndexedLensLike i f s t a b = forall p. Indexable i p =&gt; p a (f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Convenient alias for constructing simple indexed lenses and their ilk.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 623, srcSpanStartColumn = 1, srcSpanEndLine = 623, srcSpanEndColumn = 60}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 623, srcSpanStartColumn = 1, srcSpanEndLine = 623, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 6"><span class="mpre">type IndexedLensLike&#39; i f s a = IndexedLensLike i f s s a a</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | This is a convenient alias for use when you need to consume either indexed or non-indexed lens-likes based on context.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 626, srcSpanStartColumn = 1, srcSpanEndLine = 626, srcSpanEndColumn = 46}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 626, srcSpanStartColumn = 1, srcSpanEndLine = 626, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 6"><span class="mpre">type Over p f s t a b = p a (f b) -&gt; s -&gt; f t</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | This is a convenient alias for use when you need to consume either indexed or non-indexed lens-likes based on context.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Over&#39;&#39; p f = &#39;Simple&#39; (&#39;Over&#39; p f)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 633, srcSpanStartColumn = 1, srcSpanEndLine = 633, srcSpanEndColumn = 38}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 633, srcSpanStartColumn = 1, srcSpanEndLine = 633, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-4.3/src/Control/Lens/Type.hs&quot;, srcSpanStartLine = 6"><span class="mpre">type Over&#39; p f s a = Over p f s s a a</span></span><span class="mpre">
+</span></div></body></html>

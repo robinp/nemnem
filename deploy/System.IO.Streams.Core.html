@@ -1,0 +1,45 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+
+</span><span class="hl_comment"><span class="mpre">-- | Core types and functions for the @io-streams@ library.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module System.IO.Streams.Core
+ ( </span><span class="hl_comment"><span class="mpre">-- * Stream types</span></span><span class="mpre">
+   InputStream
+ , OutputStream
+
+   </span><span class="hl_comment"><span class="mpre">-- * Creating streams</span></span><span class="mpre">
+ , makeInputStream
+ , makeOutputStream
+
+   </span><span class="hl_comment"><span class="mpre">-- * Primitive stream operations</span></span><span class="mpre">
+ , read
+ , unRead
+ , peek
+ , write
+ , atEOF
+
+   </span><span class="hl_comment"><span class="mpre">-- * Connecting streams together</span></span><span class="mpre">
+ , connect
+ , connectTo
+ , supply
+ , supplyTo
+
+   </span><span class="hl_comment"><span class="mpre">-- * Thread safety \/ concurrency</span></span><span class="mpre">
+ , lockingInputStream
+ , lockingOutputStream
+
+   </span><span class="hl_comment"><span class="mpre">-- * Utility streams</span></span><span class="mpre">
+ , nullInput
+ , nullOutput
+
+   </span><span class="hl_comment"><span class="mpre">-- * Generator monad</span></span><span class="mpre">
+ , Generator
+ , fromGenerator
+ , yield
+ ) where
+
+</span><span class="hl_comment"><span class="mpre">------------------------------------------------------------------------------</span></span><span class="mpre">
+import           Prelude                    ()
+import           System.IO.Streams.Internal
+</span></div></body></html>

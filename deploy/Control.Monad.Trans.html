@@ -1,0 +1,35 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Monad.Trans</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Andy Gill 2001,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Oregon Graduate Institute of Science and Technology, 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Classes for monad transformers.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A monad transformer makes new monad out of an existing monad, such</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that computations of the old monad may be embedded in the new one.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To construct a monad with a desired set of features, one typically</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- starts with a base monad, such as @Identity@, @[]@ or &#39;IO&#39;, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- applies a sequence of monad transformers.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Most monad transformer modules include the special case of applying the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- transformer to @Identity@.  For example, @State s@ is an abbreviation</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for @StateT s Identity@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Each monad transformer also comes with an operation @run@/XXX/ to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- unwrap the transformer, exposing a computation of the inner monad.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Control.Monad.Trans (
+    module Control.Monad.Trans.Class,
+    module Control.Monad.IO.Class
+  ) where
+
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
+</span></div></body></html>

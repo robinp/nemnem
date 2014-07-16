@@ -1,0 +1,29 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.X509.Validation.Types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : unknown</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- X.509 Validation types</span></span><span class="mpre">
+module Data.X509.Validation.Types
+    ( ServiceID
+    , HostName
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/x509-validation-1.5.0/Data/X509/Validation/Types.hs&quot;, srcSpanStartLine = 14, srcSpanStartColumn = 8, srcSpanEndLine = 14, srcSpanEndColumn = 19}, srcInfoPoints = []}) &quot;Network.BSD&quot;"><span class="mpre">Network.BSD</span></span><span class="mpre"> (HostName)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/x509-validation-1.5.0/Data/X509/Validation/Types.hs&quot;, srcSpanStartLine = 15, srcSpanStartColumn = 8, srcSpanEndLine = 15, srcSpanEndColumn = 23}, srcInfoPoints = []}) &quot;Data.ByteString&quot;"><span class="mpre">Data.ByteString</span></span><span class="mpre"> (ByteString)
+
+</span><span class="hl_comment"><span class="mpre">-- | identification of the connection consisting of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- fully qualified host name (e.g. www.example.com) and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- an optional suffix.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The suffix is not used by the validation process, but</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is used by the optional cache to identity certificate per service</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- on a specific host. For example, one might have a different</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- certificate on 2 differents ports (443 and 995) for the same host.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for TCP connection, it&#39;s recommended to use: :port, or :service for the suffix.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/x509-validation-1.5.0/Data/X509/Validation/Types.hs&quot;, srcSpanStartLine = 28, srcSpanStartColumn = 1, srcSpanEndLine = 28, srcSpanEndColumn = 40}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/x509-validation-1.5.0/Data/X509/Validation/Types.hs&quot;, srcSpanStartLine = 28, srcSpanStartColumn = 1, srcSpanEndLine = 28, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/x509-validation-1.5.0/Da"><span class="mpre">type ServiceID = (HostName, ByteString)</span></span><span class="mpre">
+</span></div></body></html>

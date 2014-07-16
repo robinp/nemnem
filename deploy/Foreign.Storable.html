@@ -1,0 +1,18 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, PackageImports #-}
+#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Safe #-}
+#endif
+
+module Foreign.Storable
+        ( Storable(
+             sizeOf,         </span><span class="hl_comment"><span class="mpre">-- :: a -&gt; Int</span></span><span class="mpre">
+             alignment,      </span><span class="hl_comment"><span class="mpre">-- :: a -&gt; Int</span></span><span class="mpre">
+             peekElemOff,    </span><span class="hl_comment"><span class="mpre">-- :: Ptr a -&gt; Int      -&gt; IO a</span></span><span class="mpre">
+             pokeElemOff,    </span><span class="hl_comment"><span class="mpre">-- :: Ptr a -&gt; Int -&gt; a -&gt; IO ()</span></span><span class="mpre">
+             peekByteOff,    </span><span class="hl_comment"><span class="mpre">-- :: Ptr b -&gt; Int      -&gt; IO a</span></span><span class="mpre">
+             pokeByteOff,    </span><span class="hl_comment"><span class="mpre">-- :: Ptr b -&gt; Int -&gt; a -&gt; IO ()</span></span><span class="mpre">
+             peek,           </span><span class="hl_comment"><span class="mpre">-- :: Ptr a             -&gt; IO a</span></span><span class="mpre">
+             poke)           </span><span class="hl_comment"><span class="mpre">-- :: Ptr a        -&gt; a -&gt; IO ()</span></span><span class="mpre">
+  ) where
+import &quot;base&quot; </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/haskell2010-1.1.2.0/Foreign/Storable.hs&quot;, srcSpanStartLine = 17, srcSpanStartColumn = 15, srcSpanEndLine = 17, srcSpanEndColumn = 31}, srcInfoPoints = []}) &quot;Foreign.Storable&quot;"><span class="mpre">Foreign.Storable</span></span><span class="mpre">
+</span></div></body></html>

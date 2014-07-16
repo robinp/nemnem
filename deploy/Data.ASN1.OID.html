@@ -1,0 +1,28 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Data.ASN1.OID</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : unknown</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+{-# LANGUAGE DeriveDataTypeable #-}
+module Data.ASN1.OID
+    ( OID
+    </span><span class="hl_comment"><span class="mpre">-- * classes</span></span><span class="mpre">
+    , OIDable(..)
+    , OIDNameable(..)
+    ) where
+
+</span><span class="hl_comment"><span class="mpre">-- | Standard ASN.1 Object ID (OID)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/asn1-types-0.2.3/Data/ASN1/OID.hs&quot;, srcSpanStartLine = 17, srcSpanStartColumn = 1, srcSpanEndLine = 17, srcSpanEndColumn = 21}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/asn1-types-0.2.3/Data/ASN1/OID.hs&quot;, srcSpanStartLine = 17, srcSpanStartColumn = 1, srcSpanEndLine = 17, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/asn1-types-0.2.3/Data/ASN1/OID.hs&quot;, srcSpanStartLine = 17, s"><span class="mpre">type OID = [Integer]</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Class of things that have an Object ID</span></span><span class="mpre">
+class </span><a name="loc_20_7_20_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_20_7_20_14&#39;)"><span class="hl_classdecl"><span class="mpre">OIDable</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> where
+    </span><span class="hl_comment"><span class="mpre">-- | return the object ID of an Object from the ObjectIdentifiable class.</span></span><span class="mpre">
+    </span><a name="loc_22_5_22_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_22_5_22_16&#39;)"><span class="mpre">getObjectID</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">OID</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Class of things that can be named by Object ID</span></span><span class="mpre">
+class </span><a name="loc_25_7_25_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_25_7_25_18&#39;)"><span class="hl_classdecl"><span class="mpre">OIDNameable</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> where
+    </span><span class="hl_comment"><span class="mpre">-- | Try to convert an OID into an Object</span></span><span class="mpre">
+    </span><a name="loc_27_5_27_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_27_5_27_17&#39;)"><span class="mpre">fromObjectID</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">OID</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span></div></body></html>

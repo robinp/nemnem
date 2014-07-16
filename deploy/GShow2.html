@@ -1,0 +1,48 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# OPTIONS -fglasgow-exts #-}
+
+module GShow2 (tests) where
+
+</span><span class="hl_comment"><span class="mpre">{-
+
+This test exercices GENERIC show for the infamous company datatypes. The
+output of the program should be some representation of the infamous
+&quot;genCom&quot; company.
+
+-}</span></span><span class="mpre">
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/GShow2.hs&quot;, srcSpanStartLine = 13, srcSpanStartColumn = 8, srcSpanEndLine = 13, srcSpanEndColumn = 18}, srcInfoPoints = []}) &quot;Test.HUnit&quot;"><span class="mpre">Test.HUnit</span></span><span class="mpre">
+
+import Data.Generics
+import CompanyDatatypes
+
+</span><a name="loc_18_1_18_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_1_18_6&#39;)"><span class="hl_vardecl"><span class="mpre">tests</span></span></a><span class="mpre"> = </span><a href="Data.Generics.Text.html#loc_43_1_43_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Text.html#loc_43_1_43_6&#39;)"><span class="hl_varref"><span class="mpre">gshow</span></span></a><span class="mpre"> </span><a href="CompanyDatatypes.html#loc_21_1_21_7" onmouseover="nemnem.highlightLocalToRemote(&#39;CompanyDatatypes.html#loc_21_1_21_7&#39;)"><span class="hl_varref"><span class="mpre">genCom</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">~=?</span></span><span class="mpre"> </span><a href="#loc_47_1_47_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_7&#39;)"><span class="hl_varref"><span class="mpre">output</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-
+
+Here is another exercise:
+The following function gshow&#39; is a completely generic variation on gshow.
+It would print strings as follows:
+
+*Main&gt; gshow&#39; &quot;abc&quot;
+&quot;((:) (&#39;a&#39;) ((:) (&#39;b&#39;) ((:) (&#39;c&#39;) ([]))))&quot;
+
+The original gshow does a better job because it is customised for strings:
+
+*Main&gt; gshow &quot;foo&quot;
+&quot;\&quot;foo\&quot;&quot;
+
+In fact, this is what Haskell&#39;s normal show would also do:
+
+*Main&gt; show &quot;foo&quot;
+&quot;\&quot;foo\&quot;&quot;
+
+-}</span></span><span class="mpre">
+
+</span><a href="#loc_42_1_42_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_42_1_42_7&#39;)"><span class="mpre">gshow&#39;</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/GShow2.hs&quot;, srcSpanStartLine = 41, srcSpanStartColumn = 11, srcSpanEndLine = 41, srcSpanEndColumn = 20}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/GShow2.hs&quot;, srcSpanStartLine = 41, srcSpanStartColumn = 18, srcSpanEndLine = 41, srcSpanEndColumn = 20}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/GShow2.hs&quot;, srcSpa"><span class="mpre">Data a =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_42_1_42_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_42_1_42_7&#39;)"><span class="hl_fundecl"><span class="mpre">gshow&#39;</span></span></a><span class="mpre"> </span><a name="loc_42_8_42_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_42_8_42_9&#39;)"><span class="hl_vardecl"><span class="mpre">t</span></span></a><span class="mpre"> =     </span><span class="hl_string"><span class="mpre">&quot;(&quot;</span></span><span class="mpre">
+            </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">showConstr</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">toConstr</span></span><span class="mpre"> </span><a href="#loc_42_8_42_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_42_8_42_9&#39;)"><span class="hl_varref"><span class="mpre">t</span></span></a><span class="mpre">)
+            </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">concat</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">gmapQ</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">(++)</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot; &quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="#loc_42_1_42_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_42_1_42_7&#39;)"><span class="hl_varref"><span class="mpre">gshow&#39;</span></span></a><span class="mpre">) </span><a href="#loc_42_8_42_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_42_8_42_9&#39;)"><span class="hl_varref"><span class="mpre">t</span></span></a><span class="mpre">)
+            </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;)&quot;</span></span><span class="mpre">
+
+</span><a name="loc_47_1_47_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_7&#39;)"><span class="hl_vardecl"><span class="mpre">output</span></span></a><span class="mpre"> = </span><span class="hl_string"><span class="mpre">&quot;(C ((:) (D \&quot;Research\&quot; (E (P \&quot;Laemmel\&quot; \&quot;Amsterdam\&quot;) (S (8000.0))) ((:) (PU (E (P \&quot;Joost\&quot; \&quot;Amsterdam\&quot;) (S (1000.0)))) ((:) (PU (E (P \&quot;Marlow\&quot; \&quot;Cambridge\&quot;) (S (2000.0)))) ([])))) ((:) (D \&quot;Strategy\&quot; (E (P \&quot;Blair\&quot; \&quot;London\&quot;) (S (100000.0))) ([])) ([]))))&quot;</span></span><span class="mpre">
+</span></div></body></html>

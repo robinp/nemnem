@@ -1,0 +1,66 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.ParserCombinators.Parsec.Prim</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Paolo Martini 2007</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the LICENSE file)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  derek.a.elkins@gmail.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Parsec compatibility module</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Text.ParserCombinators.Parsec.Prim
+    ( (&lt;?&gt;),
+      (&lt;|&gt;),
+      Parser,
+      GenParser,
+      runParser,
+      parse,
+      parseFromFile,
+      parseTest,
+      token,
+      tokens,
+      tokenPrim,
+      tokenPrimEx,
+      try,
+      label,
+      labels,
+      unexpected,
+      pzero,
+      many,
+      skipMany,
+      getState,
+      setState,
+      updateState,
+      getPosition,
+      setPosition,
+      getInput,
+      setInput,
+      State(..),
+      getParserState,
+      setParserState
+    ) where
+
+import Text.Parsec.Prim hiding (</span><a href="Text.Parsec.Prim.html#loc_627_1_627_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Prim.html#loc_627_1_627_10&#39;)"><span class="mpre">runParser</span></a><span class="mpre">, </span><a href="Text.Parsec.Prim.html#loc_435_1_435_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Prim.html#loc_435_1_435_4&#39;)"><span class="mpre">try</span></a><span class="mpre">)
+import qualified Text.Parsec.Prim as N </span><span class="hl_comment"><span class="mpre">-- &#39;N&#39; for &#39;New&#39;</span></span><span class="mpre">
+import Text.Parsec.String
+
+import Text.Parsec.Error
+import Text.Parsec.Pos
+
+</span><a href="#loc_55_1_55_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_1_55_6&#39;)"><span class="mpre">pzero</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">GenParser</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">tok</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_55_1_55_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_55_1_55_6&#39;)"><span class="hl_vardecl"><span class="mpre">pzero</span></span></a><span class="mpre"> = </span><a href="Text.Parsec.Prim.html#loc_278_1_278_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Prim.html#loc_278_1_278_11&#39;)"><span class="hl_varref"><span class="mpre">parserZero</span></span></a><span class="mpre">
+
+</span><a href="#loc_62_1_62_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_1_62_10&#39;)"><span class="mpre">runParser</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">GenParser</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">tok</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+          -&gt; </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre">
+          -&gt; </span><span class="hl_tyconref"><span class="mpre">SourceName</span></span><span class="mpre">
+          -&gt; [</span><span class="hl_tyvar"><span class="mpre">tok</span></span><span class="mpre">]
+          -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><a href="Text.Parsec.Error.html#loc_96_6_96_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Error.html#loc_96_6_96_16&#39;)"><span class="hl_tyconref"><span class="mpre">ParseError</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_62_1_62_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_62_1_62_10&#39;)"><span class="hl_vardecl"><span class="mpre">runParser</span></span></a><span class="mpre"> = </span><a href="Text.Parsec.Prim.html#loc_627_1_627_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Prim.html#loc_627_1_627_10&#39;)"><span class="hl_varref"><span class="mpre">N.runParser</span></span></a><span class="mpre">
+
+</span><a href="#loc_65_1_65_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_65_1_65_4&#39;)"><span class="mpre">try</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">GenParser</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">tok</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">GenParser</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">tok</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">st</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_65_1_65_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_65_1_65_4&#39;)"><span class="hl_vardecl"><span class="mpre">try</span></span></a><span class="mpre"> = </span><a href="Text.Parsec.Prim.html#loc_435_1_435_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Prim.html#loc_435_1_435_4&#39;)"><span class="hl_varref"><span class="mpre">N.try</span></span></a><span class="mpre">
+</span></div></body></html>

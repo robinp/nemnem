@@ -1,0 +1,27 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE OverloadedStrings #-}
+
+</span><span class="hl_comment"><span class="mpre">-- Module:      Data.Text.Internal.Builder.Int.Digits</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright:   (c) 2013 Bryan O&#39;Sullivan</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License:     BSD3</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer:  Bryan O&#39;Sullivan &lt;bos@serpentine.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability:   experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability: portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Warning/: this is an internal module, and does not have a stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- API or name. Functions in this module may not check or enforce</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- preconditions expected by public modules. Use at your own risk!</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module exists because the C preprocessor does things that we</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- shall not speak of when confronted with Haskell multiline strings.</span></span><span class="mpre">
+
+module Data.Text.Internal.Builder.Int.Digits (digits) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/text-1.1.1.3/Data/Text/Internal/Builder/Int/Digits.hs&quot;, srcSpanStartLine = 19, srcSpanStartColumn = 8, srcSpanEndLine = 19, srcSpanEndColumn = 29}, srcInfoPoints = []}) &quot;Data.ByteString.Char8&quot;"><span class="mpre">Data.ByteString.Char8</span></span><span class="mpre"> (ByteString)
+
+</span><a href="#loc_22_1_22_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_22_1_22_7&#39;)"><span class="mpre">digits</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">ByteString</span></span><span class="mpre">
+</span><a name="loc_22_1_22_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_22_1_22_7&#39;)"><span class="hl_vardecl"><span class="mpre">digits</span></span></a><span class="mpre"> = </span><span class="hl_string"><span class="mpre">&quot;0001020304050607080910111213141516171819\
+         \2021222324252627282930313233343536373839\
+         \4041424344454647484950515253545556575859\
+         \6061626364656667686970717273747576777879\
+         \8081828384858687888990919293949596979899&quot;</span></span><span class="mpre">
+</span></div></body></html>

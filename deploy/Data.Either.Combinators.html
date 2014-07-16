@@ -1,0 +1,305 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Either.Combinators</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) 2010-2014 Gregory Crosswhite, Chris Done, Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  ekmett@gmail.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Functions for probing and unwrapping values inside of &#39;Either&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Most of these combinators are provided for pedagogical purposes and exist</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in more general forms in other libraries. To that end alternative definitions</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- are supplied below.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Either.Combinators
+  ( isLeft
+  , isRight
+  , fromLeft
+  , fromRight
+  , fromLeft&#39;
+  , fromRight&#39;
+  , mapBoth
+  , mapLeft
+  , mapRight
+  , whenLeft
+  , whenRight
+  , unlessLeft
+  , unlessRight
+  , leftToMaybe
+  , rightToMaybe
+  ) where
+
+import Control.Applicative
+
+</span><span class="hl_comment"><span class="mpre">-- ---------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Functions over Either</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- |The &#39;isLeft&#39; function returns &#39;True&#39; iff its argument is of the form @&#39;Left&#39; _@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Lens@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;isLeft&#39; ≡ has _Left</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; isLeft (Left 12)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- True</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; isLeft (Right 12)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- False</span></span><span class="mpre">
+</span><a href="#loc_56_1_56_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_1_56_7&#39;)"><span class="mpre">isLeft</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_56_1_56_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_1_56_7&#39;)"><span class="hl_fundecl"><span class="mpre">isLeft</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> _) = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+</span><a href="#loc_56_1_56_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_1_56_7&#39;)"><span class="hl_fundecl"><span class="mpre">isLeft</span></span></a><span class="mpre"> _        = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- |The &#39;isRight&#39; function returns &#39;True&#39; iff its argument is of the form @&#39;Right&#39; _@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Lens@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;isRight&#39; ≡ has _Right</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; isRight (Left 12)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- False</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; isRight (Right 12)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- True</span></span><span class="mpre">
+</span><a href="#loc_73_1_73_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_1_73_8&#39;)"><span class="mpre">isRight</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+</span><a name="loc_73_1_73_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_1_73_8&#39;)"><span class="hl_fundecl"><span class="mpre">isRight</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> _) = </span><span class="hl_conref"><span class="mpre">True</span></span><span class="mpre">
+</span><a href="#loc_73_1_73_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_1_73_8&#39;)"><span class="hl_fundecl"><span class="mpre">isRight</span></span></a><span class="mpre"> _         = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Extracts the element out of a &#39;Left&#39; and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- throws an error if its argument take the form  @&#39;Right&#39; _@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Lens@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;fromLeft&#39;&#39; x ≡ x^?!_Left</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; fromLeft&#39; (Left 12)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 12</span></span><span class="mpre">
+</span><a href="#loc_88_1_88_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_88_1_88_10&#39;)"><span class="mpre">fromLeft&#39;</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_88_1_88_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_88_1_88_10&#39;)"><span class="hl_fundecl"><span class="mpre">fromLeft&#39;</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> _) = </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;Data.Either.Combinators.fromLeft: Argument takes form &#39;Right _&#39;&quot;</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- yuck</span></span><span class="mpre">
+</span><a href="#loc_88_1_88_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_88_1_88_10&#39;)"><span class="hl_fundecl"><span class="mpre">fromLeft&#39;</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> </span><a name="loc_89_17_89_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_17_89_18&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">)  = </span><a href="#loc_89_17_89_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_89_17_89_18&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Extracts the element out of a &#39;Right&#39; and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- throws an error if its argument take the form @&#39;Left&#39; _@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Lens@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;fromRight&#39;&#39; x ≡ x^?!_Right</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; fromRight&#39; (Right 12)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 12</span></span><span class="mpre">
+</span><a href="#loc_103_1_103_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_11&#39;)"><span class="mpre">fromRight&#39;</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_103_1_103_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_11&#39;)"><span class="hl_fundecl"><span class="mpre">fromRight&#39;</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> _)  = </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;Data.Either.Combinators.fromRight: Argument takes form &#39;Left _&#39;&quot;</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- yuck</span></span><span class="mpre">
+</span><a href="#loc_103_1_103_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_11&#39;)"><span class="hl_fundecl"><span class="mpre">fromRight&#39;</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a name="loc_104_19_104_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_19_104_20&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">) = </span><a href="#loc_104_19_104_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_104_19_104_20&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;mapBoth&#39; function takes two functions and applies the first if iff the value</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- takes the form @&#39;Left&#39; _@ and the second if the value takes the form @&#39;Right&#39; _@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Data.Bifunctor@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;mapBoth&#39; = bimap</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Arrow@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;mapBoth&#39; = (&#39;Control.Arrow.+++&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; mapBoth (*2) (*3) (Left 4)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Left 8</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; mapBoth (*2) (*3) (Right 4)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Right 12</span></span><span class="mpre">
+</span><a href="#loc_127_1_127_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_1_127_8&#39;)"><span class="mpre">mapBoth</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre">) -&gt; (</span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">d</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">d</span></span><span class="mpre">
+</span><a name="loc_127_1_127_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_1_127_8&#39;)"><span class="hl_fundecl"><span class="mpre">mapBoth</span></span></a><span class="mpre"> </span><a name="loc_127_9_127_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_9_127_10&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> _ (</span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> </span><a name="loc_127_19_127_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_19_127_20&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">)  = </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> (</span><a href="#loc_127_9_127_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_9_127_10&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_127_19_127_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_19_127_20&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">)
+</span><a href="#loc_127_1_127_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_1_127_8&#39;)"><span class="hl_fundecl"><span class="mpre">mapBoth</span></span></a><span class="mpre"> _ </span><a name="loc_128_11_128_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_11_128_12&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a name="loc_128_20_128_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_20_128_21&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> (</span><a href="#loc_128_11_128_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_11_128_12&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_128_20_128_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_128_20_128_21&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;mapLeft&#39; function takes a function and applies it to an Either value</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- iff the value takes the form @&#39;Left&#39; _@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Data.Bifunctor@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;mapLeft&#39; = first</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Arrow@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;mapLeft&#39; = (&#39;Control.Arrow.left&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Lens@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;mapLeft&#39; = over _Left</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; mapLeft (*2) (Left 4)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Left 8</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; mapLeft (*2) (Right &quot;hello&quot;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Right &quot;hello&quot;</span></span><span class="mpre">
+</span><a href="#loc_157_1_157_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_1_157_8&#39;)"><span class="mpre">mapLeft</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_157_1_157_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_1_157_8&#39;)"><span class="hl_fundecl"><span class="mpre">mapLeft</span></span></a><span class="mpre"> </span><a name="loc_157_9_157_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_9_157_10&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = </span><a href="#loc_127_1_127_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_1_127_8&#39;)"><span class="hl_varref"><span class="mpre">mapBoth</span></span></a><span class="mpre"> </span><a href="#loc_157_9_157_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_157_9_157_10&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">id</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;mapRight&#39; function takes a function and applies it to an Either value</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- iff the value takes the form @&#39;Right&#39; _@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Data.Bifunctor@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;mapRight&#39; = second</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Arrow@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;mapRight&#39; = (&#39;Control.Arrow.right&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Lens@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;mapRight&#39; = over _Right</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; mapRight (*2) (Left &quot;hello&quot;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Left &quot;hello&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; mapRight (*2) (Right 4)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Right 8</span></span><span class="mpre">
+</span><a href="#loc_186_1_186_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_186_1_186_9&#39;)"><span class="mpre">mapRight</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre">
+</span><a name="loc_186_1_186_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_186_1_186_9&#39;)"><span class="hl_vardecl"><span class="mpre">mapRight</span></span></a><span class="mpre"> = </span><a href="#loc_127_1_127_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_127_1_127_8&#39;)"><span class="hl_varref"><span class="mpre">mapBoth</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">id</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;whenLeft&#39; function takes an &#39;Either&#39; value and a function which returns a monad.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The monad is only executed when the given argument takes the form @&#39;Left&#39; _@, otherwise</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- it does nothing.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Lens@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;whenLeft&#39; ≡ forOf_ _Left</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; whenLeft (Left 12) print</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 12</span></span><span class="mpre">
+</span><a href="#loc_201_1_201_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_201_1_201_9&#39;)"><span class="mpre">whenLeft</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/either-4.3.0.1/src/Data/Either/Combinators.hs&quot;, srcSpanStartLine = 200, srcSpanStartColumn = 13, srcSpanEndLine = 200, srcSpanEndColumn = 29}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/either-4.3.0.1/src/Data/Either/Combinators.hs&quot;, srcSpanStartLine = 200, srcSpanStartColumn = 27, srcSpanEndLine = 200, srcSpanEndColumn = 29}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/ne"><span class="mpre">Applicative m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_201_1_201_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_201_1_201_9&#39;)"><span class="hl_fundecl"><span class="mpre">whenLeft</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> </span><a name="loc_201_16_201_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_201_16_201_17&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">) </span><a name="loc_201_19_201_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_201_19_201_20&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = </span><a href="#loc_201_19_201_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_201_19_201_20&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_201_16_201_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_201_16_201_17&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+</span><a href="#loc_201_1_201_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_201_1_201_9&#39;)"><span class="hl_fundecl"><span class="mpre">whenLeft</span></span></a><span class="mpre"> _        _ = </span><a href="Control.Applicative.html#loc_115_5_115_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Applicative.html#loc_115_5_115_9&#39;)"><span class="hl_varref"><span class="mpre">pure</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;whenRight&#39; function takes an &#39;Either&#39; value and a function which returns a monad.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The monad is only executed when the given argument takes the form @&#39;Right&#39; _@, otherwise</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- it does nothing.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Data.Foldable@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;whenRight&#39; ≡ &#39;forM_&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Lens@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;whenRight&#39; ≡ forOf_ _Right</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; whenRight (Right 12) print</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- 12</span></span><span class="mpre">
+</span><a href="#loc_223_1_223_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_1_223_10&#39;)"><span class="mpre">whenRight</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/either-4.3.0.1/src/Data/Either/Combinators.hs&quot;, srcSpanStartLine = 222, srcSpanStartColumn = 14, srcSpanEndLine = 222, srcSpanEndColumn = 30}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/either-4.3.0.1/src/Data/Either/Combinators.hs&quot;, srcSpanStartLine = 222, srcSpanStartColumn = 28, srcSpanEndLine = 222, srcSpanEndColumn = 30}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/ne"><span class="mpre">Applicative m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_223_1_223_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_1_223_10&#39;)"><span class="hl_fundecl"><span class="mpre">whenRight</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a name="loc_223_18_223_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_18_223_19&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">) </span><a name="loc_223_21_223_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_21_223_22&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = </span><a href="#loc_223_21_223_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_21_223_22&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_223_18_223_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_18_223_19&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+</span><a href="#loc_223_1_223_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_1_223_10&#39;)"><span class="hl_fundecl"><span class="mpre">whenRight</span></span></a><span class="mpre"> _         _ = </span><a href="Control.Applicative.html#loc_115_5_115_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Applicative.html#loc_115_5_115_9&#39;)"><span class="hl_varref"><span class="mpre">pure</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A synonym of &#39;whenRight&#39;.</span></span><span class="mpre">
+</span><a href="#loc_228_1_228_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_228_1_228_11&#39;)"><span class="mpre">unlessLeft</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/either-4.3.0.1/src/Data/Either/Combinators.hs&quot;, srcSpanStartLine = 227, srcSpanStartColumn = 15, srcSpanEndLine = 227, srcSpanEndColumn = 31}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/either-4.3.0.1/src/Data/Either/Combinators.hs&quot;, srcSpanStartLine = 227, srcSpanStartColumn = 29, srcSpanEndLine = 227, srcSpanEndColumn = 31}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/ne"><span class="mpre">Applicative m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_228_1_228_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_228_1_228_11&#39;)"><span class="hl_vardecl"><span class="mpre">unlessLeft</span></span></a><span class="mpre"> = </span><a href="#loc_223_1_223_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_223_1_223_10&#39;)"><span class="hl_varref"><span class="mpre">whenRight</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | A synonym of &#39;whenLeft&#39;.</span></span><span class="mpre">
+</span><a href="#loc_232_1_232_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_232_1_232_12&#39;)"><span class="mpre">unlessRight</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/either-4.3.0.1/src/Data/Either/Combinators.hs&quot;, srcSpanStartLine = 231, srcSpanStartColumn = 16, srcSpanEndLine = 231, srcSpanEndColumn = 32}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/either-4.3.0.1/src/Data/Either/Combinators.hs&quot;, srcSpanStartLine = 231, srcSpanStartColumn = 30, srcSpanEndLine = 231, srcSpanEndColumn = 32}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/ne"><span class="mpre">Applicative m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_232_1_232_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_232_1_232_12&#39;)"><span class="hl_vardecl"><span class="mpre">unlessRight</span></span></a><span class="mpre"> = </span><a href="#loc_201_1_201_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_201_1_201_9&#39;)"><span class="hl_varref"><span class="mpre">whenLeft</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Extract the left value or a default.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;fromLeft&#39; ≡ &#39;either&#39; &#39;id&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; fromLeft &quot;hello&quot; (Right 42)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;hello&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; fromLeft &quot;hello&quot; (Left &quot;world&quot;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;world&quot;</span></span><span class="mpre">
+</span><a href="#loc_246_1_246_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_246_1_246_9&#39;)"><span class="mpre">fromLeft</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_246_1_246_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_246_1_246_9&#39;)"><span class="hl_fundecl"><span class="mpre">fromLeft</span></span></a><span class="mpre"> _ (</span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> </span><a name="loc_246_18_246_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_246_18_246_19&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">) = </span><a href="#loc_246_18_246_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_246_18_246_19&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+</span><a href="#loc_246_1_246_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_246_1_246_9&#39;)"><span class="hl_fundecl"><span class="mpre">fromLeft</span></span></a><span class="mpre"> </span><a name="loc_247_10_247_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_247_10_247_11&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> _ = </span><a href="#loc_247_10_247_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_247_10_247_11&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Extract the right value or a default.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;fromRight&#39; b ≡ &#39;either&#39; b &#39;id&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; fromRight &quot;hello&quot; (Right &quot;world&quot;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;world&quot;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; fromRight &quot;hello&quot; (Left 42)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &quot;hello&quot;</span></span><span class="mpre">
+</span><a href="#loc_261_1_261_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_261_1_261_10&#39;)"><span class="mpre">fromRight</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_261_1_261_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_261_1_261_10&#39;)"><span class="hl_fundecl"><span class="mpre">fromRight</span></span></a><span class="mpre"> _ (</span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a name="loc_261_20_261_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_261_20_261_21&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">) = </span><a href="#loc_261_20_261_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_261_20_261_21&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+</span><a href="#loc_261_1_261_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_261_1_261_10&#39;)"><span class="hl_fundecl"><span class="mpre">fromRight</span></span></a><span class="mpre"> </span><a name="loc_262_11_262_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_262_11_262_12&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> _ = </span><a href="#loc_262_11_262_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_262_11_262_12&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Maybe get the &#39;Left&#39; side of an &#39;Either&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;leftToMaybe&#39; ≡ &#39;either&#39; &#39;Just&#39; (&#39;const&#39; &#39;Nothing&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Lens@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;leftToMaybe&#39; ≡ preview _Left</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;leftToMaybe&#39; x ≡ x^?_Left</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; leftToMaybe (Left 12)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Just 12</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; leftToMaybe (Right 12)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Nothing</span></span><span class="mpre">
+</span><a href="#loc_283_1_283_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_283_1_283_12&#39;)"><span class="mpre">leftToMaybe</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_283_1_283_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_283_1_283_12&#39;)"><span class="hl_vardecl"><span class="mpre">leftToMaybe</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">either</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">const</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | Maybe get the &#39;Right&#39; side of an &#39;Either&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;rightToMaybe&#39; ≡ &#39;either&#39; (&#39;const&#39; &#39;Nothing&#39;) &#39;Just&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Using @Control.Lens@:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;rightToMaybe&#39; ≡ preview _Right</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;rightToMaybe&#39; x ≡ x^?_Right</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; rightToMaybe (Left 12)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Nothing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; rightToMaybe (Right 12)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Just 12</span></span><span class="mpre">
+</span><a href="#loc_304_1_304_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_304_1_304_13&#39;)"><span class="mpre">rightToMaybe</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_304_1_304_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_304_1_304_13&#39;)"><span class="hl_vardecl"><span class="mpre">rightToMaybe</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">either</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">const</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre">) </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre">
+</span></div></body></html>

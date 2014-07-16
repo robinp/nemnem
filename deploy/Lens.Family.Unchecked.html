@@ -1,0 +1,142 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- | /Caution/: Improper use of this module can lead to unexpected behaviour if the preconditions of the functions are not met.</span></span><span class="mpre">
+module Lens.Family.Unchecked (
+</span><span class="hl_comment"><span class="mpre">-- * Lenses</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | A lens family is created by separating a substructure from the rest of its structure by a functor.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- How to create a lens family is best illustrated by the common example of a field of a record:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data MyRecord a = MyRecord { _myA :: a, _myB :: Int }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; -- The use of type variables a and a&#39; allow for polymorphic updates.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myA :: Functor f =&gt; LensLike f (MyRecord a) (MyRecord a&#39;) a a&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myA f (MyRecord a b) = (\a&#39; -&gt; MyRecord a&#39; b) `fmap` (f a)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; -- The field _myB is monomorphic, so we can use a &#39;LensLike&#39;&#39;  type.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; -- However, the structure of the function is exactly the same as for LensLike.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myB :: Functor f =&gt; LensLike&#39; f (MyRecord a) Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myB f (MyRecord a b) = (\b&#39; -&gt; MyRecord a b&#39;) `fmap` (f b)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- By following this template you can safely build your own lenses.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To use this template, you do not need anything from this module other than the type synonyms &#39;LensLike&#39; and &#39;LensLike&#39;&#39;, and even they are optional.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- See the @lens-family-th@ package to generate this code using Template Haskell.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Note/: It is possible to build lenses without even depending on @lens-family-core@ by expanding away the type synonym.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; -- A lens definition that only requires the Haskell &quot;Prelude&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myA :: Functor f =&gt; (a -&gt; f a&#39;) -&gt; (MyRecord a) -&gt; f (MyRecord a&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myA f (MyRecord a b) = (\a&#39; -&gt; MyRecord a&#39; b) `fmap` (f a)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You can build lenses for more than just fields of records.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Any value @l :: Functor f =&gt; LensLike f a a&#39; b b&#39;@ is well-defined when it satisfies the two van Laarhoven lens laws:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @l Identity === Identity@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @l (Compose . fmap f . g) === Compose . fmap (l f) . (l g)@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The functions &#39;lens&#39; and &#39;iso&#39; can also be used to construct lenses.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The resulting lenses will be well-defined so long as their preconditions are satisfied.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- * Traversals</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | If you have zero or more fields of the same type of a record, a traversal can be used to refer to all of them in order.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Multiple references are made by replacing the &#39;Functor&#39; constraint of lenses with an &#39;Control.Applicative.Applicative&#39; constraint.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Consider the following example of a record with two &#39;Int&#39; fields.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data MyRecord = MyRecord { _myA :: Int, _myB :: Int }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; -- myInts is a traversal over both fields of MyRecord.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myInts :: Applicative f =&gt; LensLike&#39; f MyRecord Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myInts f (MyRecord a b) = MyRecord &lt;$&gt; f a &lt;*&gt; f b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If the record and the referenced fields are parametric, you can can build traversals with polymorphic updating.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Consider the following example of a record with two &#39;Maybe&#39; fields.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data MyRecord a = MyRecord { _myA :: Maybe a, _myB :: Maybe a }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; -- myInts is a traversal over both fields of MyRecord.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myMaybes :: Applicative f =&gt; LensLike f (MyRecord a) (MyRecord a&#39;) (Maybe a) (Maybe a&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myMaybes f (MyRecord a b) = MyRecord &lt;$&gt; f a &lt;*&gt; f b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Note/: As with lenses, is possible to build traversals without even depending on @lens-family-core@ by expanding away the type synonym.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; -- A traversal definition that only requires the Haskell &quot;Prelude&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myMaybes :: Applicative f =&gt; (Maybe a -&gt; f (Maybe a&#39;)) -&gt; MyRecord a -&gt; f (MyRecord a&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; myMaybes f (MyRecord a b) = MyRecord &lt;$&gt; f a &lt;*&gt; f b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Unfortuantely, there are no helper functions for making traversals.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- You must make them by hand.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Any value @t :: Applicative f =&gt; LensLike f a a&#39; b b&#39;@ is well-defined when it satisfies the two van Laarhoven traversal laws:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @t Identity === Identity@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @t (Compose . fmap f . g) === Compose . fmap (t f) . (t g)@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Data.Traversable.traverse&#39; is the canonical traversal for various containers.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- * Documentation</span></span><span class="mpre">
+    lens
+  , iso
+  , setting
+</span><span class="hl_comment"><span class="mpre">-- * Types</span></span><span class="mpre">
+  , LensLike, LensLike&#39;
+  , Identical
+  ) where
+
+import Control.Applicative (</span><a href="Control.Applicative.html#loc_115_5_115_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Applicative.html#loc_115_5_115_9&#39;)"><span class="mpre">pure</span></a><span class="mpre">)
+import Lens.Family.Identical (</span><a href="Lens.Family.Identical.html#loc_9_24_9_33" onmouseover="nemnem.highlightLocalToRemote(&#39;Lens.Family.Identical.html#loc_9_24_9_33&#39;)"><span class="mpre">Identical</span></a><span class="mpre">, </span><a href="Lens.Family.Identical.html#loc_10_3_10_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Lens.Family.Identical.html#loc_10_3_10_10&#39;)"><span class="mpre">extract</span></a><span class="mpre">)
+
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/src/Lens/Family/Unchecked.hs&quot;, srcSpanStartLine = 88, srcSpanStartColumn = 1, srcSpanEndLine = 88, srcSpanEndColumn = 55}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/src/Lens/Family/Unchecked.hs&quot;, srcSpanStartLine = 88, srcSpanStartColumn = 1, srcSpanEndLine = 88, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/s"><span class="mpre">type LensLike f a a&#39; b b&#39; = (b -&gt; f b&#39;) -&gt; (a -&gt; f a&#39;)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/src/Lens/Family/Unchecked.hs&quot;, srcSpanStartLine = 89, srcSpanStartColumn = 1, srcSpanEndLine = 89, srcSpanEndColumn = 48}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/src/Lens/Family/Unchecked.hs&quot;, srcSpanStartLine = 89, srcSpanStartColumn = 1, srcSpanEndLine = 89, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/s"><span class="mpre">type LensLike&#39; f a b = (b -&gt; f b) -&gt; (a -&gt; f a)</span></span><span class="mpre">
+
+</span><a href="#loc_108_1_108_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_5&#39;)"><span class="mpre">lens</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/src/Lens/Family/Unchecked.hs&quot;, srcSpanStartLine = 91, srcSpanStartColumn = 9, srcSpanEndLine = 92, srcSpanEndColumn = 8}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/src/Lens/Family/Unchecked.hs&quot;, srcSpanStartLine = 92, srcSpanStartColumn = 6, srcSpanEndLine = 92, srcSpanEndColumn = 8}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagran"><span class="mpre">Functor f
+     =&gt;</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) </span><span class="hl_comment"><span class="mpre">-- ^ getter</span></span><span class="mpre">
+     -&gt; (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b&#39;</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a&#39;</span></span><span class="mpre">) </span><span class="hl_comment"><span class="mpre">-- ^ setter</span></span><span class="mpre">
+     -&gt; </span><span class="hl_tyconref"><span class="mpre">LensLike</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a&#39;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ^ @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- lens :: (a -&gt; b) -&gt; (a -&gt; b&#39; -&gt; a&#39;) -&gt; Lens a a&#39; b b&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Build a lens from a @getter@ and @setter@ families.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Caution/: In order for the generated lens family to be well-defined, you must ensure that the three lens laws hold:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @getter (setter a b) === b@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @setter a (getter a) === a@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @setter (setter a b1) b2) === setter a b2@</span></span><span class="mpre">
+</span><a name="loc_108_1_108_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_5&#39;)"><span class="hl_fundecl"><span class="mpre">lens</span></span></a><span class="mpre"> </span><a name="loc_108_6_108_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_6_108_12&#39;)"><span class="hl_vardecl"><span class="mpre">getter</span></span></a><span class="mpre"> </span><a name="loc_108_13_108_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_13_108_19&#39;)"><span class="hl_vardecl"><span class="mpre">setter</span></span></a><span class="mpre"> </span><a name="loc_108_20_108_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_20_108_21&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> </span><a name="loc_108_22_108_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_22_108_23&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fmap</span></span><span class="mpre"> (</span><a href="#loc_108_13_108_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_13_108_19&#39;)"><span class="hl_varref"><span class="mpre">setter</span></span></a><span class="mpre"> </span><a href="#loc_108_22_108_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_22_108_23&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">) (</span><a href="#loc_108_20_108_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_20_108_21&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> (</span><a href="#loc_108_6_108_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_6_108_12&#39;)"><span class="hl_varref"><span class="mpre">getter</span></span></a><span class="mpre"> </span><a href="#loc_108_22_108_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_22_108_23&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">))
+
+</span><a href="#loc_125_1_125_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_4&#39;)"><span class="mpre">iso</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/src/Lens/Family/Unchecked.hs&quot;, srcSpanStartLine = 110, srcSpanStartColumn = 8, srcSpanEndLine = 111, srcSpanEndColumn = 7}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/src/Lens/Family/Unchecked.hs&quot;, srcSpanStartLine = 111, srcSpanStartColumn = 5, srcSpanEndLine = 111, srcSpanEndColumn = 7}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/va"><span class="mpre">Functor f 
+    =&gt;</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) </span><span class="hl_comment"><span class="mpre">-- ^ yin</span></span><span class="mpre">
+    -&gt; (</span><span class="hl_tyvar"><span class="mpre">b&#39;</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a&#39;</span></span><span class="mpre">) </span><span class="hl_comment"><span class="mpre">-- ^ yang</span></span><span class="mpre">
+    -&gt; </span><span class="hl_tyconref"><span class="mpre">LensLike</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a&#39;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ^ @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- iso :: (a -&gt; b) -&gt; (b&#39; -&gt; a&#39;) -&gt; Lens a a&#39; b b&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Build a lens from isomorphism families.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Caution/: In order for the generated lens family to be well-defined, you must ensure that the two isomorphism laws hold:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @yin . yang === id@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @yang . yin === id@</span></span><span class="mpre">
+</span><a name="loc_125_1_125_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_4&#39;)"><span class="hl_fundecl"><span class="mpre">iso</span></span></a><span class="mpre"> </span><a name="loc_125_5_125_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_5_125_11&#39;)"><span class="hl_vardecl"><span class="mpre">getter</span></span></a><span class="mpre"> </span><a name="loc_125_12_125_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_12_125_18&#39;)"><span class="hl_vardecl"><span class="mpre">setter</span></span></a><span class="mpre"> = </span><a href="#loc_108_1_108_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_108_1_108_5&#39;)"><span class="hl_varref"><span class="mpre">lens</span></span></a><span class="mpre"> </span><a href="#loc_125_5_125_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_5_125_11&#39;)"><span class="hl_varref"><span class="mpre">getter</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">const</span></span><span class="mpre"> </span><a href="#loc_125_12_125_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_12_125_18&#39;)"><span class="hl_varref"><span class="mpre">setter</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- | &#39;setting&#39; promotes a \&quot;semantic editor combinator\&quot; to a modify-only lens.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- To demote a lens to a semantic edit combinator, use the section @(l %~)@ or @over l@ from &quot;Lens.Family&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;&gt;&gt; setting map . fstL %~ length $ [(&quot;The&quot;,0),(&quot;quick&quot;,1),(&quot;brown&quot;,1),(&quot;fox&quot;,2)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- [(3,0),(5,1),(5,1),(3,2)]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Caution/: In order for the generated setter family to be well-defined, you must ensure that the two functors laws hold:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @sec id === id@</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * @sec f . sec g === sec (f . g)@</span></span><span class="mpre">
+</span><a href="#loc_141_1_141_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_1_141_8&#39;)"><span class="mpre">setting</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/src/Lens/Family/Unchecked.hs&quot;, srcSpanStartLine = 138, srcSpanStartColumn = 12, srcSpanEndLine = 139, srcSpanEndColumn = 11}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-core-1.1.0/src/Lens/Family/Unchecked.hs&quot;, srcSpanStartLine = 139, srcSpanStartColumn = 9, srcSpanEndLine = 139, srcSpanEndColumn = 11}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home"><span class="mpre">Identical f
+        =&gt;</span></span><span class="mpre"> ((</span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b&#39;</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a&#39;</span></span><span class="mpre">) </span><span class="hl_comment"><span class="mpre">-- ^ sec (semantic editor combinator)</span></span><span class="mpre">
+        -&gt; </span><span class="hl_tyconref"><span class="mpre">LensLike</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a&#39;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b&#39;</span></span><span class="mpre">
+</span><a name="loc_141_1_141_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_1_141_8&#39;)"><span class="hl_fundecl"><span class="mpre">setting</span></span></a><span class="mpre"> </span><a name="loc_141_9_141_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_9_141_10&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> </span><a name="loc_141_11_141_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_11_141_12&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> = </span><a href="Control.Applicative.html#loc_115_5_115_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Applicative.html#loc_115_5_115_9&#39;)"><span class="hl_varref"><span class="mpre">pure</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="#loc_141_9_141_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_9_141_10&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> (</span><a href="Lens.Family.Identical.html#loc_10_3_10_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Lens.Family.Identical.html#loc_10_3_10_10&#39;)"><span class="hl_varref"><span class="mpre">extract</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="#loc_141_11_141_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_141_11_141_12&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre">)
+</span></div></body></html>

@@ -1,0 +1,71 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">#if __GLASGOW_HASKELL__ &gt;= 701
+{-# LANGUAGE Safe #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.XHtml</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Andy Gill, and the Oregon Graduate Institute of </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                Science and Technology, 1999-2001,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Bjorn Bringert, 2004-2006</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Chris Dornan &lt;chris@chrisdornan.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  Stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  Portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- An XHTML combinator library.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Based on the original Text.Html library by Andy Gill. </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- See &lt;http://www.cse.ogi.edu/~andy/html/intro.htm&gt; for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- an introduction to that library.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module re-exports &quot;Text.XHtml.Transitional&quot;, which produces</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- XHTML 1.0 Transitional.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Use &quot;Text.XHtml.Strict&quot; if you want XHTML 1.0 Strict,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and &quot;Text.XHtml.Frameset&quot; if you want</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to produce XHTML 1.0 Frameset.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- See &lt;http://www.w3.org/TR/xhtml1/&gt; for more information about</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- XHTML 1.0.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-
+-- Changes by Bjorn Bringert:
+--
+-- * produces XHTML 1.0 Transitional (&lt;http://www.w3.org/TR/xhtml1/&gt;)
+--
+-- * escapes characters inside attribute values
+--
+-- * changed &#39;height&#39; to a String attribute
+--
+-- * added &#39;Monoid&#39; instance for &#39;Html&#39;.
+--
+-- * added elements from HTML 4.0: &#39;abbr&#39;, &#39;acronym&#39;, &#39;bdo&#39;, &#39;button&#39;, &#39;col&#39;, 
+--  &#39;colgroup&#39;, &#39;del&#39;, &#39;iframe&#39;, &#39;ins&#39;, &#39;label&#39;, &#39;legend&#39;, &#39;noframes&#39;, 
+--  &#39;noscript&#39;, &#39;object&#39;, &#39;optgroup&#39;, &#39;script&#39;, &#39;strike&#39;, &#39;tbody&#39;, &#39;tfoot&#39;, 
+--  &#39;thead&#39;, and &#39;quote&#39;.
+--
+-- * &#39;defList&#39; no longer makes terms bold.
+--
+-- * deprecated functions for elements and attributes 
+--   deprecated in HTML 4.0
+--
+-- * hid or removed some internal functions.
+--
+-- TODO:
+--
+-- * add new attributes introduced in HTML 4.0
+--
+-- * character encoding
+-}</span></span><span class="mpre">
+module Text.XHtml (
+                   module Text.XHtml.Transitional,
+                   module Text.XHtml.Table,
+                   module Text.XHtml.Debug
+      ) where
+
+import Text.XHtml.Transitional
+import Text.XHtml.Table
+import Text.XHtml.Debug
+
+</span></div></body></html>

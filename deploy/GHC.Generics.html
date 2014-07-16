@@ -1,0 +1,820 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy            #-}
+{-# LANGUAGE CPP                    #-}
+{-# LANGUAGE NoImplicitPrelude      #-}
+{-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE StandaloneDeriving     #-}
+{-# LANGUAGE DeriveGeneric          #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  GHC.Generics</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Universiteit Utrecht 2010-2011, University of Oxford 2012-2013</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  see libraries/base/LICENSE</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  internal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.6.0.0/</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If you&#39;re using @GHC.Generics@, you should consider using the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &lt;http://hackage.haskell.org/package/generic-deriving&gt; package, which </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- contains many useful generic functions.</span></span><span class="mpre">
+
+module GHC.Generics  (
+</span><span class="hl_comment"><span class="mpre">-- * Introduction</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Datatype-generic functions are are based on the idea of converting values of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a datatype @T@ into corresponding values of a (nearly) isomorphic type @&#39;Rep&#39; T@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The type @&#39;Rep&#39; T@ is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- built from a limited set of type constructors, all provided by this module. A</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- datatype-generic function is then an overloaded function with instances</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for most of these type constructors, together with a wrapper that performs</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the mapping between @T@ and @&#39;Rep&#39; T@. By using this technique, we merely need</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a few generic instances in order to implement functionality that works for any</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- representable type.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Representable types are collected in the &#39;Generic&#39; class, which defines the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- associated type &#39;Rep&#39; as well as conversion functions &#39;from&#39; and &#39;to&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Typically, you will not define &#39;Generic&#39; instances by hand, but have the compiler</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- derive them for you.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- ** Representing datatypes</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The key to defining your own datatype-generic functions is to understand how to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- represent datatypes using the given set of type constructors.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Let us look at an example first:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data Tree a = Leaf a | Node (Tree a) (Tree a)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   deriving &#39;Generic&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The above declaration (which requires the language pragma @DeriveGeneric@)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- causes the following representation to be generated:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance &#39;Generic&#39; (Tree a) where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   type &#39;Rep&#39; (Tree a) =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     &#39;D1&#39; D1Tree</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--       (&#39;C1&#39; C1_0Tree</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          (&#39;S1&#39; &#39;NoSelector&#39; (&#39;Par0&#39; a))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--        &#39;:+:&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--        &#39;C1&#39; C1_1Tree</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          (&#39;S1&#39; &#39;NoSelector&#39; (&#39;Rec0&#39; (Tree a))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--           &#39;:*:&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--           &#39;S1&#39; &#39;NoSelector&#39; (&#39;Rec0&#39; (Tree a))))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   ...</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Hint:/ You can obtain information about the code being generated from GHC by passing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the @-ddump-deriv@ flag. In GHCi, you can expand a type family such as &#39;Rep&#39; using</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the @:kind!@ command.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+#if 0
+</span><span class="hl_comment"><span class="mpre">-- /TODO:/ Newer GHC versions abandon the distinction between &#39;Par0&#39; and &#39;Rec0&#39; and will</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- use &#39;Rec0&#39; everywhere.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+#endif
+</span><span class="hl_comment"><span class="mpre">-- This is a lot of information! However, most of it is actually merely meta-information</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that makes names of datatypes and constructors and more available on the type level.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Here is a reduced representation for &#39;Tree&#39; with nearly all meta-information removed,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for now keeping only the most essential aspects:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance &#39;Generic&#39; (Tree a) where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   type &#39;Rep&#39; (Tree a) =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     &#39;Par0&#39; a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     &#39;:+:&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     (&#39;Rec0&#39; (Tree a) &#39;:*:&#39; &#39;Rec0&#39; (Tree a))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The @Tree@ datatype has two constructors. The representation of individual constructors</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- is combined using the binary type constructor &#39;:+:&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The first constructor consists of a single field, which is the parameter @a@. This is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- represented as @&#39;Par0&#39; a@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The second constructor consists of two fields. Each is a recursive field of type @Tree a@,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- represented as @&#39;Rec0&#39; (Tree a)@. Representations of individual fields are combined using</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the binary type constructor &#39;:*:&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Now let us explain the additional tags being used in the complete representation:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * The @&#39;S1&#39; &#39;NoSelector&#39;@ indicates that there is no record field selector associated with</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      this field of the constructor.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * The @&#39;C1&#39; C1_0Tree@ and @&#39;C1&#39; C1_1Tree@ invocations indicate that the enclosed part is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      the representation of the first and second constructor of datatype @Tree@, respectively.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      Here, @C1_0Tree@ and @C1_1Tree@ are datatypes generated by the compiler as part of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      @deriving &#39;Generic&#39;@. These datatypes are proxy types with no values. They are useful</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      because they are instances of the type class &#39;Constructor&#39;. This type class can be used</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      to obtain information about the constructor in question, such as its name</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      or infix priority.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * The @&#39;D1&#39; D1Tree@ tag indicates that the enclosed part is the representation of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      datatype @Tree@. Again, @D1Tree@ is a datatype generated by the compiler. It is a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      proxy type, and is useful by being an instance of class &#39;Datatype&#39;, which</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      can be used to obtain the name of a datatype, the module it has been defined in, and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      whether it has been defined using @data@ or @newtype@.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- ** Derived and fundamental representation types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- There are many datatype-generic functions that do not distinguish between positions that</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- are parameters or positions that are recursive calls. There are also many datatype-generic</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- functions that do not care about the names of datatypes and constructors at all. To keep</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the number of cases to consider in generic functions in such a situation to a minimum,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- it turns out that many of the type constructors introduced above are actually synonyms,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- defining them to be variants of a smaller set of constructors.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- *** Individual fields of constructors: &#39;K1&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The type constructors &#39;Par0&#39; and &#39;Rec0&#39; are variants of &#39;K1&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Par0&#39; = &#39;K1&#39; &#39;P&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;Rec0&#39; = &#39;K1&#39; &#39;R&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Here, &#39;P&#39; and &#39;R&#39; are type-level proxies again that do not have any associated values.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- *** Meta information: &#39;M1&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The type constructors &#39;S1&#39;, &#39;C1&#39; and &#39;D1&#39; are all variants of &#39;M1&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;S1&#39; = &#39;M1&#39; &#39;S&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;C1&#39; = &#39;M1&#39; &#39;C&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type &#39;D1&#39; = &#39;M1&#39; &#39;D&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The types &#39;S&#39;, &#39;C&#39; and &#39;R&#39; are once again type-level proxies, just used to create</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- several variants of &#39;M1&#39;.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- *** Additional generic representation type constructors</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Next to &#39;K1&#39;, &#39;M1&#39;, &#39;:+:&#39; and &#39;:*:&#39; there are a few more type constructors that occur</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in the representations of other datatypes.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- **** Empty datatypes: &#39;V1&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For empty datatypes, &#39;V1&#39; is used as a representation. For example,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data Empty deriving &#39;Generic&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- yields</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance &#39;Generic&#39; Empty where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   type &#39;Rep&#39; Empty = &#39;D1&#39; D1Empty &#39;V1&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- **** Constructors without fields: &#39;U1&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If a constructor has no arguments, then &#39;U1&#39; is used as its representation. For example</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the representation of &#39;Bool&#39; is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance &#39;Generic&#39; Bool where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   type &#39;Rep&#39; Bool =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     &#39;D1&#39; D1Bool</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--       (&#39;C1&#39; C1_0Bool &#39;U1&#39; &#39;:+:&#39; &#39;C1&#39; C1_1Bool &#39;U1&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- *** Representation of types with many constructors or many fields</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- As &#39;:+:&#39; and &#39;:*:&#39; are just binary operators, one might ask what happens if the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- datatype has more than two constructors, or a constructor with more than two</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- fields. The answer is simple: the operators are used several times, to combine</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- all the constructors and fields as needed. However, users /should not rely on</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a specific nesting strategy/ for &#39;:+:&#39; and &#39;:*:&#39; being used. The compiler is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- free to choose any nesting it prefers. (In practice, the current implementation</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- tries to produce a more or less balanced nesting, so that the traversal of the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- structure of the datatype from the root to a particular component can be performed</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- in logarithmic rather than linear time.)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- ** Defining datatype-generic functions</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- A datatype-generic function comprises two parts:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    1. /Generic instances/ for the function, implementing it for most of the representation</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--       type constructors introduced above.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    2. A /wrapper/ that for any datatype that is in `Generic`, performs the conversion</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--       between the original value and its `Rep`-based representation and then invokes the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--       generic instances.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- As an example, let us look at a function &#39;encode&#39; that produces a naive, but lossless</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- bit encoding of values of various datatypes. So we are aiming to define a function</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- encode :: &#39;Generic&#39; a =&gt; a -&gt; [Bool]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- where we use &#39;Bool&#39; as our datatype for bits.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- For part 1, we define a class @Encode&#39;@. Perhaps surprisingly, this class is parameterized</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- over a type constructor @f@ of kind @* -&gt; *@. This is a technicality: all the representation</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type constructors operate with kind @* -&gt; *@ as base kind. But the type argument is never</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- being used. This may be changed at some point in the future. The class has a single method,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and we use the type we want our final function to have, but we replace the occurrences of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the generic type argument @a@ with @f p@ (where the @p@ is any argument; it will not be used).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; class Encode&#39; f where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;   encode&#39; :: f p -&gt; [Bool]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- With the goal in mind to make @encode@ work on @Tree@ and other datatypes, we now define</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instances for the representation type constructors &#39;V1&#39;, &#39;U1&#39;, &#39;:+:&#39;, &#39;:*:&#39;, &#39;K1&#39;, and &#39;M1&#39;.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- *** Definition of the generic representation types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In order to be able to do this, we need to know the actual definitions of these types:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data    &#39;V1&#39;        p                       -- lifted version of Empty</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data    &#39;U1&#39;        p = &#39;U1&#39;                  -- lifted version of ()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data    (&#39;:+:&#39;) f g p = &#39;L1&#39; (f p) | &#39;R1&#39; (g p) -- lifted version of &#39;Either&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data    (&#39;:*:&#39;) f g p = (f p) &#39;:*:&#39; (g p)     -- lifted version of (,) </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- newtype &#39;K1&#39;    i c p = &#39;K1&#39; { &#39;unK1&#39; :: c }    -- a container for a c</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- newtype &#39;M1&#39;  i t f p = &#39;M1&#39; { &#39;unM1&#39; :: f p }  -- a wrapper</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- So, &#39;U1&#39; is just the unit type, &#39;:+:&#39; is just a binary choice like &#39;Either&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;:*:&#39; is a binary pair like the pair constructor @(,)@, and &#39;K1&#39; is a value</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of a specific type @c@, and &#39;M1&#39; wraps a value of the generic type argument,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- which in the lifted world is an @f p@ (where we do not care about @p@).</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- *** Generic instances</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The instance for &#39;V1&#39; is slightly awkward (but also rarely used):</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance Encode&#39; &#39;V1&#39; where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encode&#39; x = undefined</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- There are no values of type @V1 p@ to pass (except undefined), so this is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- actually impossible. One can ask why it is useful to define an instance for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;V1&#39; at all in this case? Well, an empty type can be used as an argument to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a non-empty type, and you might still want to encode the resulting type.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- As a somewhat contrived example, consider @[Empty]@, which is not an empty</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- type, but contains just the empty list. The &#39;V1&#39; instance ensures that we</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- can call the generic function on such types.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- There is exactly one value of type &#39;U1&#39;, so encoding it requires no</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- knowledge, and we can use zero bits:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance Encode&#39; &#39;U1&#39; where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encode&#39; &#39;U1&#39; = []</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In the case for &#39;:+:&#39;, we produce &#39;False&#39; or &#39;True&#39; depending on whether</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the constructor of the value provided is located on the left or on the right:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance (Encode&#39; f, Encode&#39; g) =&gt; Encode&#39; (f &#39;:+:&#39; g) where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encode&#39; (&#39;L1&#39; x) = False : encode&#39; x</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encode&#39; (&#39;R1&#39; x) = True  : encode&#39; x</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In the case for &#39;:*:&#39;, we append the encodings of the two subcomponents:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance (Encode&#39; f, Encode&#39; g) =&gt; Encode&#39; (f &#39;:*:&#39; g) where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encode&#39; (x &#39;:*:&#39; y) = encode&#39; x ++ encode&#39; y</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The case for &#39;K1&#39; is rather interesting. Here, we call the final function</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;encode&#39; that we yet have to define, recursively. We will use another type</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- class &#39;Encode&#39; for that function:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance (Encode c) =&gt; Encode&#39; (&#39;K1&#39; i c) where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encode&#39; (&#39;K1&#39; x) = encode x</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note how &#39;Par0&#39; and &#39;Rec0&#39; both being mapped to &#39;K1&#39; allows us to define</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a uniform instance here.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Similarly, we can define a uniform instance for &#39;M1&#39;, because we completely</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- disregard all meta-information:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance (Encode&#39; f) =&gt; Encode&#39; (&#39;M1&#39; i t f) where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encode&#39; (&#39;M1&#39; x) = encode&#39; x</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Unlike in &#39;K1&#39;, the instance for &#39;M1&#39; refers to &#39;encode&#39;&#39;, not &#39;encode&#39;.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- *** The wrapper and generic default</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- We now define class &#39;Encode&#39; for the actual &#39;encode&#39; function:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- class Encode a where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encode :: a -&gt; [Bool]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   default encode :: (&#39;Generic&#39; a) =&gt; a -&gt; [Bool]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encode x = encode&#39; (&#39;from&#39; x)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The incoming &#39;x&#39; is converted using &#39;from&#39;, then we dispatch to the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- generic instances using &#39;encode&#39;&#39;. We use this as a default definition</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for &#39;encode&#39;. We need the &#39;default encode&#39; signature because ordinary</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Haskell default methods must not introduce additional class constraints,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- but our generic default does.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Defining a particular instance is now as simple as saying</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance (Encode a) =&gt; Encode (Tree a)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+#if 0
+</span><span class="hl_comment"><span class="mpre">-- /TODO:/ Add usage example?</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+#endif
+</span><span class="hl_comment"><span class="mpre">-- The generic default is being used. In the future, it will hopefully be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- possible to use @deriving Encode@ as well, but GHC does not yet support</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that syntax for this situation.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Having &#39;Encode&#39; as a class has the advantage that we can define</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- non-generic special cases, which is particularly useful for abstract</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- datatypes that have no structural representation. For example, given</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a suitable integer encoding function &#39;encodeInt&#39;, we can define</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance Encode Int where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   encode = encodeInt</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- *** Omitting generic instances</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- It is not always required to provide instances for all the generic</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- representation types, but omitting instances restricts the set of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- datatypes the functions will work for:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * If no &#39;:+:&#39; instance is given, the function may still work for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      empty datatypes or datatypes that have a single constructor,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      but will fail on datatypes with more than one constructor.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * If no &#39;:*:&#39; instance is given, the function may still work for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      datatypes where each constructor has just zero or one field,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      in particular for enumeration types.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * If no &#39;K1&#39; instance is given, the function may still work for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      enumeration types, where no constructor has any fields.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * If no &#39;V1&#39; instance is given, the function may still work for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      any datatype that is not empty.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    * If no &#39;U1&#39; instance is given, the function may still work for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      any datatype where each constructor has at least one field.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- An &#39;M1&#39; instance is always required (but it can just ignore the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- meta-information, as is the case for &#39;encode&#39; above).</span></span><span class="mpre">
+#if 0
+</span><span class="hl_comment"><span class="mpre">-- *** Using meta-information</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- TODO</span></span><span class="mpre">
+#endif
+</span><span class="hl_comment"><span class="mpre">-- ** Generic constructor classes</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Datatype-generic functions as defined above work for a large class</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of datatypes, including parameterized datatypes. (We have used &#39;Tree&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- as our example above, which is of kind @* -&gt; *@.) However, the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Generic&#39; class ranges over types of kind @*@, and therefore, the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- resulting generic functions (such as &#39;encode&#39;) must be parameterized</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- by a generic type argument of kind @*@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- What if we want to define generic classes that range over type</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- constructors (such as &#39;Functor&#39;, &#39;Traversable&#39;, or &#39;Foldable&#39;)?</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- *** The &#39;Generic1&#39; class</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Like &#39;Generic&#39;, there is a class &#39;Generic1&#39; that defines a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- representation &#39;Rep1&#39; and conversion functions &#39;from1&#39; and &#39;to1&#39;,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- only that &#39;Generic1&#39; ranges over types of kind @* -&gt; *@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;Generic1&#39; class is also derivable.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The representation &#39;Rep1&#39; is ever so slightly different from &#39;Rep&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Let us look at &#39;Tree&#39; as an example again:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data Tree a = Leaf a | Node (Tree a) (Tree a)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   deriving &#39;Generic1&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The above declaration causes the following representation to be generated:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instance &#39;Generic1&#39; Tree where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   type &#39;Rep1&#39; Tree =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     &#39;D1&#39; D1Tree</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--       (&#39;C1&#39; C1_0Tree</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          (&#39;S1&#39; &#39;NoSelector&#39; &#39;Par1&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--        &#39;:+:&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--        &#39;C1&#39; C1_1Tree</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          (&#39;S1&#39; &#39;NoSelector&#39; (&#39;Rec1&#39; Tree)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--           &#39;:*:&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--           &#39;S1&#39; &#39;NoSelector&#39; (&#39;Rec1&#39; Tree)))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   ...</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The representation reuses &#39;D1&#39;, &#39;C1&#39;, &#39;S1&#39; (and thereby &#39;M1&#39;) as well</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- as &#39;:+:&#39; and &#39;:*:&#39; from &#39;Rep&#39;. (This reusability is the reason that we</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- carry around the dummy type argument for kind-@*@-types, but there are</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- already enough different names involved without duplicating each of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- these.)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- What&#39;s different is that we now use &#39;Par1&#39; to refer to the parameter</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (and that parameter, which used to be @a@), is not mentioned explicitly</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- by name anywhere; and we use &#39;Rec1&#39; to refer to a recursive use of @Tree a@.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- *** Representation of @* -&gt; *@ types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Unlike &#39;Par0&#39; and &#39;Rec0&#39;, the &#39;Par1&#39; and &#39;Rec1&#39; type constructors do not</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- map to &#39;K1&#39;. They are defined directly, as follows:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- newtype &#39;Par1&#39;   p = &#39;Par1&#39; { &#39;unPar1&#39; ::   p } -- gives access to parameter p</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- newtype &#39;Rec1&#39; f p = &#39;Rec1&#39; { &#39;unRec1&#39; :: f p } -- a wrapper</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In &#39;Par1&#39;, the parameter @p@ is used for the first time, whereas &#39;Rec1&#39; simply</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- wraps an application of @f@ to @p@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that &#39;K1&#39; (in the guise of &#39;Rec0&#39;) can still occur in a &#39;Rep1&#39; representation,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- namely when the datatype has a field that does not mention the parameter.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The declaration</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data WithInt a = WithInt Int a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   deriving &#39;Generic1&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- yields</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- class &#39;Rep1&#39; WithInt where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   type &#39;Rep1&#39; WithInt =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     &#39;D1&#39; D1WithInt</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--       (&#39;C1&#39; C1_0WithInt</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--         (&#39;S1&#39; &#39;NoSelector&#39; (&#39;Rec0&#39; Int)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          &#39;:*:&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          &#39;S1&#39; &#39;NoSelector&#39; &#39;Par1&#39;))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If the parameter @a@ appears underneath a composition of other type constructors,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- then the representation involves composition, too:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- data Rose a = Fork a [Rose a]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- yields</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- class &#39;Rep1&#39; Rose where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--   type &#39;Rep1&#39; Rose =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     &#39;D1&#39; D1Rose</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--       (&#39;C1&#39; C1_0Rose</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--         (&#39;S1&#39; &#39;NoSelector&#39; &#39;Par1&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          &#39;:*:&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          &#39;S1&#39; &#39;NoSelector&#39; ([] &#39;:.:&#39; &#39;Rec1&#39; Rose)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- newtype (&#39;:.:&#39;) f g p = &#39;Comp1&#39; { &#39;unComp1&#39; :: f (g p) }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+#if 0
+</span><span class="hl_comment"><span class="mpre">-- *** Limitations</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /TODO/</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /TODO:/ Also clear up confusion about &#39;Rec0&#39; and &#39;Rec1&#39; not really indicating recursion.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- * Generic representation types</span></span><span class="mpre">
+    V1, U1(..), Par1(..), Rec1(..), K1(..), M1(..)
+  , (:+:)(..), (:*:)(..), (:.:)(..)
+
+  </span><span class="hl_comment"><span class="mpre">-- ** Synonyms for convenience</span></span><span class="mpre">
+  , Rec0, Par0, R, P
+  , D1, C1, S1, D, C, S
+
+  </span><span class="hl_comment"><span class="mpre">-- * Meta-information</span></span><span class="mpre">
+  , Datatype(..), Constructor(..), Selector(..), NoSelector
+  , Fixity(..), Associativity(..), Arity(..), prec
+
+  </span><span class="hl_comment"><span class="mpre">-- * Generic type classes</span></span><span class="mpre">
+  , Generic(..), Generic1(..)
+
+  ) where
+
+</span><span class="hl_comment"><span class="mpre">-- We use some base types</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 564, srcSpanStartColumn = 8, srcSpanEndLine = 564, srcSpanEndColumn = 17}, srcInfoPoints = []}) &quot;GHC.Types&quot;"><span class="mpre">GHC.Types</span></span><span class="mpre">
+import Data.Maybe ( </span><a href="Data.Maybe.html#loc_49_7_49_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Maybe.html#loc_49_7_49_12&#39;)"><span class="mpre">Maybe</span></a><span class="mpre">(..) )
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 566, srcSpanStartColumn = 8, srcSpanEndLine = 566, srcSpanEndColumn = 19}, srcInfoPoints = []}) &quot;Data.Either&quot;"><span class="mpre">Data.Either</span></span><span class="mpre"> ( Either(..) )
+
+</span><span class="hl_comment"><span class="mpre">-- Needed for instances</span></span><span class="mpre">
+import GHC.Classes ( </span><a href="GHC.Classes.html#loc_43_8_43_10" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Classes.html#loc_43_8_43_10&#39;)"><span class="mpre">Eq</span></a><span class="mpre">, </span><a href="GHC.Classes.html#loc_127_18_127_21" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Classes.html#loc_127_18_127_21&#39;)"><span class="mpre">Ord</span></a><span class="mpre"> )
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 570, srcSpanStartColumn = 8, srcSpanEndLine = 570, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Read&quot;"><span class="mpre">GHC.Read</span></span><span class="mpre"> ( Read )
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 571, srcSpanStartColumn = 8, srcSpanEndLine = 571, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Show&quot;"><span class="mpre">GHC.Show</span></span><span class="mpre"> ( Show )
+import Data.Proxy
+
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Representation types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Void: used for datatypes without constructors</span></span><span class="mpre">
+data </span><a name="loc_579_6_579_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_579_6_579_8&#39;)"><span class="hl_tycondecl"><span class="mpre">V1</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Unit: used for constructors without arguments</span></span><span class="mpre">
+data </span><a name="loc_582_6_582_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_582_6_582_8&#39;)"><span class="hl_tycondecl"><span class="mpre">U1</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> = </span><a name="loc_582_13_582_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_582_13_582_15&#39;)"><span class="hl_condecl"><span class="mpre">U1</span></span></a><span class="mpre">
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 583, srcSpanStartColumn = 3, srcSpanEndLine = 583, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 583, srcSpanStartColumn = 3, srcSpanEndLine = 583, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 583, srcSpanSta"><span class="mpre">deriving (Eq, Ord, Read, Show, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Used for marking occurrences of the parameter</span></span><span class="mpre">
+newtype </span><a name="loc_586_9_586_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_586_9_586_13&#39;)"><span class="hl_tycondecl"><span class="mpre">Par1</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">Par1</span></span><span class="mpre"> { </span><a name="loc_586_25_586_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_586_25_586_31&#39;)"><span class="hl_fielddecl"><span class="mpre">unPar1</span></span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> }
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 587, srcSpanStartColumn = 3, srcSpanEndLine = 587, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 587, srcSpanStartColumn = 3, srcSpanEndLine = 587, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 587, srcSpanSta"><span class="mpre">deriving (Eq, Ord, Read, Show, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Recursive calls of kind * -&gt; *</span></span><span class="mpre">
+newtype </span><a name="loc_590_9_590_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_590_9_590_13&#39;)"><span class="hl_tycondecl"><span class="mpre">Rec1</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">Rec1</span></span><span class="mpre"> { </span><a name="loc_590_27_590_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_590_27_590_33&#39;)"><span class="hl_fielddecl"><span class="mpre">unRec1</span></span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> }
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 591, srcSpanStartColumn = 3, srcSpanEndLine = 591, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 591, srcSpanStartColumn = 3, srcSpanEndLine = 591, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 591, srcSpanSta"><span class="mpre">deriving (Eq, Ord, Read, Show, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Constants, additional parameters and recursion of kind *</span></span><span class="mpre">
+newtype </span><a name="loc_594_9_594_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_9_594_11&#39;)"><span class="hl_tycondecl"><span class="mpre">K1</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">i</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> = </span><a name="loc_594_20_594_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_20_594_22&#39;)"><span class="hl_condecl"><span class="mpre">K1</span></span></a><span class="mpre"> { </span><a name="loc_594_25_594_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_25_594_29&#39;)"><span class="hl_fielddecl"><span class="mpre">unK1</span></span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre"> }
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 595, srcSpanStartColumn = 3, srcSpanEndLine = 595, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 595, srcSpanStartColumn = 3, srcSpanEndLine = 595, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 595, srcSpanSta"><span class="mpre">deriving (Eq, Ord, Read, Show, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Meta-information (constructor names, etc.)</span></span><span class="mpre">
+newtype </span><a name="loc_598_9_598_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_9_598_11&#39;)"><span class="hl_tycondecl"><span class="mpre">M1</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">i</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> = </span><a name="loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_condecl"><span class="mpre">M1</span></span></a><span class="mpre"> { </span><a name="loc_598_27_598_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_27_598_31&#39;)"><span class="hl_fielddecl"><span class="mpre">unM1</span></span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> }
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 599, srcSpanStartColumn = 3, srcSpanEndLine = 599, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 599, srcSpanStartColumn = 3, srcSpanEndLine = 599, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 599, srcSpanSta"><span class="mpre">deriving (Eq, Ord, Read, Show, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Sums: encode choice between constructors</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclInfixDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 602, srcSpanStartColumn = 1, srcSpanEndLine = 602, srcSpanEndColumn = 13}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 602, srcSpanStartColumn = 8, srcSpanEndLine = 602, srcSpanEndColumn = 9}]}) (AssocRight (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Gener"><span class="mpre">infixr 5 :+:</span></span><span class="mpre">
+data </span><a name="loc_603_6_603_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_603_6_603_11&#39;)"><span class="hl_tycondecl"><span class="mpre">(:+:)</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">g</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> = </span><a name="loc_603_20_603_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_603_20_603_22&#39;)"><span class="hl_condecl"><span class="mpre">L1</span></span></a><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre">) | </span><a name="loc_603_31_603_33" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_603_31_603_33&#39;)"><span class="hl_condecl"><span class="mpre">R1</span></span></a><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">g</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre">)
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 604, srcSpanStartColumn = 3, srcSpanEndLine = 604, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 604, srcSpanStartColumn = 3, srcSpanEndLine = 604, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 604, srcSpanSta"><span class="mpre">deriving (Eq, Ord, Read, Show, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Products: encode multiple arguments to constructors</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclInfixDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 607, srcSpanStartColumn = 1, srcSpanEndLine = 607, srcSpanEndColumn = 13}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 607, srcSpanStartColumn = 8, srcSpanEndLine = 607, srcSpanEndColumn = 9}]}) (AssocRight (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Gener"><span class="mpre">infixr 6 :*:</span></span><span class="mpre">
+data </span><a name="loc_608_6_608_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_608_6_608_11&#39;)"><span class="hl_tycondecl"><span class="mpre">(:*:)</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">g</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> = </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> </span><a name="loc_608_24_608_27" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_608_24_608_27&#39;)"><span class="hl_condecl"><span class="mpre">:*:</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">g</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre">
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 609, srcSpanStartColumn = 3, srcSpanEndLine = 609, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 609, srcSpanStartColumn = 3, srcSpanEndLine = 609, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 609, srcSpanSta"><span class="mpre">deriving (Eq, Ord, Read, Show, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Composition of functors</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclInfixDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 612, srcSpanStartColumn = 1, srcSpanEndLine = 612, srcSpanEndColumn = 13}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 612, srcSpanStartColumn = 8, srcSpanEndLine = 612, srcSpanEndColumn = 9}]}) (AssocRight (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Gener"><span class="mpre">infixr 7 :.:</span></span><span class="mpre">
+newtype </span><a name="loc_613_9_613_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_613_9_613_14&#39;)"><span class="hl_tycondecl"><span class="mpre">(:.:)</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">g</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">Comp1</span></span><span class="mpre"> { </span><a name="loc_613_31_613_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_613_31_613_38&#39;)"><span class="hl_fielddecl"><span class="mpre">unComp1</span></span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> (</span><span class="hl_tyvar"><span class="mpre">g</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">p</span></span><span class="mpre">) }
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 614, srcSpanStartColumn = 3, srcSpanEndLine = 614, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 614, srcSpanStartColumn = 3, srcSpanEndLine = 614, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 614, srcSpanSta"><span class="mpre">deriving (Eq, Ord, Read, Show, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Tag for K1: recursion (of kind *)</span></span><span class="mpre">
+data </span><a name="loc_617_6_617_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_617_6_617_7&#39;)"><span class="hl_tycondecl"><span class="mpre">R</span></span></a><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | Tag for K1: parameters (other than the last)</span></span><span class="mpre">
+data </span><a name="loc_619_6_619_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_619_6_619_7&#39;)"><span class="hl_tycondecl"><span class="mpre">P</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Type synonym for encoding recursion (of kind *)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 622, srcSpanStartColumn = 1, srcSpanEndLine = 622, srcSpanEndColumn = 18}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 622, srcSpanStartColumn = 1, srcSpanEndLine = 622, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 622, srcSpanStar"><span class="mpre">type Rec0  = K1 R</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | Type synonym for encoding parameters (other than the last)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 624, srcSpanStartColumn = 1, srcSpanEndLine = 624, srcSpanEndColumn = 18}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 624, srcSpanStartColumn = 1, srcSpanEndLine = 624, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 624, srcSpanStar"><span class="mpre">type Par0  = K1 P</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDeprPragmaDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 625, srcSpanStartColumn = 1, srcSpanEndLine = 625, srcSpanEndColumn = 71}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 625, srcSpanStartColumn = 1, srcSpanEndLine = 625, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 625, srcS"><span class="mpre">{-# DEPRECATED Par0 &quot;&#39;Par0&#39; is no longer used; use &#39;Rec0&#39; instead&quot; #-}</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- deprecated in 7.6</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDeprPragmaDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 626, srcSpanStartColumn = 1, srcSpanEndLine = 626, srcSpanEndColumn = 62}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 626, srcSpanStartColumn = 1, srcSpanEndLine = 626, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 626, srcS"><span class="mpre">{-# DEPRECATED P &quot;&#39;P&#39; is no longer used; use &#39;R&#39; instead&quot; #-}</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- deprecated in 7.6</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Tag for M1: datatype</span></span><span class="mpre">
+data </span><a name="loc_629_6_629_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_629_6_629_7&#39;)"><span class="hl_tycondecl"><span class="mpre">D</span></span></a><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | Tag for M1: constructor</span></span><span class="mpre">
+data </span><a name="loc_631_6_631_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_631_6_631_7&#39;)"><span class="hl_tycondecl"><span class="mpre">C</span></span></a><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | Tag for M1: record selector</span></span><span class="mpre">
+data </span><a name="loc_633_6_633_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_633_6_633_7&#39;)"><span class="hl_tycondecl"><span class="mpre">S</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Type synonym for encoding meta-information for datatypes</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 636, srcSpanStartColumn = 1, srcSpanEndLine = 636, srcSpanEndColumn = 15}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 636, srcSpanStartColumn = 1, srcSpanEndLine = 636, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 636, srcSpanStar"><span class="mpre">type D1 = M1 D</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Type synonym for encoding meta-information for constructors</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 639, srcSpanStartColumn = 1, srcSpanEndLine = 639, srcSpanEndColumn = 15}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 639, srcSpanStartColumn = 1, srcSpanEndLine = 639, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 639, srcSpanStar"><span class="mpre">type C1 = M1 C</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Type synonym for encoding meta-information for record selectors</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclTypeDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 642, srcSpanStartColumn = 1, srcSpanEndLine = 642, srcSpanEndColumn = 15}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 642, srcSpanStartColumn = 1, srcSpanEndLine = 642, srcSpanEndColumn = 5},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 642, srcSpanStar"><span class="mpre">type S1 = M1 S</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Class for datatypes that represent datatypes</span></span><span class="mpre">
+class </span><a name="loc_646_7_646_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_7_646_15&#39;)"><span class="hl_classdecl"><span class="mpre">Datatype</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">d</span></span><span class="mpre"> where
+  </span><span class="hl_comment"><span class="mpre">-- | The name of the datatype (unqualified)</span></span><span class="mpre">
+  </span><a name="loc_648_3_648_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_648_3_648_15&#39;)"><span class="mpre">datatypeName</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">t</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">d</span></span><span class="mpre"> </span><span class="warning" data-warning="TypeTyKind (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 648, srcSpanStartColumn = 23, srcSpanEndLine = 648, srcSpanEndColumn = 36}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 648, srcSpanStartColumn = 23, srcSpanEndLine = 648, srcSpanEndColumn = 24},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 648, srcSpanSta"><span class="mpre">(f :: * -&gt; *)</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; [</span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre">]
+  </span><span class="hl_comment"><span class="mpre">-- | The fully-qualified name of the module where the type is declared</span></span><span class="mpre">
+  </span><a name="loc_650_3_650_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_650_3_650_13&#39;)"><span class="mpre">moduleName</span></a><span class="mpre">   :: </span><span class="hl_tyvar"><span class="mpre">t</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">d</span></span><span class="mpre"> </span><span class="warning" data-warning="TypeTyKind (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 650, srcSpanStartColumn = 23, srcSpanEndLine = 650, srcSpanEndColumn = 36}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 650, srcSpanStartColumn = 23, srcSpanEndLine = 650, srcSpanEndColumn = 24},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 650, srcSpanSta"><span class="mpre">(f :: * -&gt; *)</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; [</span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre">]
+  </span><span class="hl_comment"><span class="mpre">-- | Marks if the datatype is actually a newtype</span></span><span class="mpre">
+  </span><a name="loc_652_3_652_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_652_3_652_12&#39;)"><span class="mpre">isNewtype</span></a><span class="mpre">    :: </span><span class="hl_tyvar"><span class="mpre">t</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">d</span></span><span class="mpre"> </span><span class="warning" data-warning="TypeTyKind (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 652, srcSpanStartColumn = 23, srcSpanEndLine = 652, srcSpanEndColumn = 36}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 652, srcSpanStartColumn = 23, srcSpanEndLine = 652, srcSpanEndColumn = 24},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 652, srcSpanSta"><span class="mpre">(f :: * -&gt; *)</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+  </span><a href="#loc_652_3_652_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_652_3_652_12&#39;)"><span class="hl_fundecl"><span class="mpre">isNewtype</span></span></a><span class="mpre"> _ = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Class for datatypes that represent records</span></span><span class="mpre">
+class </span><a name="loc_657_7_657_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_657_7_657_15&#39;)"><span class="hl_classdecl"><span class="mpre">Selector</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> where
+  </span><span class="hl_comment"><span class="mpre">-- | The name of the selector</span></span><span class="mpre">
+  </span><a name="loc_659_3_659_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_659_3_659_10&#39;)"><span class="mpre">selName</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">t</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">s</span></span><span class="mpre"> </span><span class="warning" data-warning="TypeTyKind (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 659, srcSpanStartColumn = 18, srcSpanEndLine = 659, srcSpanEndColumn = 31}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 659, srcSpanStartColumn = 18, srcSpanEndLine = 659, srcSpanEndColumn = 19},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 659, srcSpanSta"><span class="mpre">(f :: * -&gt; *)</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; [</span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre">]
+
+</span><span class="hl_comment"><span class="mpre">-- | Used for constructor fields without a name</span></span><span class="mpre">
+data </span><a name="loc_662_6_662_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_662_6_662_16&#39;)"><span class="hl_tycondecl"><span class="mpre">NoSelector</span></span></a><span class="mpre">
+
+instance </span><a href="#loc_657_7_657_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_657_7_657_15&#39;)"><span class="hl_classref"><span class="mpre">Selector</span></span></a><span class="mpre"> </span><a href="#loc_662_6_662_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_662_6_662_16&#39;)"><span class="hl_tyconref"><span class="mpre">NoSelector</span></span></a><span class="mpre"> where </span><a href="#loc_659_3_659_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_659_3_659_10&#39;)"><span class="hl_fundecl"><span class="mpre">selName</span></span></a><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Class for datatypes that represent data constructors</span></span><span class="mpre">
+class </span><a name="loc_667_7_667_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_667_7_667_18&#39;)"><span class="hl_classdecl"><span class="mpre">Constructor</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre"> where
+  </span><span class="hl_comment"><span class="mpre">-- | The name of the constructor</span></span><span class="mpre">
+  </span><a name="loc_669_3_669_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_669_3_669_10&#39;)"><span class="mpre">conName</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">t</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre"> </span><span class="warning" data-warning="TypeTyKind (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 669, srcSpanStartColumn = 18, srcSpanEndLine = 669, srcSpanEndColumn = 31}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 669, srcSpanStartColumn = 18, srcSpanEndLine = 669, srcSpanEndColumn = 19},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 669, srcSpanSta"><span class="mpre">(f :: * -&gt; *)</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; [</span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre">]
+
+  </span><span class="hl_comment"><span class="mpre">-- | The fixity of the constructor</span></span><span class="mpre">
+  </span><a name="loc_672_3_672_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_672_3_672_12&#39;)"><span class="mpre">conFixity</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">t</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre"> </span><span class="warning" data-warning="TypeTyKind (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 672, srcSpanStartColumn = 20, srcSpanEndLine = 672, srcSpanEndColumn = 33}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 672, srcSpanStartColumn = 20, srcSpanEndLine = 672, srcSpanEndColumn = 21},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 672, srcSpanSta"><span class="mpre">(f :: * -&gt; *)</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><a href="#loc_686_6_686_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_686_6_686_12&#39;)"><span class="hl_tyconref"><span class="mpre">Fixity</span></span></a><span class="mpre">
+  </span><a href="#loc_672_3_672_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_672_3_672_12&#39;)"><span class="hl_fundecl"><span class="mpre">conFixity</span></span></a><span class="mpre"> _ = </span><a href="#loc_686_15_686_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_686_15_686_21&#39;)"><span class="hl_conref"><span class="mpre">Prefix</span></span></a><span class="mpre">
+
+  </span><span class="hl_comment"><span class="mpre">-- | Marks if this constructor is a record</span></span><span class="mpre">
+  </span><a name="loc_676_3_676_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_676_3_676_14&#39;)"><span class="mpre">conIsRecord</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">t</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">c</span></span><span class="mpre"> </span><span class="warning" data-warning="TypeTyKind (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 676, srcSpanStartColumn = 22, srcSpanEndLine = 676, srcSpanEndColumn = 35}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 676, srcSpanStartColumn = 22, srcSpanEndLine = 676, srcSpanEndColumn = 23},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 676, srcSpanSta"><span class="mpre">(f :: * -&gt; *)</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Bool</span></span><span class="mpre">
+  </span><a href="#loc_676_3_676_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_676_3_676_14&#39;)"><span class="hl_fundecl"><span class="mpre">conIsRecord</span></span></a><span class="mpre"> _ = </span><span class="hl_conref"><span class="mpre">False</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Datatype to represent the arity of a tuple.</span></span><span class="mpre">
+data </span><a name="loc_681_6_681_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_681_6_681_11&#39;)"><span class="hl_tycondecl"><span class="mpre">Arity</span></span></a><span class="mpre"> = </span><a name="loc_681_14_681_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_681_14_681_21&#39;)"><span class="hl_condecl"><span class="mpre">NoArity</span></span></a><span class="mpre"> | </span><a name="loc_681_24_681_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_681_24_681_29&#39;)"><span class="hl_condecl"><span class="mpre">Arity</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 682, srcSpanStartColumn = 3, srcSpanEndLine = 682, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 682, srcSpanStartColumn = 3, srcSpanEndLine = 682, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 682, srcSpanSta"><span class="mpre">deriving (Eq, Show, Ord, Read, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Datatype to represent the fixity of a constructor. An infix</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | declaration directly corresponds to an application of &#39;Infix&#39;.</span></span><span class="mpre">
+data </span><a name="loc_686_6_686_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_686_6_686_12&#39;)"><span class="hl_tycondecl"><span class="mpre">Fixity</span></span></a><span class="mpre"> = </span><a name="loc_686_15_686_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_686_15_686_21&#39;)"><span class="hl_condecl"><span class="mpre">Prefix</span></span></a><span class="mpre"> | </span><a name="loc_686_24_686_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_686_24_686_29&#39;)"><span class="hl_condecl"><span class="mpre">Infix</span></span></a><span class="mpre"> </span><a href="#loc_695_6_695_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_6_695_19&#39;)"><span class="hl_tyconref"><span class="mpre">Associativity</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 687, srcSpanStartColumn = 3, srcSpanEndLine = 687, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 687, srcSpanStartColumn = 3, srcSpanEndLine = 687, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 687, srcSpanSta"><span class="mpre">deriving (Eq, Show, Ord, Read, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Get the precedence of a fixity value.</span></span><span class="mpre">
+</span><a href="#loc_691_1_691_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_691_1_691_5&#39;)"><span class="mpre">prec</span></a><span class="mpre"> :: </span><a href="#loc_686_6_686_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_686_6_686_12&#39;)"><span class="hl_tyconref"><span class="mpre">Fixity</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+</span><a name="loc_691_1_691_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_691_1_691_5&#39;)"><span class="hl_fundecl"><span class="mpre">prec</span></span></a><span class="mpre"> </span><a href="#loc_686_15_686_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_686_15_686_21&#39;)"><span class="hl_conref"><span class="mpre">Prefix</span></span></a><span class="mpre">      = </span><span class="hl_num"><span class="mpre">10</span></span><span class="mpre">
+</span><a href="#loc_691_1_691_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_691_1_691_5&#39;)"><span class="hl_fundecl"><span class="mpre">prec</span></span></a><span class="mpre"> (</span><a href="#loc_686_24_686_29" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_686_24_686_29&#39;)"><span class="hl_conref"><span class="mpre">Infix</span></span></a><span class="mpre"> _ </span><a name="loc_692_15_692_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_692_15_692_16&#39;)"><span class="hl_vardecl"><span class="mpre">n</span></span></a><span class="mpre">) = </span><a href="#loc_692_15_692_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_692_15_692_16&#39;)"><span class="hl_varref"><span class="mpre">n</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Datatype to represent the associativity of a constructor</span></span><span class="mpre">
+data </span><a name="loc_695_6_695_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_6_695_19&#39;)"><span class="hl_tycondecl"><span class="mpre">Associativity</span></span></a><span class="mpre"> = </span><a name="loc_695_22_695_37" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_695_22_695_37&#39;)"><span class="hl_condecl"><span class="mpre">LeftAssociative</span></span></a><span class="mpre">
+                   | </span><a name="loc_696_22_696_38" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_696_22_696_38&#39;)"><span class="hl_condecl"><span class="mpre">RightAssociative</span></span></a><span class="mpre">
+                   | </span><a name="loc_697_22_697_36" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_697_22_697_36&#39;)"><span class="hl_condecl"><span class="mpre">NotAssociative</span></span></a><span class="mpre">
+  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 698, srcSpanStartColumn = 3, srcSpanEndLine = 698, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 698, srcSpanStartColumn = 3, srcSpanEndLine = 698, srcSpanEndColumn = 11},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 698, srcSpanSta"><span class="mpre">deriving (Eq, Show, Ord, Read, Generic)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Representable types of kind *.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This class is derivable in GHC with the DeriveGeneric flag on.</span></span><span class="mpre">
+class </span><a name="loc_702_7_702_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_7_702_14&#39;)"><span class="hl_classdecl"><span class="mpre">Generic</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> where
+  </span><span class="hl_comment"><span class="mpre">-- | Generic representation type</span></span><span class="mpre">
+  </span><span class="warning" data-warning="ClassDecl ClsTyFam (SrcSpanInfo {srcInfoClsTyFam (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 704, srcSpanStartColumn = 3, srcSpanEndLine = 704, srcSpanEndColumn = 23}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 704, srcSpanStartColumn = 3, srcSpanEndLine = 704, srcSpanEndColumn = 7},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 704, srcSpanStar"><span class="mpre">type Rep a :: * -&gt; *</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | Convert from the datatype to its representation</span></span><span class="mpre">
+  </span><a name="loc_706_3_706_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_3_706_7&#39;)"><span class="mpre">from</span></a><span class="mpre">  :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyconref"><span class="mpre">Rep</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) </span><span class="hl_tyvar"><span class="mpre">x</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | Convert from the representation to the datatype</span></span><span class="mpre">
+  </span><a name="loc_708_3_708_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_708_3_708_5&#39;)"><span class="mpre">to</span></a><span class="mpre">    :: (</span><span class="hl_tyconref"><span class="mpre">Rep</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">) </span><span class="hl_tyvar"><span class="mpre">x</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Representable types of kind * -&gt; *.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This class is derivable in GHC with the DeriveGeneric flag on.</span></span><span class="mpre">
+class </span><a name="loc_713_7_713_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_713_7_713_15&#39;)"><span class="hl_classdecl"><span class="mpre">Generic1</span></span></a><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> where
+  </span><span class="hl_comment"><span class="mpre">-- | Generic representation type</span></span><span class="mpre">
+  </span><span class="warning" data-warning="ClassDecl ClsTyFam (SrcSpanInfo {srcInfoClsTyFam (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 715, srcSpanStartColumn = 3, srcSpanEndLine = 715, srcSpanEndColumn = 24}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 715, srcSpanStartColumn = 3, srcSpanEndLine = 715, srcSpanEndColumn = 7},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 715, srcSpanStar"><span class="mpre">type Rep1 f :: * -&gt; *</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | Convert from the datatype to its representation</span></span><span class="mpre">
+  </span><a name="loc_717_3_717_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_717_3_717_8&#39;)"><span class="mpre">from1</span></a><span class="mpre">  :: </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; (</span><span class="hl_tyconref"><span class="mpre">Rep1</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre">) </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+  </span><span class="hl_comment"><span class="mpre">-- | Convert from the representation to the datatype</span></span><span class="mpre">
+  </span><a name="loc_719_3_719_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_719_3_719_6&#39;)"><span class="mpre">to1</span></a><span class="mpre">    :: (</span><span class="hl_tyconref"><span class="mpre">Rep1</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre">) </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">f</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Derived instances</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 725, srcSpanStartColumn = 1, srcSpanEndLine = 725, srcSpanEndColumn = 30}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 725, srcSpanStartColumn = 1, srcSpanEndLine = 725, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 725, srcSpanSta"><span class="mpre">deriving instance Generic [a]</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 726, srcSpanStartColumn = 1, srcSpanEndLine = 726, srcSpanEndColumn = 36}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 726, srcSpanStartColumn = 1, srcSpanEndLine = 726, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 726, srcSpanSta"><span class="mpre">deriving instance Generic (Maybe a)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 727, srcSpanStartColumn = 1, srcSpanEndLine = 727, srcSpanEndColumn = 39}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 727, srcSpanStartColumn = 1, srcSpanEndLine = 727, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 727, srcSpanSta"><span class="mpre">deriving instance Generic (Either a b)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 728, srcSpanStartColumn = 1, srcSpanEndLine = 728, srcSpanEndColumn = 31}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 728, srcSpanStartColumn = 1, srcSpanEndLine = 728, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 728, srcSpanSta"><span class="mpre">deriving instance Generic Bool</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 729, srcSpanStartColumn = 1, srcSpanEndLine = 729, srcSpanEndColumn = 35}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 729, srcSpanStartColumn = 1, srcSpanEndLine = 729, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 729, srcSpanSta"><span class="mpre">deriving instance Generic Ordering</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 730, srcSpanStartColumn = 1, srcSpanEndLine = 730, srcSpanEndColumn = 29}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 730, srcSpanStartColumn = 1, srcSpanEndLine = 730, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 730, srcSpanSta"><span class="mpre">deriving instance Generic ()</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 731, srcSpanStartColumn = 1, srcSpanEndLine = 731, srcSpanEndColumn = 36}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 731, srcSpanStartColumn = 1, srcSpanEndLine = 731, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 731, srcSpanSta"><span class="mpre">deriving instance Generic ((,) a b)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 732, srcSpanStartColumn = 1, srcSpanEndLine = 732, srcSpanEndColumn = 39}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 732, srcSpanStartColumn = 1, srcSpanEndLine = 732, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 732, srcSpanSta"><span class="mpre">deriving instance Generic ((,,) a b c)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 733, srcSpanStartColumn = 1, srcSpanEndLine = 733, srcSpanEndColumn = 42}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 733, srcSpanStartColumn = 1, srcSpanEndLine = 733, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 733, srcSpanSta"><span class="mpre">deriving instance Generic ((,,,) a b c d)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 734, srcSpanStartColumn = 1, srcSpanEndLine = 734, srcSpanEndColumn = 45}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 734, srcSpanStartColumn = 1, srcSpanEndLine = 734, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 734, srcSpanSta"><span class="mpre">deriving instance Generic ((,,,,) a b c d e)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 735, srcSpanStartColumn = 1, srcSpanEndLine = 735, srcSpanEndColumn = 48}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 735, srcSpanStartColumn = 1, srcSpanEndLine = 735, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 735, srcSpanSta"><span class="mpre">deriving instance Generic ((,,,,,) a b c d e f)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 736, srcSpanStartColumn = 1, srcSpanEndLine = 736, srcSpanEndColumn = 51}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 736, srcSpanStartColumn = 1, srcSpanEndLine = 736, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 736, srcSpanSta"><span class="mpre">deriving instance Generic ((,,,,,,) a b c d e f g)</span></span><span class="mpre">
+
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 738, srcSpanStartColumn = 1, srcSpanEndLine = 738, srcSpanEndColumn = 30}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 738, srcSpanStartColumn = 1, srcSpanEndLine = 738, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 738, srcSpanSta"><span class="mpre">deriving instance Generic1 []</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 739, srcSpanStartColumn = 1, srcSpanEndLine = 739, srcSpanEndColumn = 33}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 739, srcSpanStartColumn = 1, srcSpanEndLine = 739, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 739, srcSpanSta"><span class="mpre">deriving instance Generic1 Maybe</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 740, srcSpanStartColumn = 1, srcSpanEndLine = 740, srcSpanEndColumn = 38}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 740, srcSpanStartColumn = 1, srcSpanEndLine = 740, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 740, srcSpanSta"><span class="mpre">deriving instance Generic1 (Either a)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 741, srcSpanStartColumn = 1, srcSpanEndLine = 741, srcSpanEndColumn = 35}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 741, srcSpanStartColumn = 1, srcSpanEndLine = 741, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 741, srcSpanSta"><span class="mpre">deriving instance Generic1 ((,) a)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 742, srcSpanStartColumn = 1, srcSpanEndLine = 742, srcSpanEndColumn = 38}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 742, srcSpanStartColumn = 1, srcSpanEndLine = 742, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 742, srcSpanSta"><span class="mpre">deriving instance Generic1 ((,,) a b)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 743, srcSpanStartColumn = 1, srcSpanEndLine = 743, srcSpanEndColumn = 41}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 743, srcSpanStartColumn = 1, srcSpanEndLine = 743, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 743, srcSpanSta"><span class="mpre">deriving instance Generic1 ((,,,) a b c)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 744, srcSpanStartColumn = 1, srcSpanEndLine = 744, srcSpanEndColumn = 44}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 744, srcSpanStartColumn = 1, srcSpanEndLine = 744, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 744, srcSpanSta"><span class="mpre">deriving instance Generic1 ((,,,,) a b c d)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 745, srcSpanStartColumn = 1, srcSpanEndLine = 745, srcSpanEndColumn = 47}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 745, srcSpanStartColumn = 1, srcSpanEndLine = 745, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 745, srcSpanSta"><span class="mpre">deriving instance Generic1 ((,,,,,) a b c d e)</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 746, srcSpanStartColumn = 1, srcSpanEndLine = 746, srcSpanEndColumn = 50}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 746, srcSpanStartColumn = 1, srcSpanEndLine = 746, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 746, srcSpanSta"><span class="mpre">deriving instance Generic1 ((,,,,,,) a b c d e f)</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Primitive representations</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- Int</span></span><span class="mpre">
+data </span><a name="loc_753_6_753_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_753_6_753_11&#39;)"><span class="hl_tycondecl"><span class="mpre">D_Int</span></span></a><span class="mpre">
+data </span><a name="loc_754_6_754_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_754_6_754_11&#39;)"><span class="hl_tycondecl"><span class="mpre">C_Int</span></span></a><span class="mpre">
+
+instance </span><a href="#loc_646_7_646_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_7_646_15&#39;)"><span class="hl_classref"><span class="mpre">Datatype</span></span></a><span class="mpre"> </span><a href="#loc_753_6_753_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_753_6_753_11&#39;)"><span class="hl_tyconref"><span class="mpre">D_Int</span></span></a><span class="mpre"> where
+  </span><a href="#loc_648_3_648_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_648_3_648_15&#39;)"><span class="hl_fundecl"><span class="mpre">datatypeName</span></span></a><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;Int&quot;</span></span><span class="mpre">
+  </span><a href="#loc_650_3_650_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_650_3_650_13&#39;)"><span class="hl_fundecl"><span class="mpre">moduleName</span></span></a><span class="mpre">   _ = </span><span class="hl_string"><span class="mpre">&quot;GHC.Int&quot;</span></span><span class="mpre">
+
+instance </span><a href="#loc_667_7_667_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_667_7_667_18&#39;)"><span class="hl_classref"><span class="mpre">Constructor</span></span></a><span class="mpre"> </span><a href="#loc_754_6_754_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_754_6_754_11&#39;)"><span class="hl_tyconref"><span class="mpre">C_Int</span></span></a><span class="mpre"> where
+  </span><a href="#loc_669_3_669_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_669_3_669_10&#39;)"><span class="hl_fundecl"><span class="mpre">conName</span></span></a><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- JPM: I&#39;m not sure this is the right implementation...</span></span><span class="mpre">
+
+instance </span><a href="#loc_702_7_702_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_7_702_14&#39;)"><span class="hl_classref"><span class="mpre">Generic</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> where
+  </span><span class="warning" data-warning="InstDeclInsType (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 764, srcSpanStartColumn = 3, srcSpanEndLine = 764, srcSpanEndColumn = 64}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 764, srcSpanStartColumn = 3, srcSpanEndLine = 764, srcSpanEndColumn = 7},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 764, srcSpanStart"><span class="mpre">type Rep Int = D1 D_Int (C1 C_Int (S1 NoSelector (Rec0 Int)))</span></span><span class="mpre">
+  </span><a href="#loc_706_3_706_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_3_706_7&#39;)"><span class="hl_fundecl"><span class="mpre">from</span></span></a><span class="mpre"> </span><a name="loc_765_8_765_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_765_8_765_9&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_594_20_594_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_20_594_22&#39;)"><span class="hl_conref"><span class="mpre">K1</span></span></a><span class="mpre"> </span><a href="#loc_765_8_765_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_765_8_765_9&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">)))
+  </span><a href="#loc_708_3_708_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_708_3_708_5&#39;)"><span class="hl_fundecl"><span class="mpre">to</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_594_20_594_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_20_594_22&#39;)"><span class="hl_conref"><span class="mpre">K1</span></span></a><span class="mpre"> </span><a name="loc_766_22_766_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_766_22_766_23&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">)))) = </span><a href="#loc_766_22_766_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_766_22_766_23&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- Float</span></span><span class="mpre">
+data </span><a name="loc_770_6_770_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_6_770_13&#39;)"><span class="hl_tycondecl"><span class="mpre">D_Float</span></span></a><span class="mpre">
+data </span><a name="loc_771_6_771_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_771_6_771_13&#39;)"><span class="hl_tycondecl"><span class="mpre">C_Float</span></span></a><span class="mpre">
+
+instance </span><a href="#loc_646_7_646_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_7_646_15&#39;)"><span class="hl_classref"><span class="mpre">Datatype</span></span></a><span class="mpre"> </span><a href="#loc_770_6_770_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_770_6_770_13&#39;)"><span class="hl_tyconref"><span class="mpre">D_Float</span></span></a><span class="mpre"> where
+  </span><a href="#loc_648_3_648_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_648_3_648_15&#39;)"><span class="hl_fundecl"><span class="mpre">datatypeName</span></span></a><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;Float&quot;</span></span><span class="mpre">
+  </span><a href="#loc_650_3_650_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_650_3_650_13&#39;)"><span class="hl_fundecl"><span class="mpre">moduleName</span></span></a><span class="mpre">   _ = </span><span class="hl_string"><span class="mpre">&quot;GHC.Float&quot;</span></span><span class="mpre">
+
+instance </span><a href="#loc_667_7_667_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_667_7_667_18&#39;)"><span class="hl_classref"><span class="mpre">Constructor</span></span></a><span class="mpre"> </span><a href="#loc_771_6_771_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_771_6_771_13&#39;)"><span class="hl_tyconref"><span class="mpre">C_Float</span></span></a><span class="mpre"> where
+  </span><a href="#loc_669_3_669_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_669_3_669_10&#39;)"><span class="hl_fundecl"><span class="mpre">conName</span></span></a><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- JPM: I&#39;m not sure this is the right implementation...</span></span><span class="mpre">
+
+instance </span><a href="#loc_702_7_702_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_7_702_14&#39;)"><span class="hl_classref"><span class="mpre">Generic</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Float</span></span><span class="mpre"> where
+  </span><span class="warning" data-warning="InstDeclInsType (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 781, srcSpanStartColumn = 3, srcSpanEndLine = 781, srcSpanEndColumn = 72}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 781, srcSpanStartColumn = 3, srcSpanEndLine = 781, srcSpanEndColumn = 7},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 781, srcSpanStart"><span class="mpre">type Rep Float = D1 D_Float (C1 C_Float (S1 NoSelector (Rec0 Float)))</span></span><span class="mpre">
+  </span><a href="#loc_706_3_706_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_3_706_7&#39;)"><span class="hl_fundecl"><span class="mpre">from</span></span></a><span class="mpre"> </span><a name="loc_782_8_782_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_782_8_782_9&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_594_20_594_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_20_594_22&#39;)"><span class="hl_conref"><span class="mpre">K1</span></span></a><span class="mpre"> </span><a href="#loc_782_8_782_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_782_8_782_9&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">)))
+  </span><a href="#loc_708_3_708_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_708_3_708_5&#39;)"><span class="hl_fundecl"><span class="mpre">to</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_594_20_594_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_20_594_22&#39;)"><span class="hl_conref"><span class="mpre">K1</span></span></a><span class="mpre"> </span><a name="loc_783_22_783_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_783_22_783_23&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">)))) = </span><a href="#loc_783_22_783_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_783_22_783_23&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- Double</span></span><span class="mpre">
+data </span><a name="loc_787_6_787_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_787_6_787_14&#39;)"><span class="hl_tycondecl"><span class="mpre">D_Double</span></span></a><span class="mpre">
+data </span><a name="loc_788_6_788_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_788_6_788_14&#39;)"><span class="hl_tycondecl"><span class="mpre">C_Double</span></span></a><span class="mpre">
+
+instance </span><a href="#loc_646_7_646_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_7_646_15&#39;)"><span class="hl_classref"><span class="mpre">Datatype</span></span></a><span class="mpre"> </span><a href="#loc_787_6_787_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_787_6_787_14&#39;)"><span class="hl_tyconref"><span class="mpre">D_Double</span></span></a><span class="mpre"> where
+  </span><a href="#loc_648_3_648_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_648_3_648_15&#39;)"><span class="hl_fundecl"><span class="mpre">datatypeName</span></span></a><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;Double&quot;</span></span><span class="mpre">
+  </span><a href="#loc_650_3_650_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_650_3_650_13&#39;)"><span class="hl_fundecl"><span class="mpre">moduleName</span></span></a><span class="mpre">   _ = </span><span class="hl_string"><span class="mpre">&quot;GHC.Float&quot;</span></span><span class="mpre">
+
+instance </span><a href="#loc_667_7_667_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_667_7_667_18&#39;)"><span class="hl_classref"><span class="mpre">Constructor</span></span></a><span class="mpre"> </span><a href="#loc_788_6_788_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_788_6_788_14&#39;)"><span class="hl_tyconref"><span class="mpre">C_Double</span></span></a><span class="mpre"> where
+  </span><a href="#loc_669_3_669_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_669_3_669_10&#39;)"><span class="hl_fundecl"><span class="mpre">conName</span></span></a><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- JPM: I&#39;m not sure this is the right implementation...</span></span><span class="mpre">
+
+instance </span><a href="#loc_702_7_702_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_7_702_14&#39;)"><span class="hl_classref"><span class="mpre">Generic</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Double</span></span><span class="mpre"> where
+  </span><span class="warning" data-warning="InstDeclInsType (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 798, srcSpanStartColumn = 3, srcSpanEndLine = 798, srcSpanEndColumn = 76}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 798, srcSpanStartColumn = 3, srcSpanEndLine = 798, srcSpanEndColumn = 7},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 798, srcSpanStart"><span class="mpre">type Rep Double = D1 D_Double (C1 C_Double (S1 NoSelector (Rec0 Double)))</span></span><span class="mpre">
+  </span><a href="#loc_706_3_706_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_3_706_7&#39;)"><span class="hl_fundecl"><span class="mpre">from</span></span></a><span class="mpre"> </span><a name="loc_799_8_799_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_799_8_799_9&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_594_20_594_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_20_594_22&#39;)"><span class="hl_conref"><span class="mpre">K1</span></span></a><span class="mpre"> </span><a href="#loc_799_8_799_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_799_8_799_9&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">)))
+  </span><a href="#loc_708_3_708_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_708_3_708_5&#39;)"><span class="hl_fundecl"><span class="mpre">to</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_594_20_594_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_20_594_22&#39;)"><span class="hl_conref"><span class="mpre">K1</span></span></a><span class="mpre"> </span><a name="loc_800_22_800_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_800_22_800_23&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">)))) = </span><a href="#loc_800_22_800_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_800_22_800_23&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- Char</span></span><span class="mpre">
+data </span><a name="loc_804_6_804_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_804_6_804_12&#39;)"><span class="hl_tycondecl"><span class="mpre">D_Char</span></span></a><span class="mpre">
+data </span><a name="loc_805_6_805_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_805_6_805_12&#39;)"><span class="hl_tycondecl"><span class="mpre">C_Char</span></span></a><span class="mpre">
+
+instance </span><a href="#loc_646_7_646_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_646_7_646_15&#39;)"><span class="hl_classref"><span class="mpre">Datatype</span></span></a><span class="mpre"> </span><a href="#loc_804_6_804_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_804_6_804_12&#39;)"><span class="hl_tyconref"><span class="mpre">D_Char</span></span></a><span class="mpre"> where
+  </span><a href="#loc_648_3_648_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_648_3_648_15&#39;)"><span class="hl_fundecl"><span class="mpre">datatypeName</span></span></a><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;Char&quot;</span></span><span class="mpre">
+  </span><a href="#loc_650_3_650_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_650_3_650_13&#39;)"><span class="hl_fundecl"><span class="mpre">moduleName</span></span></a><span class="mpre">   _ = </span><span class="hl_string"><span class="mpre">&quot;GHC.Base&quot;</span></span><span class="mpre">
+
+instance </span><a href="#loc_667_7_667_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_667_7_667_18&#39;)"><span class="hl_classref"><span class="mpre">Constructor</span></span></a><span class="mpre"> </span><a href="#loc_805_6_805_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_805_6_805_12&#39;)"><span class="hl_tyconref"><span class="mpre">C_Char</span></span></a><span class="mpre"> where
+  </span><a href="#loc_669_3_669_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_669_3_669_10&#39;)"><span class="hl_fundecl"><span class="mpre">conName</span></span></a><span class="mpre"> _ = </span><span class="hl_string"><span class="mpre">&quot;&quot;</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- JPM: I&#39;m not sure this is the right implementation...</span></span><span class="mpre">
+
+instance </span><a href="#loc_702_7_702_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_702_7_702_14&#39;)"><span class="hl_classref"><span class="mpre">Generic</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Char</span></span><span class="mpre"> where
+  </span><span class="warning" data-warning="InstDeclInsType (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 815, srcSpanStartColumn = 3, srcSpanEndLine = 815, srcSpanEndColumn = 68}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 815, srcSpanStartColumn = 3, srcSpanEndLine = 815, srcSpanEndColumn = 7},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 815, srcSpanStart"><span class="mpre">type Rep Char = D1 D_Char (C1 C_Char (S1 NoSelector (Rec0 Char)))</span></span><span class="mpre">
+  </span><a href="#loc_706_3_706_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_706_3_706_7&#39;)"><span class="hl_fundecl"><span class="mpre">from</span></span></a><span class="mpre"> </span><a name="loc_816_8_816_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_816_8_816_9&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_594_20_594_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_20_594_22&#39;)"><span class="hl_conref"><span class="mpre">K1</span></span></a><span class="mpre"> </span><a href="#loc_816_8_816_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_816_8_816_9&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">)))
+  </span><a href="#loc_708_3_708_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_708_3_708_5&#39;)"><span class="hl_fundecl"><span class="mpre">to</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_598_22_598_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_598_22_598_24&#39;)"><span class="hl_conref"><span class="mpre">M1</span></span></a><span class="mpre"> (</span><a href="#loc_594_20_594_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_594_20_594_22&#39;)"><span class="hl_conref"><span class="mpre">K1</span></span></a><span class="mpre"> </span><a name="loc_817_22_817_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_817_22_817_23&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">)))) = </span><a href="#loc_817_22_817_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_817_22_817_23&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="warning" data-warning="DeclDerivDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 819, srcSpanStartColumn = 1, srcSpanEndLine = 819, srcSpanEndColumn = 36}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 819, srcSpanStartColumn = 1, srcSpanEndLine = 819, srcSpanEndColumn = 9},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/GHC/Generics.hs&quot;, srcSpanStartLine = 819, srcSpanSta"><span class="mpre">deriving instance Generic (Proxy t)</span></span><span class="mpre">
+</span></div></body></html>

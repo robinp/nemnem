@@ -1,0 +1,1510 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
+</span><span class="hl_comment"><span class="mpre">{-| Conventional Haskell stream programming forces you to choose only two of the
+    following three features:
+
+    * Effects
+
+    * Streaming
+
+    * Composability
+
+    If you sacrifice /Effects/ you get Haskell&#39;s pure and lazy lists, which you
+    can transform using composable functions in constant space, but without
+    interleaving effects.
+
+    If you sacrifice /Streaming/ you get &#39;mapM&#39;, &#39;forM&#39; and
+    \&quot;ListT done wrong\&quot;, which are composable and effectful, but do not return
+    a single result until the whole list has first been processed and loaded
+    into memory.
+
+    If you sacrifice /Composability/ you write a tightly coupled read,
+    transform, and write loop in &#39;IO&#39;, which is streaming and effectful, but is
+    not modular or separable.
+
+    @pipes@ gives you all three features: effectful, streaming, and composable
+    programming.  @pipes@ also provides a wide variety of stream programming
+    abstractions which are all subsets of a single unified machinery:
+
+    * effectful &#39;Producer&#39;s (like generators),
+
+    * effectful &#39;Consumer&#39;s (like iteratees),
+
+    * effectful &#39;Pipe&#39;s (like Unix pipes), and:
+
+    * &#39;ListT&#39; done right.
+
+    All of these are connectable and you can combine them together in clever and
+    unexpected ways because they all share the same underlying type.
+
+    @pipes@ requires a basic understanding of monad transformers, which you can
+    learn about by reading either:
+
+    * the paper \&quot;Monad Transformers - Step by Step\&quot;,
+
+    * chapter 18 of \&quot;Real World Haskell\&quot; on monad transformers, or:
+
+    * the documentation of the @transformers@ library.
+
+    If you want a Quick Start guide to @pipes@, read the documentation in
+    &quot;Pipes.Prelude&quot; from top to bottom.
+
+    This tutorial is more extensive and explains the @pipes@ API in greater
+    detail and illustrates several idioms.
+-}</span></span><span class="mpre">
+
+module Pipes.Tutorial (
+    </span><span class="hl_comment"><span class="mpre">-- * Introduction</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $introduction</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Producers</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $producers</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Composability</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $composability</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Consumers</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $consumers</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Pipes</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $pipes</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * ListT</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $listT</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Tricks</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $tricks</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Conclusion</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $conclusion</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Appendix: Types</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $types</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Appendix: Time Complexity</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $timecomplexity</span></span><span class="mpre">
+    ) where
+
+import Control.Category
+import Control.Monad
+import Control.Monad.Trans.Error
+import Control.Monad.Trans.Writer.Strict
+import Pipes
+import Pipes.Lift
+import qualified Pipes.Prelude as P
+import Prelude hiding ((.), id)
+
+</span><span class="hl_comment"><span class="mpre">{- $introduction
+    The @pipes@ library decouples stream processing stages from each other so
+    that you can mix and match diverse stages to produce useful streaming
+    programs.  If you are a library writer, @pipes@ lets you package up
+    streaming components into a reusable interface.  If you are an application
+    writer, @pipes@ lets you connect pre-made streaming components with minimal
+    effort to produce a highly-efficient program that streams data in constant
+    memory.
+
+    To enforce loose coupling, components can only communicate using two
+    commands:
+
+    * &#39;yield&#39;: Send output data
+
+    * &#39;await&#39;: Receive input data
+
+    @pipes@ has four types of components built around these two commands:
+
+    * &#39;Producer&#39;s can only &#39;yield&#39; values and they model streaming sources
+
+    * &#39;Consumer&#39;s can only &#39;await&#39; values and they model streaming sinks
+
+    * &#39;Pipe&#39;s can both &#39;yield&#39; and &#39;await&#39; values and they model stream
+      transformations
+
+    * &#39;Effect&#39;s can neither &#39;yield&#39; nor &#39;await&#39; and they model non-streaming
+      components
+
+    You can connect these components together in four separate ways which
+    parallel the four above types:
+
+    * &#39;for&#39; handles &#39;yield&#39;s
+
+    * (&#39;&gt;~&#39;) handles &#39;await&#39;s
+
+    * (&#39;&gt;-&gt;&#39;) handles both &#39;yield&#39;s and &#39;await&#39;s
+
+    * (&#39;&gt;&gt;=&#39;) handles return values
+
+    As you connect components their types will change to reflect inputs and
+    outputs that you&#39;ve fused away.  You know that you&#39;re done connecting things
+    when you get an &#39;Effect&#39;, meaning that you have handled all inputs and
+    outputs.  You run this final &#39;Effect&#39; to begin streaming.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $producers
+    &#39;Producer&#39;s are effectful streams of input.  Specifically, a &#39;Producer&#39; is a
+    monad transformer that extends any base monad with a new &#39;yield&#39; command.
+    This &#39;yield&#39; command lets you send output downstream to an anonymous
+    handler, decoupling how you generate values from how you consume them.
+
+    The following @stdinLn@ &#39;Producer&#39; shows how to incrementally read in
+    &#39;String&#39;s from standard input and &#39;yield&#39; them downstream, terminating
+    gracefully when reaching the end of the input:
+
+&gt; -- echo.hs
+&gt;
+&gt; import Control.Monad (unless)
+&gt; import Pipes
+&gt; import System.IO (isEOF)
+&gt;
+&gt; --         +--------+-- A &#39;Producer&#39; that yields &#39;String&#39;s
+&gt; --         |        |
+&gt; --         |        |      +-- Every monad transformer has a base monad.
+&gt; --         |        |      |   This time the base monad is &#39;IO&#39;.
+&gt; --         |        |      |  
+&gt; --         |        |      |  +-- Every monadic action has a return value.
+&gt; --         |        |      |  |   This action returns &#39;()&#39; when finished
+&gt; --         v        v      v  v
+&gt; stdinLn :: Producer String IO ()
+&gt; stdinLn = do
+&gt;     eof &lt;- lift isEOF        -- &#39;lift&#39; an &#39;IO&#39; action from the base monad
+&gt;     unless eof $ do
+&gt;         str &lt;- lift getLine
+&gt;         yield str            -- &#39;yield&#39; the &#39;String&#39;
+&gt;         stdinLn              -- Loop
+
+    &#39;yield&#39; emits a value, suspending the current &#39;Producer&#39; until the value is
+    consumed.  If nobody consumes the value (which is possible) then &#39;yield&#39;
+    never returns.  You can think of &#39;yield&#39; as having the following type:
+
+@
+ &#39;yield&#39; :: &#39;Monad&#39; m =&gt; a -&gt; &#39;Producer&#39; a m ()
+@
+
+    The true type of &#39;yield&#39; is actually more general and powerful.  Throughout
+    the tutorial I will present type signatures like this that are simplified at
+    first and then later reveal more general versions.  So read the above type
+    signature as simply saying: \&quot;You can use &#39;yield&#39; within a &#39;Producer&#39;, but
+    you may be able to use &#39;yield&#39; in other contexts, too.\&quot;
+
+    Click the link to &#39;yield&#39; to navigate to its documentation.  There you will
+    see that &#39;yield&#39; actually uses the &#39;Producer&#39;&#39; (with an apostrophe) type
+    synonym which hides a lot of polymorphism behind a simple veneer.  The
+    documentation for &#39;yield&#39; says that you can also use &#39;yield&#39; within a
+    &#39;Pipe&#39;, too, because of this polymorphism:
+
+@
+ &#39;yield&#39; :: &#39;Monad&#39; m =&gt; a -&gt; &#39;Pipe&#39; x a m ()
+@
+
+    Use simpler types like these to guide you until you understand the fully
+    general type.
+
+    &#39;for&#39; loops are the simplest way to consume a &#39;Producer&#39; like @stdinLn@.
+    &#39;for&#39; has the following type:
+
+@
+ \-\-                +-- Producer      +-- The body of the   +-- Result
+ \-\-                |   to loop       |   loop              |
+ \-\-                v   over          v                     v
+ \-\-                --------------    ------------------    ----------
+ &#39;for&#39; :: &#39;Monad&#39; m =&gt; &#39;Producer&#39; a m r -&gt; (a -&gt; &#39;Effect&#39; m ()) -&gt; &#39;Effect&#39; m r
+@
+
+    @(for producer body)@ loops over @(producer)@, substituting each &#39;yield&#39; in
+    @(producer)@ with @(body)@.
+
+    You can also deduce that behavior purely from the type signature:
+
+    * The body of the loop takes exactly one argument of type @(a)@, which is
+      the same as the output type of the &#39;Producer&#39;.  Therefore, the body of the
+      loop must get its input from that &#39;Producer&#39; and nowhere else.
+
+    * The return value of the input &#39;Producer&#39; matches the return value of the
+      result, therefore &#39;for&#39; must loop over the entire &#39;Producer&#39; and not skip
+      anything.
+
+    The above type signature is not the true type of &#39;for&#39;, which is actually
+    more general.  Think of the above type signature as saying: \&quot;If the first
+    argument of &#39;for&#39; is a &#39;Producer&#39; and the second argument returns an
+    &#39;Effect&#39;, then the final result must be an &#39;Effect&#39;.\&quot;
+
+    Click the link to &#39;for&#39; to navigate to its documentation.  There you will
+    see the fully general type and underneath you will see equivalent simpler
+    types.  One of these says that if the body of the loop is a &#39;Producer&#39;, then
+    the result is a &#39;Producer&#39;, too:
+
+@
+ &#39;for&#39; :: &#39;Monad&#39; m =&gt; &#39;Producer&#39; a m r -&gt; (a -&gt; &#39;Producer&#39; b m ()) -&gt; &#39;Producer&#39; b m r
+@
+
+    The first type signature I showed for &#39;for&#39; was a special case of this
+    slightly more general signature because a &#39;Producer&#39; that never &#39;yield&#39;s is
+    also an &#39;Effect&#39;:
+
+@
+ data &#39;X&#39;  -- The uninhabited type
+
+\ type &#39;Effect&#39; m r = &#39;Producer&#39; &#39;X&#39; m r
+@
+
+    This is why &#39;for&#39; permits two different type signatures.  The first type
+    signature is just a special case of the second one:
+
+@
+ &#39;for&#39; :: &#39;Monad&#39; m =&gt; &#39;Producer&#39; a m r -&gt; (a -&gt; &#39;Producer&#39; b m ()) -&gt; &#39;Producer&#39; b m r
+
+\ -- Specialize \&#39;b\&#39; to \&#39;X\&#39;
+ &#39;for&#39; :: &#39;Monad&#39; m =&gt; &#39;Producer&#39; a m r -&gt; (a -&gt; &#39;Producer&#39; &#39;X&#39; m ()) -&gt; &#39;Producer&#39; &#39;X&#39; m r
+
+\ -- Producer X = Effect
+ &#39;for&#39; :: &#39;Monad&#39; m =&gt; &#39;Producer&#39; a m r -&gt; (a -&gt; &#39;Effect&#39;     m ()) -&gt; &#39;Effect&#39;     m r
+@
+
+    This is the same trick that all @pipes@ functions use to work with various
+    combinations of &#39;Producer&#39;s, &#39;Consumer&#39;s, &#39;Pipe&#39;s, and &#39;Effect&#39;s.  Each
+    function really has just one general type, which you can then simplify down
+    to multiple useful alternative types.
+
+    Here&#39;s an example use of a &#39;for&#39; @loop@, where the second argument (the
+    loop body) is an &#39;Effect&#39;:
+
+&gt; -- echo.hs
+&gt;
+&gt; loop :: Effect IO ()
+&gt; loop = for stdinLn $ \str -&gt; do  -- Read this like: &quot;for str in stdinLn&quot;
+&gt;     lift $ putStrLn str          -- The body of the &#39;for&#39; loop
+&gt;
+&gt; -- more concise: loop = for stdinLn (lift . putStrLn)
+
+    In this example, &#39;for&#39; loops over @stdinLn@ and replaces every &#39;yield&#39; in
+    @stdinLn@ with the body of the loop, printing each line.  This is exactly
+    equivalent to the following code, which I&#39;ve placed side-by-side with the
+    original definition of @stdinLn@ for comparison:
+
+&gt; loop = do                      |  stdinLn = do
+&gt;     eof &lt;- lift isEOF          |      eof &lt;- lift isEOF
+&gt;     unless eof $ do            |      unless eof $ do
+&gt;         str &lt;- lift getLine    |          str &lt;- lift getLine
+&gt;         (lift . putStrLn) str  |          yield str
+&gt;         loop                   |          stdinLn
+
+    You can think of &#39;yield&#39; as creating a hole and a &#39;for&#39; loop is one way to
+    fill that hole.
+
+    Notice how the final @loop@ only &#39;lift&#39;s actions from the base monad and
+    does nothing else.  This property is true for all &#39;Effect&#39;s, which are just
+    glorified wrappers around actions in the base monad.  This means we can run
+    these &#39;Effect&#39;s to remove their &#39;lift&#39;s and lower them back to the
+    equivalent computation in the base monad:
+
+@
+ &#39;runEffect&#39; :: &#39;Monad&#39; m =&gt; &#39;Effect&#39; m r -&gt; m r
+@
+
+    This is the real type signature of &#39;runEffect&#39;, which refuses to accept
+    anything other than an &#39;Effect&#39;.  This ensures that we handle all inputs and
+    outputs before streaming data:
+
+&gt; -- echo.hs
+&gt;
+&gt; main :: IO ()
+&gt; main = runEffect loop
+
+    ... or you could inline the entire @loop@ into the following one-liner:
+
+&gt; main = runEffect $ for stdinLn (lift . putStrLn)
+
+    Our final program loops over standard input and echoes every line to
+    standard output until we hit @Ctrl-D@ to end the input stream:
+
+&gt; $ ghc -O2 echo.hs
+&gt; $ ./echo
+&gt; Test&lt;Enter&gt;
+&gt; Test
+&gt; ABC&lt;Enter&gt;
+&gt; ABC
+&gt; &lt;Ctrl-D&gt;
+&gt; $
+
+    The final behavior is indistinguishable from just removing all the &#39;lift&#39;s
+    from @loop@:
+
+&gt; main = do               |  loop = do
+&gt;     eof &lt;- isEof        |      eof &lt;- lift isEof
+&gt;     unless eof $ do     |      unless eof $ do
+&gt;         str &lt;- getLine  |          str &lt;- lift getLine
+&gt;         putStrLn str    |          (lift . putStrLn) str
+&gt;         main            |          loop
+
+    This @main@ is what we might have written by hand if we were not using
+    @pipes@, but with @pipes@ we can decouple the input and output logic from
+    each other.  When we connect them back together, we still produce streaming
+    code equivalent to what a sufficiently careful Haskell programmer would
+    have written.
+
+    You can also use &#39;for&#39; to loop over lists, too.  To do so, convert the list
+    to a &#39;Producer&#39; using &#39;each&#39;, which is exported by default from &quot;Pipes&quot;:
+
+&gt; each :: Monad m =&gt; [a] -&gt; Producer a m ()
+&gt; each as = mapM_ yield as
+
+    Combine &#39;for&#39; and &#39;each&#39; to iterate over lists using a \&quot;foreach\&quot; loop:
+
+&gt;&gt;&gt; runEffect $ for (each [1..4]) (lift . print)
+1
+2
+3
+4
+
+    &#39;each&#39; is actually more general and works for any &#39;Foldable&#39;:
+
+@
+ &#39;each&#39; :: (&#39;Monad&#39; m, &#39;Foldable&#39; f) =&gt; f a -&gt; &#39;Producer&#39; a m ()
+@
+
+     So you can loop over any &#39;Foldable&#39; container or even a &#39;Maybe&#39;:
+
+&gt;&gt;&gt; runEffect $ for (each (Just 1)) (lift . print)
+1
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $composability
+    You might wonder why the body of a &#39;for&#39; loop can be a &#39;Producer&#39;.  Let&#39;s
+    test out this feature by defining a new loop body that @duplicate@s every
+    value:
+
+&gt; -- nested.hs
+&gt;
+&gt; import Pipes
+&gt; import qualified Pipes.Prelude as P  -- Pipes.Prelude already has &#39;stdinLn&#39;
+&gt; 
+&gt; duplicate :: Monad m =&gt; a -&gt; Producer a m ()
+&gt; duplicate x = do
+&gt;     yield x
+&gt;     yield x
+&gt;
+&gt; loop :: Producer String IO ()
+&gt; loop = for P.stdinLn duplicate
+&gt;
+&gt; -- This is the exact same as:
+&gt; --
+&gt; -- loop = for P.stdinLn $ \x -&gt; do
+&gt; --     yield x
+&gt; --     yield x
+
+    This time our @loop@ is a &#39;Producer&#39; that outputs &#39;String&#39;s, specifically
+    two copies of each line that we read from standard input.  Since @loop@ is a
+    &#39;Producer&#39; we cannot run it because there is still unhandled output.
+    However, we can use yet another &#39;for&#39; to handle this new duplicated stream:
+
+&gt; -- nested.hs
+&gt;
+&gt; main = runEffect $ for loop (lift . putStrLn)
+
+    This creates a program which echoes every line from standard input to
+    standard output twice:
+
+&gt; $ ./nested
+&gt; Test&lt;Enter&gt;
+&gt; Test
+&gt; Test
+&gt; ABC&lt;Enter&gt;
+&gt; ABC
+&gt; ABC
+&gt; &lt;Ctrl-D&gt;
+&gt; $
+
+    But is this really necessary?  Couldn&#39;t we have instead written this using a
+    nested for loop?
+
+&gt; main = runEffect $
+&gt;     for P.stdinLn $ \str1 -&gt;
+&gt;         for (duplicate str1) $ \str2 -&gt;
+&gt;             lift $ putStrLn str2
+
+    Yes, we could have!  In fact, this is a special case of the following
+    equality, which always holds no matter what:
+
+@
+ \-\- s :: Monad m =&gt;      &#39;Producer&#39; a m ()  -- i.e. \&#39;P.stdinLn\&#39;
+ \-\- f :: Monad m =&gt; a -&gt; &#39;Producer&#39; b m ()  -- i.e. \&#39;duplicate\&#39;
+ \-\- g :: Monad m =&gt; b -&gt; &#39;Producer&#39; c m ()  -- i.e. \&#39;(lift . putStrLn)\&#39;
+
+\ for (for s f) g = for s (\\x -&gt; for (f x) g)
+@
+
+    We can understand the rationale behind this equality if we first define the
+    following operator that is the point-free counterpart to &#39;for&#39;:
+
+@
+ (~&gt;) :: Monad m
+      =&gt; (a -&gt; &#39;Producer&#39; b m ())
+      -&gt; (b -&gt; &#39;Producer&#39; c m ())
+      -&gt; (a -&gt; &#39;Producer&#39; c m ())
+ (f ~&gt; g) x = for (f x) g
+@
+
+    Using (&#39;~&gt;&#39;) (pronounced \&quot;into\&quot;), we can transform our original equality
+    into the following more symmetric equation:
+
+@
+ f :: Monad m =&gt; a -&gt; &#39;Producer&#39; b m ()
+ g :: Monad m =&gt; b -&gt; &#39;Producer&#39; c m ()
+ h :: Monad m =&gt; c -&gt; &#39;Producer&#39; d m ()
+
+\ \-\- Associativity
+ (f ~&gt; g) ~&gt; h = f ~&gt; (g ~&gt; h)
+@
+
+    This looks just like an associativity law.  In fact, (&#39;~&gt;&#39;) has another nice
+    property, which is that &#39;yield&#39; is its left and right identity:
+
+&gt; -- Left Identity
+&gt; yield ~&gt; f = f
+
+&gt; -- Right Identity
+&gt; f ~&gt; yield = f
+
+    In other words, &#39;yield&#39; and (&#39;~&gt;&#39;) form a &#39;Category&#39;, specifically the
+    generator category, where (&#39;~&gt;&#39;) plays the role of the composition operator
+    and &#39;yield&#39; is the identity.  If you don&#39;t know what a &#39;Category&#39; is, that&#39;s
+    okay, and category theory is not a prerequisite for using @pipes@.  All you
+    really need to know is that @pipes@ uses some simple category theory to keep
+    the API intuitive and easy to use.
+
+    Notice that if we translate the left identity law to use &#39;for&#39; instead of
+    (&#39;~&gt;&#39;) we get:
+
+&gt; for (yield x) f = f x
+
+    This just says that if you iterate over a pure single-element &#39;Producer&#39;,
+    then you could instead cut out the middle man and directly apply the body of
+    the loop to that single element.
+
+    If we translate the right identity law to use &#39;for&#39; instead of (&#39;~&gt;&#39;) we
+    get:
+
+&gt; for s yield = s
+
+    This just says that if the only thing you do is re-&#39;yield&#39; every element of
+    a stream, you get back your original stream.
+
+    These three \&quot;for loop\&quot; laws summarize our intuition for how &#39;for&#39; loops
+    should behave and because these are &#39;Category&#39; laws in disguise that means
+    that &#39;Producer&#39;s are composable in a rigorous sense of the word.
+
+    In fact, we get more out of this than just a bunch of equations.  We also
+    get a useful operator: (&#39;~&gt;&#39;).  We can use this operator to condense
+    our original code into the following more succinct form that composes two
+    transformations:
+
+&gt; main = runEffect $ for P.stdinLn (duplicate ~&gt; lift . putStrLn)
+
+    This means that we can also choose to program in a more functional style and
+    think of stream processing in terms of composing transformations using
+    (&#39;~&gt;&#39;) instead of nesting a bunch of &#39;for&#39; loops.
+
+    The above example is a microcosm of the design philosophy behind the @pipes@
+    library:
+
+    * Define the API in terms of categories
+
+    * Specify expected behavior in terms of category laws
+
+    * Think compositionally instead of sequentially
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $consumers
+    Sometimes you don&#39;t want to use a &#39;for&#39; loop because you don&#39;t want to consume
+    every element of a &#39;Producer&#39; or because you don&#39;t want to process every
+    value of a &#39;Producer&#39; the exact same way.
+
+    The most general solution is to externally iterate over the &#39;Producer&#39; using
+    the &#39;next&#39; command:
+
+@
+ &#39;next&#39; :: &#39;Monad&#39; m =&gt; &#39;Producer&#39; a m r -&gt; m (&#39;Either&#39; r (a, &#39;Producer&#39; a m r))
+@
+
+    Think of &#39;next&#39; as pattern matching on the head of the &#39;Producer&#39;.  This
+    &#39;Either&#39; returns a &#39;Left&#39; if the &#39;Producer&#39; is done or it returns a &#39;Right&#39;
+    containing the next value, @a@, along with the remainder of the &#39;Producer&#39;.
+
+    However, sometimes we can get away with something a little more simple and
+    elegant, like a &#39;Consumer&#39;, which represents an effectful sink of values.  A
+    &#39;Consumer&#39; is a monad transformer that extends the base monad with a new
+    &#39;await&#39; command. This &#39;await&#39; command lets you receive input from an
+    anonymous upstream source.
+
+    The following @stdoutLn@ &#39;Consumer&#39; shows how to incrementally &#39;await&#39;
+    &#39;String&#39;s and print them to standard output, terminating gracefully when
+    receiving a broken pipe error:
+
+&gt; import Control.Monad (unless)
+&gt; import Control.Exception (try, throwIO)
+&gt; import qualified GHC.IO.Exception as G
+&gt; import Pipes
+&gt;
+&gt; --          +--------+-- A &#39;Consumer&#39; that awaits &#39;String&#39;s
+&gt; --          |        |
+&gt; --          v        v
+&gt; stdoutLn :: Consumer String IO ()
+&gt; stdoutLn = do
+&gt;     str &lt;- await  -- &#39;await&#39; a &#39;String&#39;
+&gt;     x   &lt;- lift $ try $ putStrLn str
+&gt;     case x of
+&gt;         -- Gracefully terminate if we got a broken pipe error
+&gt;         Left e@(G.IOError { G.ioe_type = t}) -&gt;
+&gt;             lift $ unless (t == G.ResourceVanished) $ throwIO e
+&gt;         -- Otherwise loop
+&gt;         Right () -&gt; stdoutLn
+
+    &#39;await&#39; is the dual of &#39;yield&#39;: we suspend our &#39;Consumer&#39; until we receive a
+    new value.  If nobody provides a value (which is possible) then &#39;await&#39;
+    never returns.  You can think of &#39;await&#39; as having the following type:
+
+@
+ &#39;await&#39; :: &#39;Monad&#39; m =&gt; &#39;Consumer&#39; a m a
+@
+
+    One way to feed a &#39;Consumer&#39; is to repeatedly feed the same input using
+    (&#39;&gt;~&#39;) (pronounced \&quot;feed\&quot;):
+
+@
+ \-\-                 +- Feed       +- Consumer to    +- Returns new
+ \-\-                 |  action     |  feed           |  Effect
+ \-\-                 v             v                 v  
+ \-\-                 ----------    --------------    ----------
+ (&#39;&gt;~&#39;) :: &#39;Monad&#39; m =&gt; &#39;Effect&#39; m b -&gt; &#39;Consumer&#39; b m c -&gt; &#39;Effect&#39; m c
+@
+
+    @(draw &gt;~ consumer)@ loops over @(consumer)@, substituting each &#39;await&#39; in
+    @(consumer)@ with @(draw)@.
+
+    So the following code replaces every &#39;await&#39; in &#39;P.stdoutLn&#39; with
+    @(lift getLine)@ and then removes all the &#39;lift&#39;s:
+
+&gt;&gt;&gt; runEffect $ lift getLine &gt;~ stdoutLn
+Test&lt;Enter&gt;
+Test
+ABC&lt;Enter&gt;
+ABC
+42&lt;Enter&gt;
+42
+...
+
+    You might wonder why (&#39;&gt;~&#39;) uses an &#39;Effect&#39; instead of a raw action in the
+    base monad.  The reason why is that (&#39;&gt;~&#39;) actually permits the following
+    more general type:
+
+@
+ (&#39;&gt;~&#39;) :: &#39;Monad&#39; m =&gt; &#39;Consumer&#39; a m b -&gt; &#39;Consumer&#39; b m c -&gt; &#39;Consumer&#39; a m c
+@
+
+    (&#39;&gt;~&#39;) is the dual of (&#39;~&gt;&#39;), composing &#39;Consumer&#39;s instead of &#39;Producer&#39;s.
+
+    This means that you can feed a &#39;Consumer&#39; with yet another &#39;Consumer&#39; so
+    that you can &#39;await&#39; while you &#39;await&#39;.  For example, we could define the
+    following intermediate &#39;Consumer&#39; that requests two &#39;String&#39;s and returns
+    them concatenated:
+
+&gt; doubleUp :: Monad m =&gt; Consumer String m String
+&gt; doubleUp = do
+&gt;     str1 &lt;- await
+&gt;     str2 &lt;- await
+&gt;     return (str1 ++ str2)
+&gt;
+&gt; -- more concise: doubleUp = (++) &lt;$&gt; await &lt;*&gt; await
+
+    We can now insert this in between @(lift getLine)@ and @stdoutLn@ and see
+    what happens:
+
+&gt;&gt;&gt; runEffect $ lift getLine &gt;~ doubleUp &gt;~ stdoutLn
+Test&lt;Enter&gt;
+ing&lt;Enter&gt;
+Testing
+ABC&lt;Enter&gt;
+DEF&lt;Enter&gt;
+ABCDEF
+42&lt;Enter&gt;
+000&lt;Enter&gt;
+42000
+...
+
+    &#39;doubleUp&#39; splits every request from &#39;stdoutLn&#39; into two separate requests
+    and
+    returns back the concatenated result.
+
+    We didn&#39;t need to parenthesize the above chain of (&#39;&gt;~&#39;) operators, because
+    (&#39;&gt;~&#39;) is associative:
+
+&gt; -- Associativity
+&gt; (f &gt;~ g) &gt;~ h = f &gt;~ (g &gt;~ h)
+
+    ... so we can always omit the parentheses since the meaning is unambiguous:
+
+&gt; f &gt;~ g &gt;~ h
+
+    Also, (&#39;&gt;~&#39;) has an identity, which is &#39;await&#39;!
+
+&gt; -- Left identity
+&gt; await &gt;~ f = f
+&gt;
+&gt; -- Right Identity
+&gt; f &gt;~ await = f
+
+    In other words, (&#39;&gt;~&#39;) and &#39;await&#39; form a &#39;Category&#39;, too, specifically the
+    iteratee category, and &#39;Consumer&#39;s are also composable.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $pipes
+    Our previous programs were unsatisfactory because they were biased either
+    towards the &#39;Producer&#39; end or the &#39;Consumer&#39; end.  As a result, we had to
+    choose between gracefully handling end of input (using &#39;P.stdinLn&#39;) or
+    gracefully handling end of output (using &#39;P.stdoutLn&#39;), but not both at the
+    same time.
+
+    However, we don&#39;t need to restrict ourselves to using &#39;Producer&#39;s
+    exclusively or &#39;Consumer&#39;s exclusively.  We can connect &#39;Producer&#39;s and
+    &#39;Consumer&#39;s directly together using (&#39;&gt;-&gt;&#39;) (pronounced \&quot;pipe\&quot;):
+
+@
+ (&#39;&gt;-&gt;&#39;) :: &#39;Monad&#39; m =&gt; &#39;Producer&#39; a m r -&gt; &#39;Consumer&#39; a m r -&gt; &#39;Effect&#39; m r
+@
+
+    This returns an &#39;Effect&#39; which we can run:
+
+&gt; -- echo2.hs
+&gt;
+&gt; import Pipes
+&gt; import qualified Pipes.Prelude as P  -- Pipes.Prelude also provides &#39;stdoutLn&#39;
+&gt;
+&gt; main = runEffect $ P.stdinLn &gt;-&gt; P.stdoutLn
+
+    This program is more declarative of our intent: we want to stream values
+    from &#39;P.stdinLn&#39; to &#39;P.stdoutLn&#39;.  The above \&quot;pipeline\&quot; not only echoes
+    standard input to standard output, but also handles both end of input and
+    broken pipe errors:
+
+&gt; $ ./echo2
+&gt; Test&lt;Enter&gt;
+&gt; Test
+&gt; ABC&lt;Enter&gt;
+&gt; ABC
+&gt; 42&lt;Enter&gt;
+&gt; 42
+&gt; &lt;Ctrl-D&gt;
+&gt; $
+
+    (&#39;&gt;-&gt;&#39;) is \&quot;pull-based\&quot; meaning that control flow begins at the most
+    downstream component (i.e. &#39;P.stdoutLn&#39; in the above example).  Any time a
+    component &#39;await&#39;s a value it blocks and transfers control upstream and
+    every time a component &#39;yield&#39;s a value it blocks and restores control back
+    downstream, satisfying the &#39;await&#39;.  So in the above example, (&#39;&gt;-&gt;&#39;)
+    matches every &#39;await&#39; from &#39;P.stdoutLn&#39; with a &#39;yield&#39; from &#39;P.stdinLn&#39;.
+
+    Streaming stops when either &#39;P.stdinLn&#39; terminates (i.e. end of input) or
+    &#39;P.stdoutLn&#39; terminates (i.e. broken pipe).  This is why (&#39;&gt;-&gt;&#39;) requires
+    that both the &#39;Producer&#39; and &#39;Consumer&#39; share the same type of return value:
+    whichever one terminates first provides the return value for the entire
+    &#39;Effect&#39;.
+
+    Let&#39;s test this by modifying our &#39;Producer&#39; and &#39;Consumer&#39; to each return a
+    diagnostic &#39;String&#39;:
+
+&gt; -- echo3.hs
+&gt;
+&gt; import Control.Applicative ((&lt;$))  -- (&lt;$) modifies return values
+&gt; import Pipes
+&gt; import qualified Pipes.Prelude as P
+&gt; import System.IO
+&gt;
+&gt; main = do
+&gt;     hSetBuffering stdout NoBuffering
+&gt;     str &lt;- runEffect $
+&gt;         (&quot;End of input!&quot; &lt;$ P.stdinLn) &gt;-&gt; (&quot;Broken pipe!&quot; &lt;$ P.stdoutLn)
+&gt;     hPutStrLn stderr str
+
+    This lets us diagnose whether the &#39;Producer&#39; or &#39;Consumer&#39; terminated first:
+
+&gt; $ ./echo3
+&gt; Test&lt;Enter&gt;
+&gt; Test
+&gt; &lt;Ctrl-D&gt;
+&gt; End of input!
+&gt; $ ./echo3 | perl -e &#39;close STDIN&#39;
+&gt; Test&lt;Enter&gt;
+&gt; Broken pipe!
+&gt; $
+
+    You might wonder why (&#39;&gt;-&gt;&#39;) returns an &#39;Effect&#39; that we have to run instead
+    of directly returning an action in the base monad.  This is because you can
+    connect things other than &#39;Producer&#39;s and &#39;Consumer&#39;s, like &#39;Pipe&#39;s, which
+    are effectful stream transformations.
+
+    A &#39;Pipe&#39; is a monad transformer that is a mix between a &#39;Producer&#39; and
+    &#39;Consumer&#39;, because a &#39;Pipe&#39; can both &#39;await&#39; and &#39;yield&#39;.  The following
+    example &#39;Pipe&#39; is analagous to the Prelude&#39;s &#39;take&#39;, only allowing a fixed
+    number of values to flow through:
+
+&gt; -- take.hs
+&gt;
+&gt; import Control.Monad (replicateM_)
+&gt; import Pipes
+&gt; import Prelude hiding (take)
+&gt;
+&gt; --              +--------- A &#39;Pipe&#39; that
+&gt; --              |    +---- &#39;await&#39;s &#39;a&#39;s and
+&gt; --              |    | +-- &#39;yield&#39;s &#39;a&#39;s
+&gt; --              |    | |
+&gt; --              v    v v
+&gt; take ::  Int -&gt; Pipe a a IO ()
+&gt; take n = do
+&gt;     replicateM_ n $ do                     -- Repeat this block &#39;n&#39; times
+&gt;         x &lt;- await                         -- &#39;await&#39; a value of type &#39;a&#39;
+&gt;         yield x                            -- &#39;yield&#39; a value of type &#39;a&#39;
+&gt;     lift $ putStrLn &quot;You shall not pass!&quot;  -- Fly, you fools!
+
+    You can use &#39;Pipe&#39;s to transform &#39;Producer&#39;s, &#39;Consumer&#39;s, or even other
+    &#39;Pipe&#39;s using the same (&#39;&gt;-&gt;&#39;) operator:
+
+@
+ (&#39;&gt;-&gt;&#39;) :: &#39;Monad&#39; m =&gt; &#39;Producer&#39; a m r -&gt; &#39;Pipe&#39;   a b m r -&gt; &#39;Producer&#39; b m r
+ (&#39;&gt;-&gt;&#39;) :: &#39;Monad&#39; m =&gt; &#39;Pipe&#39;   a b m r -&gt; &#39;Consumer&#39; b m r -&gt; &#39;Consumer&#39; a m r
+ (&#39;&gt;-&gt;&#39;) :: &#39;Monad&#39; m =&gt; &#39;Pipe&#39;   a b m r -&gt; &#39;Pipe&#39;   b c m r -&gt; &#39;Pipe&#39;   a c m r
+@
+
+    For example, you can compose &#39;P.take&#39; after &#39;P.stdinLn&#39; to limit the number
+    of lines drawn from standard input:
+
+&gt; maxInput :: Int -&gt; Producer String IO ()
+&gt; maxInput n = P.stdinLn &gt;-&gt; take n
+
+&gt;&gt;&gt; runEffect $ maxInput 3 &gt;-&gt; P.stdoutLn
+Test&lt;Enter&gt;
+Test
+ABC&lt;Enter&gt;
+ABC
+42&lt;Enter&gt;
+42
+You shall not pass!
+&gt;&gt;&gt;
+
+    ... or you can pre-compose &#39;P.take&#39; before &#39;P.stdoutLn&#39; to limit the number
+    of lines written to standard output:
+
+&gt; maxOutput :: Int -&gt; Consumer String IO ()
+&gt; maxOutput n = take n &gt;-&gt; P.stdoutLn
+
+&gt;&gt;&gt; runEffect $ P.stdinLn &gt;-&gt; maxOutput 3
+&lt;Exact same behavior&gt;
+
+    Those both gave the same behavior because (&#39;&gt;-&gt;&#39;) is associative:
+
+&gt; (p1 &gt;-&gt; p2) &gt;-&gt; p3 = p1 &gt;-&gt; (p2 &gt;-&gt; p3)
+
+    Therefore we can just leave out the parentheses:
+
+&gt;&gt;&gt; runEffect $ P.stdinLn &gt;-&gt; take 3 &gt;-&gt; P.stdoutLn
+&lt;Exact same behavior&gt;
+
+    (&#39;&gt;-&gt;&#39;) is designed to behave like the Unix pipe operator, except with less
+    quirks.  In fact, we can continue the analogy to Unix by defining &#39;cat&#39;
+    (named after the Unix @cat@ utility), which reforwards elements endlessly:
+
+&gt; cat :: Monad m =&gt; Pipe a a m r
+&gt; cat = forever $ do
+&gt;     x &lt;- await
+&gt;     yield x
+
+     &#39;cat&#39; is the identity of (&#39;&gt;-&gt;&#39;), meaning that &#39;cat&#39; satisfies the
+     following two laws:
+
+&gt; -- Useless use of &#39;cat&#39;
+&gt; cat &gt;-&gt; p = p
+&gt;
+&gt; -- Forwarding output to &#39;cat&#39; does nothing
+&gt; p &gt;-&gt; cat = p
+
+    Therefore, (&#39;&gt;-&gt;&#39;) and &#39;cat&#39; form a &#39;Category&#39;, specifically the category of
+    Unix pipes, and &#39;Pipe&#39;s are also composable.
+
+    A lot of Unix tools have very simple definitions when written using @pipes@:
+
+&gt; -- unix.hs
+&gt;
+&gt; import Control.Monad (forever)
+&gt; import Pipes
+&gt; import qualified Pipes.Prelude as P  -- Pipes.Prelude provides &#39;take&#39;, too
+&gt; import Prelude hiding (head)
+&gt;
+&gt; head :: Monad m =&gt; Int -&gt; Pipe a a m ()
+&gt; head = P.take
+&gt;
+&gt; yes :: Monad m =&gt; Producer String m r
+&gt; yes = forever $ yield &quot;y&quot;
+&gt;
+&gt; main = runEffect $ yes &gt;-&gt; head 3 &gt;-&gt; P.stdoutLn
+
+    This prints out 3 \&#39;@y@\&#39;s, just like the equivalent Unix pipeline:
+
+&gt; $ ./unix
+&gt; y
+&gt; y
+&gt; y
+&gt; $ yes | head -3
+&gt; y
+&gt; y
+&gt; y
+&gt; $
+
+    This lets us write \&quot;Haskell pipes\&quot; instead of Unix pipes.  These are much
+    easier to build than Unix pipes and we can connect them directly within
+    Haskell for interoperability with the Haskell language and ecosystem.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $listT
+    @pipes@ also provides a \&quot;ListT done right\&quot; implementation.  This differs
+    from the implementation in @transformers@ because this &#39;ListT&#39;:
+
+    * obeys the monad laws, and
+
+    * streams data immediately instead of collecting all results into memory.
+
+    The latter property is actually an elegant consequence of obeying the monad
+    laws.
+
+    To bind a list within a &#39;ListT&#39; computation, combine &#39;Select&#39; and &#39;each&#39;:
+
+&gt; import Pipes
+&gt; 
+&gt; pair :: ListT IO (Int, Int)
+&gt; pair = do
+&gt;     x &lt;- Select $ each [1, 2]
+&gt;     lift $ putStrLn $ &quot;x = &quot; ++ show x
+&gt;     y &lt;- Select $ each [3, 4]
+&gt;     lift $ putStrLn $ &quot;y = &quot; ++ show y
+&gt;     return (x, y)
+
+    You can then loop over a &#39;ListT&#39; by using &#39;every&#39;:
+
+@
+ &#39;every&#39; :: &#39;Monad&#39; m =&gt; &#39;ListT&#39; m a -&gt; &#39;Producer&#39; a m ()
+@
+
+    So you can use your &#39;ListT&#39; within a &#39;for&#39; loop:
+
+&gt;&gt;&gt; runEffect $ for (every pair) (lift . print)
+x = 1
+y = 3
+(1,3)
+y = 4
+(1,4)
+x = 2
+y = 3
+(2,3)
+y = 4
+(2,4)
+
+    ... or a pipeline:
+
+&gt;&gt;&gt; import qualified Pipes.Prelude as P
+&gt;&gt;&gt; runEffect $ every pair &gt;-&gt; P.print
+&lt;Exact same behavior&gt;
+
+    Note that &#39;ListT&#39; is lazy and only produces as many elements as we request:
+
+&gt;&gt;&gt; runEffect $ for (every pair &gt;-&gt; P.take 2) (lift . print)
+x = 1
+y = 3
+(1,3)
+y = 4
+(1,4)
+
+    You can also go the other way, binding &#39;Producer&#39;s directly within a
+    &#39;ListT&#39;.  In fact, this is actually what &#39;Select&#39; was already doing:
+
+@
+ &#39;Select&#39; :: &#39;Producer&#39; a m () -&gt; &#39;ListT&#39; m a
+@
+
+    This lets you write crazy code like:
+
+&gt; import Pipes
+&gt; import qualified Pipes.Prelude as P
+&gt; 
+&gt; input :: Producer String IO ()
+&gt; input = P.stdinLn &gt;-&gt; P.takeWhile (/= &quot;quit&quot;)
+&gt; 
+&gt; name :: ListT IO String
+&gt; name = do
+&gt;     firstName &lt;- Select input
+&gt;     lastName  &lt;- Select input
+&gt;     return (firstName ++ &quot; &quot; ++ lastName)
+
+    Here we&#39;re binding standard input non-deterministically (twice) as if it
+    were an effectful list:
+
+&gt;&gt;&gt; runEffect $ every name &gt;-&gt; P.stdoutLn
+Daniel&lt;Enter&gt;
+Fischer&lt;Enter&gt;
+Daniel Fischer
+Wagner&lt;Enter&gt;
+Daniel Wagner
+quit&lt;Enter&gt;
+Donald&lt;Enter&gt;
+Stewart&lt;Enter&gt;
+Donald Stewart
+Duck&lt;Enter&gt;
+Donald Duck
+quit&lt;Enter&gt;
+quit&lt;Enter&gt;
+&gt;&gt;&gt;
+
+    Notice how this streams out values immediately as they are generated, rather
+    than building up a large intermediate result and then printing all the
+    values in one batch at the end.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $tricks
+    @pipes@ is more powerful than meets the eye so this section presents some
+    non-obvious tricks you may find useful.
+
+    Many pipe combinators will work on unusual pipe types and the next few
+    examples will use the &#39;cat&#39; pipe to demonstrate this.
+
+    For example, you can loop over the output of a &#39;Pipe&#39; using &#39;for&#39;, which is
+    how &#39;P.map&#39; is defined:
+
+&gt; map :: Monad m =&gt; (a -&gt; b) -&gt; Pipe a b m r
+&gt; map f = for cat $ \x -&gt; yield (f x)
+&gt;
+&gt; -- Read this as: For all values flowing downstream, apply &#39;f&#39;
+
+    This is equivalent to:
+
+&gt; map f = forever $ do
+&gt;     x &lt;- await
+&gt;     yield (f x)
+
+    You can also feed a &#39;Pipe&#39; input using (&#39;&gt;~&#39;).  This means we could have
+    instead defined the @yes@ pipe like this:
+
+&gt; yes :: Monad m =&gt; Producer String m r
+&gt; yes = return &quot;y&quot; &gt;~ cat
+&gt;
+&gt; -- Read this as: Keep feeding &quot;y&quot; downstream
+
+    This is equivalent to:
+
+&gt; yes = forever $ yield &quot;y&quot;
+
+    You can also sequence two &#39;Pipe&#39;s together.  This is how &#39;P.drop&#39; is
+    defined:
+
+&gt; drop :: Monad m =&gt; Int -&gt; Pipe a a m r
+&gt; drop n = do
+&gt;     replicateM_ n await
+&gt;     cat
+
+    This is equivalent to:
+
+&gt; drop n = do
+&gt;     replicateM_ n await
+&gt;     forever $ do
+&gt;         x &lt;- await
+&gt;         yield x
+
+    You can even compose pipes inside of another pipe:
+
+&gt; customerService :: Producer String IO ()
+&gt; customerService = do
+&gt;     each [ &quot;Hello, how can I help you?&quot;        -- Begin with a script
+&gt;          , &quot;Hold for one second.&quot;
+&gt;          ]
+&gt;     P.stdinLn &gt;-&gt; P.takeWhile (/= &quot;Goodbye!&quot;)  -- Now continue with a human
+
+    Also, you can often use &#39;each&#39; in conjunction with (&#39;~&gt;&#39;) to traverse nested
+    data structures.  For example, you can print all non-&#39;Nothing&#39; elements
+    from a doubly-nested list:
+
+&gt;&gt;&gt; runEffect $ (each ~&gt; each ~&gt; each ~&gt; lift . print) [[Just 1, Nothing], [Just 2, Just 3]]
+1
+2
+3
+
+    Another neat thing to know is that &#39;every&#39; has a more general type:
+
+@
+ &#39;every&#39; :: (&#39;Monad&#39; m, &#39;Enumerable&#39; t) =&gt; t m a -&gt; &#39;Producer&#39; a m ()
+@
+
+    &#39;Enumerable&#39; generalizes &#39;Foldable&#39; and if you have an effectful container
+    of your own that you want others to traverse using @pipes@, just have your
+    container implement the &#39;toListT&#39; method of the &#39;Enumerable&#39; class:
+
+&gt; class Enumerable t where
+&gt;     toListT :: Monad m =&gt; t m a -&gt; ListT m a
+
+    You can even use &#39;Enumerable&#39; to traverse effectful types that are not even
+    proper containers, like &#39;Control.Monad.Trans.Maybe.MaybeT&#39;:
+
+&gt; input :: MaybeT IO String
+&gt; input = do
+&gt;     str &lt;- lift getLine
+&gt;     guard (str /= &quot;Fail&quot;)
+&gt;     return str
+
+&gt;&gt;&gt; runEffect $ every input &gt;-&gt; P.stdoutLn
+Test&lt;Enter&gt;
+Test
+&gt;&gt;&gt; runEffect $ every input &gt;-&gt; P.stdoutLn
+Fail&lt;Enter&gt;
+&gt;&gt;&gt;
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $conclusion
+    This tutorial covers the concepts of connecting, building, and reading
+    @pipes@ code.  However, this library is only the core component in an
+    ecosystem of streaming components.  Derived libraries that build immediately
+    upon @pipes@ include:
+
+    * @pipes-concurrency@: Concurrent reactive programming and message passing
+
+    * @pipes-parse@: Minimal utilities for stream parsing
+
+    * @pipes-safe@: Resource management and exception safety for @pipes@
+
+    These libraries provide functionality specialized to common streaming
+    domains.  Additionally, there are several libraries on Hackage that provide
+    even higher-level functionality, which you can find by searching under the
+    \&quot;Pipes\&quot; category or by looking for packages with a @pipes-@ prefix in
+    their name.  Current examples include:
+
+    * @pipes-network@/@pipes-network-tls@: Networking
+
+    * @pipes-zlib@: Compression and decompression
+
+    * @pipes-binary@: Binary serialization
+
+    * @pipes-attoparsec@: High-performance parsing
+
+    * @pipes-aeson@: JSON serialization and deserialization
+
+    Even these derived packages still do not explore the full potential of
+    @pipes@ functionality, which actually permits bidirectional communication.
+    Advanced @pipes@ users can explore this library in greater detail by
+    studying the documentation in the &quot;Pipes.Core&quot; module to learn about the
+    symmetry of the underlying &#39;Proxy&#39; type and operators.
+
+    To learn more about @pipes@, ask questions, or follow @pipes@ development,
+    you can subscribe to the @haskell-pipes@ mailing list at:
+
+    &lt;https://groups.google.com/forum/#!forum/haskell-pipes&gt;
+
+    ... or you can mail the list directly at:
+
+    &lt;mailto:haskell-pipes@googlegroups.com&gt;
+
+    Additionally, for questions regarding types or type errors, you might find
+    the following appendix on types very useful.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $types
+    @pipes@ uses parametric polymorphism (i.e. generics) to overload all
+    operations.  You&#39;ve probably noticed this overloading already::
+
+    * &#39;yield&#39; works within both &#39;Producer&#39;s and &#39;Pipe&#39;s
+
+    * &#39;await&#39; works within both &#39;Consumer&#39;s and &#39;Pipe&#39;s
+
+    * (&#39;&gt;-&gt;&#39;) connects &#39;Producer&#39;s, &#39;Consumer&#39;s, and &#39;Pipe&#39;s in varying ways
+
+    This overloading is great when it works, but when connections fail they
+    produce type errors that appear intimidating at first.  This section
+    explains the underlying types so that you can work through type errors
+    intelligently.
+
+    &#39;Producer&#39;s, &#39;Consumer&#39;s, &#39;Pipe&#39;s, and &#39;Effect&#39;s are all special cases of a
+    single underlying type: a &#39;Proxy&#39;.  This overarching type permits fully
+    bidirectional communication on both an upstream and downstream interface.
+    You can think of it as having the following shape:
+
+&gt; Proxy a&#39; a b&#39; b m r
+&gt;
+&gt; Upstream | Downstream
+&gt;     +---------+
+&gt;     |         |
+&gt; a&#39; &lt;==       &lt;== b&#39;  -- Information flowing upstream
+&gt;     |         |
+&gt; a  ==&gt;       ==&gt; b   -- Information flowing downstream
+&gt;     |    |    |
+&gt;     +----|----+
+&gt;          v
+&gt;          r
+
+    The four core types do not use the upstream flow of information.  This means
+    that the @a&#39;@ and @b&#39;@ in the above diagram go unused unless you use the
+    more advanced features provided in &quot;Pipes.Core&quot;.
+
+    @pipes@ uses type synonyms to hide unused inputs or outputs and clean up
+    type signatures.  These type synonyms come in two flavors:
+
+    * Concrete type synonyms that explicitly close unused inputs and outputs of
+      the &#39;Proxy&#39; type
+
+    * Polymorphic type synonyms that don&#39;t explicitly close unused inputs or
+      outputs
+
+    The concrete type synonyms use @()@ to close unused inputs and &#39;X&#39; (the
+    uninhabited type) to close unused outputs:
+
+    * &#39;Effect&#39;: explicitly closes both ends, forbidding &#39;await&#39;s and &#39;yield&#39;s
+
+&gt; type Effect = Proxy X () () X
+&gt;
+&gt;  Upstream | Downstream
+&gt;     +---------+
+&gt;     |         |
+&gt; X  &lt;==       &lt;== ()
+&gt;     |         |
+&gt; () ==&gt;       ==&gt; X
+&gt;     |    |    |
+&gt;     +----|----+
+&gt;          v
+&gt;          r
+
+    * &#39;Producer&#39;: explicitly closes the upstream end, forbidding &#39;await&#39;s
+
+&gt; type Producer b = Proxy X () () b
+&gt;
+&gt; Upstream | Downstream
+&gt;     +---------+
+&gt;     |         |
+&gt; X  &lt;==       &lt;== ()
+&gt;     |         |
+&gt; () ==&gt;       ==&gt; b
+&gt;     |    |    |
+&gt;     +----|----+
+&gt;          v
+&gt;          r
+
+    * &#39;Consumer&#39;: explicitly closes the downstream end, forbidding &#39;yield&#39;s
+
+&gt; type Consumer a = Proxy () a () X
+&gt;
+&gt; Upstream | Downstream
+&gt;     +---------+
+&gt;     |         |
+&gt; () &lt;==       &lt;== ()
+&gt;     |         |
+&gt; a  ==&gt;       ==&gt; X
+&gt;     |    |    |
+&gt;     +----|----+
+&gt;          v
+&gt;          r
+
+    * &#39;Pipe&#39;: marks both ends open, allowing both &#39;await&#39;s and &#39;yield&#39;s
+
+&gt; type Pipe a b = Proxy () a () b
+&gt;
+&gt; Upstream | Downstream
+&gt;     +---------+
+&gt;     |         |
+&gt; () &lt;==       &lt;== ()
+&gt;     |         |
+&gt; a  ==&gt;       ==&gt; b
+&gt;     |    |    |
+&gt;     +----|----+
+&gt;          v
+&gt;          r
+
+    When you compose &#39;Proxy&#39;s using (&#39;&gt;-&gt;&#39;) all you are doing is placing them
+    side by side and fusing them laterally.  For example, when you compose a
+    &#39;Producer&#39;, &#39;Pipe&#39;, and a &#39;Consumer&#39;, you can think of information flowing
+    like this:
+
+&gt;        Producer                Pipe                 Consumer
+&gt;     +-----------+          +----------+          +------------+
+&gt;     |           |          |          |          |            |
+&gt; X  &lt;==         &lt;==   ()   &lt;==        &lt;==   ()   &lt;==          &lt;== ()
+&gt;     |  stdinLn  |          |  take 3  |          |  stdoutLn  |
+&gt; () ==&gt;         ==&gt; String ==&gt;        ==&gt; String ==&gt;          ==&gt; X
+&gt;     |     |     |          |    |     |          |      |     |
+&gt;     +-----|-----+          +----|-----+          +------|-----+
+&gt;           v                     v                       v
+&gt;           ()                    ()                      ()
+
+     Composition fuses away the intermediate interfaces, leaving behind an
+     &#39;Effect&#39;:
+
+&gt;                    Effect
+&gt;     +-----------------------------------+
+&gt;     |                                   |
+&gt; X  &lt;==                                 &lt;== ()
+&gt;     |  stdinLn &gt;-&gt; take 3 &gt;-&gt; stdoutLn  |
+&gt; () ==&gt;                                 ==&gt; X
+&gt;     |                                   |
+&gt;     +----------------|------------------+
+&gt;                      v
+&gt;                      ()
+
+    @pipes@ also provides polymorphic type synonyms with apostrophes at the end
+    of their names.  These use universal quantification to leave open any unused
+    input or output ends (which I mark using @*@):
+
+    * &#39;Producer&#39;&#39;: marks the upstream end unused but still open
+
+&gt; type Producer&#39; b m r = forall x&#39; x . Proxy x&#39; x () b m r
+&gt;
+&gt; Upstream | Downstream
+&gt;     +---------+
+&gt;     |         |
+&gt;  * &lt;==       &lt;== ()
+&gt;     |         |
+&gt;  * ==&gt;       ==&gt; b
+&gt;     |    |    |
+&gt;     +----|----+
+&gt;          v
+&gt;          r
+
+    * &#39;Consumer&#39;&#39;: marks the downstream end unused but still open
+
+&gt; type Consumer&#39; a m r = forall y&#39; y . Proxy () a y&#39; y m r
+&gt;
+&gt; Upstream | Downstream
+&gt;     +---------+
+&gt;     |         |
+&gt; () &lt;==       &lt;== * 
+&gt;     |         |
+&gt; a  ==&gt;       ==&gt; *
+&gt;     |    |    |
+&gt;     +----|----+
+&gt;          v
+&gt;          r
+
+    * &#39;Effect&#39;&#39;: marks both ends unused but still open
+
+&gt; type Effect&#39; m r = forall x&#39; x y&#39; y . Proxy x&#39; x y&#39; y m r
+&gt;
+&gt; Upstream | Downstream
+&gt;     +---------+
+&gt;     |         |
+&gt;  * &lt;==       &lt;== * 
+&gt;     |         |
+&gt;  * ==&gt;       ==&gt; *
+&gt;     |    |    |
+&gt;     +----|----+
+&gt;          v
+&gt;          r
+
+    Note that there is no polymorphic generalization of a &#39;Pipe&#39;.
+
+    Like before, if you compose a &#39;Producer&#39;&#39;, a &#39;Pipe&#39;, and a &#39;Consumer&#39;&#39;:
+
+&gt;        Producer&#39;               Pipe                 Consumer&#39;
+&gt;     +-----------+          +----------+          +------------+
+&gt;     |           |          |          |          |            |
+&gt;  * &lt;==         &lt;==   ()   &lt;==        &lt;==   ()   &lt;==          &lt;== *
+&gt;     |  stdinLn  |          |  take 3  |          |  stdoutLn  |
+&gt;  * ==&gt;         ==&gt; String ==&gt;        ==&gt; String ==&gt;          ==&gt; *
+&gt;     |     |     |          |     |    |          |      |     |
+&gt;     +-----|-----+          +-----|----+          +------|-----+
+&gt;           v                      v                      v
+&gt;           ()                     ()                     ()
+
+    ... they fuse into an &#39;Effect&#39;&#39;:
+
+&gt;                    Effect&#39;
+&gt;     +-----------------------------------+
+&gt;     |                                   |
+&gt;  * &lt;==                                 &lt;== *
+&gt;     |  stdinLn &gt;-&gt; take 3 &gt;-&gt; stdoutLn  |
+&gt;  * ==&gt;                                 ==&gt; *
+&gt;     |                                   |
+&gt;     +----------------|------------------+
+&gt;                      v
+&gt;                      ()
+
+    Polymorphic type synonyms come in handy when you want to keep the type as
+    general as possible.  For example, the type signature for &#39;yield&#39; uses
+    &#39;Producer&#39;&#39; to keep the type signature simple while still leaving the
+    upstream input end open:
+
+@
+ &#39;yield&#39; :: &#39;Monad&#39; m =&gt; a -&gt; &#39;Producer&#39;&#39; a m ()
+@
+
+    This type signature lets us use &#39;yield&#39; within a &#39;Pipe&#39;, too, because the
+    &#39;Pipe&#39; type synonym is a special case of the polymorphic &#39;Producer&#39;&#39; type 
+    synonym:
+
+@
+ type &#39;Producer&#39;&#39; b m r = forall x&#39; x . &#39;Proxy&#39; x&#39; x () b m r
+ type &#39;Pipe&#39;    a b m r =               &#39;Proxy&#39; () a () b m r
+@
+
+    The same is true for &#39;await&#39;, which uses the polymorphic &#39;Consumer&#39;&#39; type
+    synonym:
+
+@
+ &#39;await&#39; :: &#39;Monad&#39; m =&gt; &#39;Consumer&#39;&#39; a m a
+@
+
+    We can use &#39;await&#39; within a &#39;Pipe&#39; because a &#39;Pipe&#39; is a special case of the
+    polymorphic &#39;Consumer&#39;&#39; type synonym:
+
+@
+ type &#39;Consumer&#39;&#39; a   m r = forall y&#39; y . &#39;Proxy&#39; () a y&#39; y m r
+ type &#39;Pipe&#39;      a b m r =               &#39;Proxy&#39; () a () b m r
+@
+
+    However, polymorphic type synonyms cause problems in many other cases:
+
+    * They usually give the wrong behavior when used as the argument of a
+      function (known as the \&quot;negative\&quot; or \&quot;contravariant\&quot; position) like
+      this:
+
+&gt; f :: Producer&#39; a m r -&gt; ...  -- Wrong
+&gt;
+&gt; f :: Producer  a m r -&gt; ...  -- Right
+
+      The former function only accepts polymorphic &#39;Producer&#39;s as arguments.
+      The latter function accepts both polymorphic and concrete &#39;Producer&#39;s,
+      which is probably what you want.
+
+    * Even when you desire a polymorphic argument, this induces a higher-ranked
+      type, because it translates to a @forall@ which you cannot factor out to
+      the top-level to simplify the type signature:
+
+&gt; f :: (forall x&#39; x y&#39; . Proxy x&#39; x y&#39; m r) -&gt; ...
+
+      These kinds of type signatures require the @RankNTypes@ extension.
+
+    * Even when you have polymorphic type synonyms as the result of a function
+      (i.e.  the \&quot;positive\&quot; or \&quot;covariant\&quot; position), recent versions of
+      @ghc@ such still require the @RankNTypes@ extension.  For example, the
+      &#39;Pipes.Prelude.fromHandle&#39; function from &quot;Pipes.Prelude&quot; requires
+      @RankNTypes@ to compile correctly on @ghc-7.6.3@:
+
+&gt; fromHandle :: MonadIO m =&gt; Handle -&gt; Producer&#39; String m ()
+
+    * You can&#39;t use polymorphic type synonyms inside other type constructors
+      without the @ImpredicativeTypes@ extension:
+
+&gt; io :: IO (Producer&#39; a m r)  -- Type error without ImpredicativeTypes
+
+    * You can&#39;t partially apply polymorphic type synonyms:
+
+&gt; stack :: MaybeT (Producer&#39; a m) r  -- Type error
+
+    In these scenarios you should fall back on the concrete type synonyms, which
+    are better behaved.  If concrete type synonyms are unsatisfactory, then ask
+    @ghc@ to infer the most general type signature and use that.
+
+    For the purposes of debugging type errors you can just remember that:
+
+&gt;  Input --+    +-- Output
+&gt;          |    |
+&gt;          v    v
+&gt; Proxy a&#39; a b&#39; b m r
+&gt;       ^    ^
+&gt;       |    |
+&gt;       +----+-- Ignore these
+
+    For example, let&#39;s say that you try to run the &#39;P.stdinLn&#39; &#39;Producer&#39;.  This
+    produces the following type error:
+
+&gt;&gt;&gt; runEffect P.stdinLn
+&lt;interactive&gt;:4:5:
+    Couldn&#39;t match expected type `X&#39; with actual type `String&#39;
+    Expected type: Effect m0 r0
+      Actual type: Proxy X () () String IO ()
+    In the first argument of `runEffect&#39;, namely `P.stdinLn&#39;
+    In the expression: runEffect P.stdinLn
+
+    &#39;runEffect&#39; expects an &#39;Effect&#39;, which is equivalent to the following type:
+
+&gt; Effect          IO () = Proxy X () () X      IO ()
+
+    ... but &#39;P.stdinLn&#39; type-checks as a &#39;Producer&#39;, which has the following
+    type:
+
+&gt; Producer String IO () = Proxy X () () String IO ()
+
+    The fourth type variable (the output) does not match.  For an &#39;Effect&#39; this
+    type variable should be closed (i.e. &#39;X&#39;), but &#39;P.stdinLn&#39; has a &#39;String&#39;
+    output, thus the type error:
+
+&gt;    Couldn&#39;t match expected type `X&#39; with actual type `String&#39;
+
+    Any time you get type errors like these you can work through them by
+    expanding out the type synonyms and seeing which type variables do not
+    match.
+
+    You may also consult this table of type synonyms to more easily compare
+    them:
+
+&gt; type Effect             = Proxy X  () () X
+&gt; type Producer         b = Proxy X  () () b
+&gt; type Consumer    a      = Proxy () a  () X
+&gt; type Pipe        a    b = Proxy () a  () b
+&gt;
+&gt; type Server        b&#39; b = Proxy X  () b&#39; b 
+&gt; type Client   a&#39; a      = Proxy a&#39; a  () X
+&gt;
+&gt; type Effect&#39;            m r = forall x&#39; x y&#39; y . Proxy x&#39; x y&#39; y m r
+&gt; type Producer&#39;        b m r = forall x&#39; x      . Proxy x&#39; x () b m r
+&gt; type Consumer&#39;   a      m r = forall      y&#39; y . Proxy () a y&#39; y m r
+&gt;
+&gt; type Server&#39;       b&#39; b m r = forall x&#39; x      . Proxy x&#39; x b&#39; b m r
+&gt; type Client&#39;  a&#39; a      m r = forall      y&#39; y . Proxy a&#39; a y&#39; y m r
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $timecomplexity
+    There are three functions that give quadratic time complexity when used in
+    within @pipes@:
+
+    * &#39;sequence&#39;
+
+    * &#39;replicateM&#39;
+
+    * &#39;mapM&#39;
+
+    For example, the time complexity of this code segment scales quadratically
+    with `n`:
+
+&gt; import Control.Monad (replicateM)
+&gt; import Pipes
+&gt;
+&gt; quadratic :: Int -&gt; Consumer a m [a]
+&gt; quadratic n = replicateM n await
+
+    These three functions are generally bad practice to use, because all three
+    of them correspond to \&quot;ListT done wrong\&quot;, building a list in memory
+    instead of streaming results.
+
+    However, sometimes situations arise where one deliberately intends to build
+    a list in memory.  The solution is to use the \&quot;codensity transformation\&quot;
+    to transform the code to run with linear time complexity.  This involves:
+
+    * wrapping the code in the @Codensity@ monad transformer (from
+      @Control.Monad.Codensity@ module of the @kan-extensions@ package) using
+      &#39;lift&#39;
+
+    * applying &#39;sequence&#39; \/ &#39;replicateM&#39; \/ &#39;mapM&#39;
+
+    * unwrapping the code using @lowerCodensity@
+
+    To illustrate this, we&#39;d transform the above example to:
+
+&gt; import Control.Monad.Codensity (lowerCodensity)
+&gt; 
+&gt; linear :: Monad m =&gt; Int -&gt; Consumer a m [a]
+&gt; linear n = lowerCodensity $ replicateM n $ lift await
+
+    This will produce the exact same result, but in linear time.
+-}</span></span><span class="mpre">
+</span></div></body></html>

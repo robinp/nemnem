@@ -1,0 +1,63 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# OPTIONS_GHC -fno-warn-deprecations #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE FlexibleContexts #-}
+
+#if __GLASGOW_HASKELL__ &gt;= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">{- |
+Module      :  Control.Concurrent.QSem.Lifted
+Copyright   :  Liyang HU, Bas van Dijk
+License     :  BSD-style
+
+Maintainer  :  Bas van Dijk &lt;v.dijk.bas@gmail.com&gt;
+Stability   :  experimental
+
+This is a wrapped version of &quot;Control.Concurrent.QSem&quot; with types
+generalised from &#39;IO&#39; to all monads in &#39;MonadBase&#39;.
+-}</span></span><span class="mpre">
+
+module Control.Concurrent.QSem.Lifted
+    ( QSem
+    , newQSem
+    , waitQSem
+    , signalQSem
+    ) where
+
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Imports</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- from base:</span></span><span class="mpre">
+import Control.Concurrent.QSem ( </span><a href="Control.Concurrent.QSem.html#loc_42_6_42_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Concurrent.QSem.html#loc_42_6_42_10&#39;)"><span class="mpre">QSem</span></a><span class="mpre"> )
+import qualified Control.Concurrent.QSem as QSem
+import Data.Int ( Int )
+import System.IO ( IO )
+import Prelude ( (.) )
+
+</span><span class="hl_comment"><span class="mpre">-- from transformers-base:</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Control/Concurrent/QSem/Lifted.hs&quot;, srcSpanStartLine = 41, srcSpanStartColumn = 8, srcSpanEndLine = 41, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;Control.Monad.Base&quot;"><span class="mpre">Control.Monad.Base</span></span><span class="mpre"> ( MonadBase, liftBase )
+
+#include &quot;inlinable.h&quot;
+
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- * QSems</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Generalized version of &#39;QSem.newQSem&#39;.</span></span><span class="mpre">
+</span><a href="#loc_51_1_51_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_51_1_51_8&#39;)"><span class="mpre">newQSem</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Control/Concurrent/QSem/Lifted.hs&quot;, srcSpanStartLine = 50, srcSpanStartColumn = 12, srcSpanEndLine = 50, srcSpanEndColumn = 29}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Control/Concurrent/QSem/Lifted.hs&quot;, srcSpanStartLine = 50, srcSpanStartColumn = 27, srcSpanEndLine = 50, srcSpanEndColumn = 29}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/hom"><span class="mpre">MonadBase IO m =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><a href="Control.Concurrent.QSem.html#loc_42_6_42_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Concurrent.QSem.html#loc_42_6_42_10&#39;)"><span class="hl_tyconref"><span class="mpre">QSem</span></span></a><span class="mpre">
+</span><a name="loc_51_1_51_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_51_1_51_8&#39;)"><span class="hl_vardecl"><span class="mpre">newQSem</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">liftBase</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Control.Concurrent.QSem.html#loc_65_1_65_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Concurrent.QSem.html#loc_65_1_65_8&#39;)"><span class="hl_varref"><span class="mpre">QSem.newQSem</span></span></a><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{-# INLINABLE newQSem #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Generalized version of &#39;QSem.waitQSem&#39;.</span></span><span class="mpre">
+</span><a href="#loc_56_1_56_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_1_56_9&#39;)"><span class="mpre">waitQSem</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Control/Concurrent/QSem/Lifted.hs&quot;, srcSpanStartLine = 55, srcSpanStartColumn = 13, srcSpanEndLine = 55, srcSpanEndColumn = 30}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Control/Concurrent/QSem/Lifted.hs&quot;, srcSpanStartLine = 55, srcSpanStartColumn = 28, srcSpanEndLine = 55, srcSpanEndColumn = 30}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/hom"><span class="mpre">MonadBase IO m =&gt;</span></span><span class="mpre"> </span><a href="Control.Concurrent.QSem.html#loc_42_6_42_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Concurrent.QSem.html#loc_42_6_42_10&#39;)"><span class="hl_tyconref"><span class="mpre">QSem</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_56_1_56_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_56_1_56_9&#39;)"><span class="hl_vardecl"><span class="mpre">waitQSem</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">liftBase</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Control.Concurrent.QSem.html#loc_73_1_73_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Concurrent.QSem.html#loc_73_1_73_9&#39;)"><span class="hl_varref"><span class="mpre">QSem.waitQSem</span></span></a><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{-# INLINABLE waitQSem #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Generalized version of &#39;QSem.signalQSem&#39;.</span></span><span class="mpre">
+</span><a href="#loc_61_1_61_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_1_61_11&#39;)"><span class="mpre">signalQSem</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxSingle (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Control/Concurrent/QSem/Lifted.hs&quot;, srcSpanStartLine = 60, srcSpanStartColumn = 15, srcSpanEndLine = 60, srcSpanEndColumn = 32}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Control/Concurrent/QSem/Lifted.hs&quot;, srcSpanStartLine = 60, srcSpanStartColumn = 30, srcSpanEndLine = 60, srcSpanEndColumn = 32}]}) (ClassA (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/hom"><span class="mpre">MonadBase IO m =&gt;</span></span><span class="mpre"> </span><a href="Control.Concurrent.QSem.html#loc_42_6_42_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Concurrent.QSem.html#loc_42_6_42_10&#39;)"><span class="hl_tyconref"><span class="mpre">QSem</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_61_1_61_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_61_1_61_11&#39;)"><span class="hl_vardecl"><span class="mpre">signalQSem</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">liftBase</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><a href="Control.Concurrent.QSem.html#loc_97_1_97_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Concurrent.QSem.html#loc_97_1_97_11&#39;)"><span class="hl_varref"><span class="mpre">QSem.signalQSem</span></span></a><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{-# INLINABLE signalQSem #-}</span></span><span class="mpre">
+</span></div></body></html>

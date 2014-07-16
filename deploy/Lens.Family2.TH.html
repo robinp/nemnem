@@ -1,0 +1,82 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE TemplateHaskell, Rank2Types #-}
+
+</span><span class="hl_comment"><span class="mpre">-- | Derive lenses for &quot;Lens.Family2&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Example usage:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; {-# LANGUAGE TemplateHaskell, Rank2Types #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import Lens.Family2</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import Lens.Family2.TH</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; data Foo a = Foo { _bar :: Int, _baz :: a }</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt;            deriving (Show, Read, Eq, Ord)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; $(makeLenses &#39;&#39;Foo)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+module Lens.Family2.TH (
+    makeLenses
+  , makeLensesBy
+  , makeLensesFor
+
+  , makeTraversals
+
+  , mkLenses
+  , mkLensesBy
+  , mkLensesFor
+  ) where
+
+import Language.Haskell.TH
+import Lens.Family.THCore
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Derive lenses for the record selectors in </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- a single-constructor data declaration,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- or for the record selector in a newtype declaration.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Lenses will only be generated for record fields which</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- are prefixed with an underscore.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Example usage:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- $(makeLenses &#39;&#39;Foo)</span></span><span class="mpre">
+</span><a href="#loc_43_1_43_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_11&#39;)"><span class="mpre">makeLenses</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Name</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Q</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">Dec</span></span><span class="mpre">]
+</span><a name="loc_43_1_43_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_11&#39;)"><span class="hl_vardecl"><span class="mpre">makeLenses</span></span></a><span class="mpre"> = </span><a href="#loc_59_1_59_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_1_59_13&#39;)"><span class="hl_varref"><span class="mpre">makeLensesBy</span></span></a><span class="mpre"> </span><a href="Lens.Family.THCore.html#loc_20_1_20_21" onmouseover="nemnem.highlightLocalToRemote(&#39;Lens.Family.THCore.html#loc_20_1_20_21&#39;)"><span class="hl_varref"><span class="mpre">defaultNameTransform</span></span></a><span class="mpre">
+
+</span><span class="warning" data-warning="DeclDeprPragmaDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-th-0.3.0.0/Lens/Family2/TH.hs&quot;, srcSpanStartLine = 45, srcSpanStartColumn = 1, srcSpanEndLine = 45, srcSpanEndColumn = 54}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-th-0.3.0.0/Lens/Family2/TH.hs&quot;, srcSpanStartLine = 45, srcSpanStartColumn = 1, srcSpanEndLine = 45, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-th-0.3.0.0/Lens/Family2/T"><span class="mpre">{-# DEPRECATED mkLenses &quot;Use makeLenses instead.&quot; #-}</span></span><span class="mpre">
+</span><a href="#loc_47_1_47_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_9&#39;)"><span class="mpre">mkLenses</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Name</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Q</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">Dec</span></span><span class="mpre">]
+</span><a name="loc_47_1_47_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_9&#39;)"><span class="hl_vardecl"><span class="mpre">mkLenses</span></span></a><span class="mpre"> = </span><a href="#loc_43_1_43_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_11&#39;)"><span class="hl_varref"><span class="mpre">makeLenses</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Derive lenses with the provided name transformation</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and filtering function. Produce @Just lensName@ to generate a lens</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of the resultant name, or @Nothing@ to not generate a lens</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for the input record name.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Example usage:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; $(makeLensesBy (\n -&gt; Just (n ++ &quot;L&quot;)) &#39;&#39;Foo)</span></span><span class="mpre">
+</span><a href="#loc_59_1_59_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_1_59_13&#39;)"><span class="mpre">makeLensesBy</span></a><span class="mpre"> :: (</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">Name</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Q</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">Dec</span></span><span class="mpre">]
+</span><a name="loc_59_1_59_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_1_59_13&#39;)"><span class="hl_vardecl"><span class="mpre">makeLensesBy</span></span></a><span class="mpre"> = </span><a href="Lens.Family.THCore.html#loc_41_1_41_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Lens.Family.THCore.html#loc_41_1_41_13&#39;)"><span class="hl_varref"><span class="mpre">deriveLenses</span></span></a><span class="mpre"> </span><a href="#loc_81_1_81_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_1_81_14&#39;)"><span class="hl_varref"><span class="mpre">deriveLensSig</span></span></a><span class="mpre">
+
+</span><span class="warning" data-warning="DeclDeprPragmaDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-th-0.3.0.0/Lens/Family2/TH.hs&quot;, srcSpanStartLine = 61, srcSpanStartColumn = 1, srcSpanEndLine = 61, srcSpanEndColumn = 58}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-th-0.3.0.0/Lens/Family2/TH.hs&quot;, srcSpanStartLine = 61, srcSpanStartColumn = 1, srcSpanEndLine = 61, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-th-0.3.0.0/Lens/Family2/T"><span class="mpre">{-# DEPRECATED mkLensesBy &quot;Use makeLensesBy instead.&quot; #-}</span></span><span class="mpre">
+</span><a href="#loc_63_1_63_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_63_1_63_11&#39;)"><span class="mpre">mkLensesBy</span></a><span class="mpre"> :: (</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">) -&gt; </span><span class="hl_tyconref"><span class="mpre">Name</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Q</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">Dec</span></span><span class="mpre">]
+</span><a name="loc_63_1_63_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_63_1_63_11&#39;)"><span class="hl_vardecl"><span class="mpre">mkLensesBy</span></span></a><span class="mpre"> = </span><a href="#loc_59_1_59_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_1_59_13&#39;)"><span class="hl_varref"><span class="mpre">makeLensesBy</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- | Derive lenses, specifying explicit pairings of @(fieldName, lensName)@.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Example usage:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; $(makeLensesFor [(&quot;_foo&quot;, &quot;fooLens&quot;), (&quot;bar&quot;, &quot;lbar&quot;)] &#39;&#39;Foo)</span></span><span class="mpre">
+</span><a href="#loc_72_1_72_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_14&#39;)"><span class="mpre">makeLensesFor</span></a><span class="mpre"> :: [(</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">)] -&gt; </span><span class="hl_tyconref"><span class="mpre">Name</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Q</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">Dec</span></span><span class="mpre">]
+</span><a name="loc_72_1_72_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_14&#39;)"><span class="hl_fundecl"><span class="mpre">makeLensesFor</span></span></a><span class="mpre"> </span><a name="loc_72_15_72_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_15_72_21&#39;)"><span class="hl_vardecl"><span class="mpre">fields</span></span></a><span class="mpre"> = </span><a href="#loc_59_1_59_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_59_1_59_13&#39;)"><span class="hl_varref"><span class="mpre">makeLensesBy</span></span></a><span class="mpre"> (</span><span class="hl_infix"><span class="mpre">`lookup`</span></span><span class="mpre"> </span><a href="#loc_72_15_72_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_15_72_21&#39;)"><span class="hl_varref"><span class="mpre">fields</span></span></a><span class="mpre">)
+
+</span><span class="warning" data-warning="DeclDeprPragmaDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-th-0.3.0.0/Lens/Family2/TH.hs&quot;, srcSpanStartLine = 74, srcSpanStartColumn = 1, srcSpanEndLine = 74, srcSpanEndColumn = 60}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-th-0.3.0.0/Lens/Family2/TH.hs&quot;, srcSpanStartLine = 74, srcSpanStartColumn = 1, srcSpanEndLine = 74, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lens-family-th-0.3.0.0/Lens/Family2/T"><span class="mpre">{-# DEPRECATED mkLensesFor &quot;Use makeLensesFor instead.&quot; #-}</span></span><span class="mpre">
+</span><a href="#loc_76_1_76_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_1_76_12&#39;)"><span class="mpre">mkLensesFor</span></a><span class="mpre"> :: [(</span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">, </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">)] -&gt; </span><span class="hl_tyconref"><span class="mpre">Name</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Q</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">Dec</span></span><span class="mpre">]
+</span><a name="loc_76_1_76_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_76_1_76_12&#39;)"><span class="hl_vardecl"><span class="mpre">mkLensesFor</span></span></a><span class="mpre"> = </span><a href="#loc_72_1_72_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_14&#39;)"><span class="hl_varref"><span class="mpre">makeLensesFor</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- TODO</span></span><span class="mpre">
+</span><a href="#loc_81_1_81_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_1_81_14&#39;)"><span class="mpre">deriveLensSig</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Name</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">LensTypeInfo</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ConstructorFieldInfo</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Q</span></span><span class="mpre"> [</span><span class="hl_tyconref"><span class="mpre">Dec</span></span><span class="mpre">]
+</span><a name="loc_81_1_81_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_1_81_14&#39;)"><span class="hl_fundecl"><span class="mpre">deriveLensSig</span></span></a><span class="mpre"> _ _ _ = </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> []
+</span></div></body></html>

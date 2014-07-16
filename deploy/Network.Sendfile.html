@@ -1,0 +1,30 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+
+</span><span class="hl_comment"><span class="mpre">{-|
+  Cross platform library for the sendfile system call.
+  This library tries to call minimum system calls which
+  are the bottleneck of web servers.
+-}</span></span><span class="mpre">
+
+module Network.Sendfile (
+    sendfile
+  , sendfileWithHeader
+#if OS_BSD || OS_MacOS || OS_Linux
+  , sendfileFd
+  , sendfileFdWithHeader
+#endif
+  , FileRange(..)
+  ) where
+
+import Network.Sendfile.Types
+
+#ifdef OS_BSD
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/simple-sendfile-0.2.15/Network/Sendfile.hs&quot;, srcSpanStartLine = 22, srcSpanStartColumn = 8, srcSpanEndLine = 22, srcSpanEndColumn = 28}, srcInfoPoints = []}) &quot;Network.Sendfile.BSD&quot;"><span class="mpre">Network.Sendfile.BSD</span></span><span class="mpre">
+#elif  OS_MacOS
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/simple-sendfile-0.2.15/Network/Sendfile.hs&quot;, srcSpanStartLine = 24, srcSpanStartColumn = 8, srcSpanEndLine = 24, srcSpanEndColumn = 28}, srcInfoPoints = []}) &quot;Network.Sendfile.BSD&quot;"><span class="mpre">Network.Sendfile.BSD</span></span><span class="mpre">
+#elif  OS_Linux
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/simple-sendfile-0.2.15/Network/Sendfile.hs&quot;, srcSpanStartLine = 26, srcSpanStartColumn = 8, srcSpanEndLine = 26, srcSpanEndColumn = 30}, srcInfoPoints = []}) &quot;Network.Sendfile.Linux&quot;"><span class="mpre">Network.Sendfile.Linux</span></span><span class="mpre">
+#else
+import Network.Sendfile.Fallback
+#endif
+</span></div></body></html>

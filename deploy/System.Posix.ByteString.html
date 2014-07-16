@@ -1,0 +1,71 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+#ifdef __GLASGOW_HASKELL__
+{-# LANGUAGE Safe #-}
+#endif
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  System.Posix.ByteString</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2002</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (requires POSIX)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- POSIX support with ByteString file paths and environment strings.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module exports exactly the same API as &quot;System.Posix&quot;, except</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that all file paths and environment strings are represented by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;ByteString&#39; instead of &#39;String&#39;.  The &quot;System.Posix&quot; API</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- implicitly translates all file paths and environment strings using</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the locale encoding, whereas this version of the API does no</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- encoding or decoding and works directly in terms of raw bytes.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that if you do need to interpret file paths or environment</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- strings as text, then some Unicode encoding or decoding should be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- applied first.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module System.Posix.ByteString (
+  System.Posix.ByteString.FilePath.RawFilePath,
+  module System.Posix.Types,
+  module System.Posix.Signals,
+  module System.Posix.Directory.ByteString,
+  module System.Posix.Files.ByteString,
+  module System.Posix.Unistd,
+  module System.Posix.IO.ByteString,
+  module System.Posix.Env.ByteString,
+  module System.Posix.Process.ByteString,
+  module System.Posix.Temp.ByteString,
+  module System.Posix.Terminal.ByteString,
+  module System.Posix.Time,
+  module System.Posix.User,
+  module System.Posix.Resource,
+  module System.Posix.Semaphore,
+  module System.Posix.SharedMem,
+  module System.Posix.DynamicLinker.ByteString,
+</span><span class="hl_comment"><span class="mpre">-- XXX &#39;Module&#39; type clashes with GHC</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  module System.Posix.DynamicLinker.Module.ByteString</span></span><span class="mpre">
+ ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 52, srcSpanStartColumn = 8, srcSpanEndLine = 52, srcSpanEndColumn = 40}, srcInfoPoints = []}) &quot;System.Posix.ByteString.FilePath&quot;"><span class="mpre">System.Posix.ByteString.FilePath</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 53, srcSpanStartColumn = 8, srcSpanEndLine = 53, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;System.Posix.Types&quot;"><span class="mpre">System.Posix.Types</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 54, srcSpanStartColumn = 8, srcSpanEndLine = 54, srcSpanEndColumn = 28}, srcInfoPoints = []}) &quot;System.Posix.Signals&quot;"><span class="mpre">System.Posix.Signals</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 55, srcSpanStartColumn = 8, srcSpanEndLine = 55, srcSpanEndColumn = 41}, srcInfoPoints = []}) &quot;System.Posix.Directory.ByteString&quot;"><span class="mpre">System.Posix.Directory.ByteString</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 56, srcSpanStartColumn = 8, srcSpanEndLine = 56, srcSpanEndColumn = 37}, srcInfoPoints = []}) &quot;System.Posix.Files.ByteString&quot;"><span class="mpre">System.Posix.Files.ByteString</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 57, srcSpanStartColumn = 8, srcSpanEndLine = 57, srcSpanEndColumn = 27}, srcInfoPoints = []}) &quot;System.Posix.Unistd&quot;"><span class="mpre">System.Posix.Unistd</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 58, srcSpanStartColumn = 8, srcSpanEndLine = 58, srcSpanEndColumn = 39}, srcInfoPoints = []}) &quot;System.Posix.Process.ByteString&quot;"><span class="mpre">System.Posix.Process.ByteString</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 59, srcSpanStartColumn = 8, srcSpanEndLine = 59, srcSpanEndColumn = 34}, srcInfoPoints = []}) &quot;System.Posix.IO.ByteString&quot;"><span class="mpre">System.Posix.IO.ByteString</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 60, srcSpanStartColumn = 8, srcSpanEndLine = 60, srcSpanEndColumn = 35}, srcInfoPoints = []}) &quot;System.Posix.Env.ByteString&quot;"><span class="mpre">System.Posix.Env.ByteString</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 61, srcSpanStartColumn = 8, srcSpanEndLine = 61, srcSpanEndColumn = 36}, srcInfoPoints = []}) &quot;System.Posix.Temp.ByteString&quot;"><span class="mpre">System.Posix.Temp.ByteString</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 62, srcSpanStartColumn = 8, srcSpanEndLine = 62, srcSpanEndColumn = 40}, srcInfoPoints = []}) &quot;System.Posix.Terminal.ByteString&quot;"><span class="mpre">System.Posix.Terminal.ByteString</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 63, srcSpanStartColumn = 8, srcSpanEndLine = 63, srcSpanEndColumn = 25}, srcInfoPoints = []}) &quot;System.Posix.Time&quot;"><span class="mpre">System.Posix.Time</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 64, srcSpanStartColumn = 8, srcSpanEndLine = 64, srcSpanEndColumn = 25}, srcInfoPoints = []}) &quot;System.Posix.User&quot;"><span class="mpre">System.Posix.User</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 65, srcSpanStartColumn = 8, srcSpanEndLine = 65, srcSpanEndColumn = 29}, srcInfoPoints = []}) &quot;System.Posix.Resource&quot;"><span class="mpre">System.Posix.Resource</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 66, srcSpanStartColumn = 8, srcSpanEndLine = 66, srcSpanEndColumn = 30}, srcInfoPoints = []}) &quot;System.Posix.Semaphore&quot;"><span class="mpre">System.Posix.Semaphore</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 67, srcSpanStartColumn = 8, srcSpanEndLine = 67, srcSpanEndColumn = 30}, srcInfoPoints = []}) &quot;System.Posix.SharedMem&quot;"><span class="mpre">System.Posix.SharedMem</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- XXX: bad planning, we have two constructors called &quot;Default&quot;</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unix-2.7.0.1/System/Posix/ByteString.hs&quot;, srcSpanStartLine = 69, srcSpanStartColumn = 8, srcSpanEndLine = 69, srcSpanEndColumn = 45}, srcInfoPoints = []}) &quot;System.Posix.DynamicLinker.ByteString&quot;"><span class="mpre">System.Posix.DynamicLinker.ByteString</span></span><span class="mpre"> hiding (Default)
+</span><span class="hl_comment"><span class="mpre">--import System.Posix.DynamicLinker.Module.ByteString</span></span><span class="mpre">
+</span></div></body></html>

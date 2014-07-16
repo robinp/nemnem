@@ -1,0 +1,30 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Attoparsec.Lazy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  Bryan O&#39;Sullivan 2007-2014</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD3</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  bos@serpentine.com</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  unknown</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Simple, efficient combinator parsing for lazy &#39;ByteString&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- strings, loosely based on the Parsec library.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This is essentially the same code as in the &#39;Data.Attoparsec&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- module, only with a &#39;parse&#39; function that can consume a lazy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;ByteString&#39; incrementally, and a &#39;Result&#39; type that does not allow</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- more input to be fed in.  Think of this as suitable for use with a</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- lazily read file, e.g. via &#39;L.readFile&#39; or &#39;L.hGetContents&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Behind the scenes, strict &#39;B.ByteString&#39; values are still used</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- internally to store parser input and manipulate it efficiently.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- High-performance parsers such as &#39;string&#39; still expect strict</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;B.ByteString&#39; parameters.</span></span><span class="mpre">
+
+module Data.Attoparsec.Lazy
+    (
+      module Data.Attoparsec.ByteString.Lazy
+    ) where
+
+import Data.Attoparsec.ByteString.Lazy
+</span></div></body></html>

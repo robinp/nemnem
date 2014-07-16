@@ -1,0 +1,34 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{-
+Copyright (C) 2009 John MacFarlane &lt;jgm@berkeley.edu&gt;
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- | Functions for converting LaTeX math formulas to MathML.
+-}</span></span><span class="mpre">
+
+module Text.TeXMath ( texMathToMathML, DisplayType(..) )
+where
+import Text.TeXMath.Parser
+import Text.TeXMath.MathMLWriter
+import Text.XML.Light
+import Text.ParserCombinators.Parsec (</span><a href="Text.Parsec.Prim.html#loc_642_1_642_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Prim.html#loc_642_1_642_6&#39;)"><span class="mpre">parse</span></a><span class="mpre">)
+
+</span><a href="#loc_30_1_30_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_1_30_16&#39;)"><span class="mpre">texMathToMathML</span></a><span class="mpre"> :: </span><a href="Text.TeXMath.MathMLWriter.html#loc_30_6_30_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.TeXMath.MathMLWriter.html#loc_30_6_30_17&#39;)"><span class="hl_tyconref"><span class="mpre">DisplayType</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Either</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> </span><a href="Text.XML.Light.Types.html#loc_30_6_30_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.XML.Light.Types.html#loc_30_6_30_13&#39;)"><span class="hl_tyconref"><span class="mpre">Element</span></span></a><span class="mpre">
+</span><a name="loc_30_1_30_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_1_30_16&#39;)"><span class="hl_fundecl"><span class="mpre">texMathToMathML</span></span></a><span class="mpre"> </span><a name="loc_30_17_30_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_17_30_19&#39;)"><span class="hl_vardecl"><span class="mpre">dt</span></span></a><span class="mpre"> </span><a name="loc_30_20_30_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_20_30_23&#39;)"><span class="hl_vardecl"><span class="mpre">inp</span></span></a><span class="mpre"> = </span><a href="#loc_30_20_30_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_20_30_23&#39;)"><span class="hl_varref"><span class="mpre">inp</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">`seq`</span></span><span class="mpre">
+  case </span><a href="Text.Parsec.Prim.html#loc_642_1_642_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.Parsec.Prim.html#loc_642_1_642_6&#39;)"><span class="hl_varref"><span class="mpre">parse</span></span></a><span class="mpre"> </span><a href="Text.TeXMath.Parser.html#loc_102_1_102_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.TeXMath.Parser.html#loc_102_1_102_8&#39;)"><span class="hl_varref"><span class="mpre">formula</span></span></a><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;TeX math input&quot;</span></span><span class="mpre"> </span><a href="#loc_30_20_30_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_20_30_23&#39;)"><span class="hl_varref"><span class="mpre">inp</span></span></a><span class="mpre"> of
+       </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> </span><a name="loc_32_13_32_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_13_32_16&#39;)"><span class="hl_vardecl"><span class="mpre">err</span></span></a><span class="mpre">        -&gt; </span><span class="hl_conref"><span class="mpre">Left</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_32_13_32_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_32_13_32_16&#39;)"><span class="hl_varref"><span class="mpre">err</span></span></a><span class="mpre">)
+       </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><a name="loc_33_14_33_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_33_14_33_15&#39;)"><span class="hl_vardecl"><span class="mpre">v</span></span></a><span class="mpre">         -&gt; </span><span class="hl_conref"><span class="mpre">Right</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="Text.TeXMath.MathMLWriter.html#loc_35_1_35_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Text.TeXMath.MathMLWriter.html#loc_35_1_35_9&#39;)"><span class="hl_varref"><span class="mpre">toMathML</span></span></a><span class="mpre"> </span><a href="#loc_30_17_30_19" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_30_17_30_19&#39;)"><span class="hl_varref"><span class="mpre">dt</span></span></a><span class="mpre"> </span><a href="#loc_33_14_33_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_33_14_33_15&#39;)"><span class="hl_varref"><span class="mpre">v</span></span></a><span class="mpre">
+</span></div></body></html>

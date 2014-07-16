@@ -1,0 +1,19 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP, ForeignFunctionInterface #-}
+
+module Data.HashMap.PopCount
+    ( popCount
+    ) where
+
+#if __GLASGOW_HASKELL__ &gt;= 704
+import Data.Bits (popCount)
+#else
+import Data.Word (Word)
+import Foreign.C (CUInt)
+#endif
+
+#if __GLASGOW_HASKELL__ &lt; 704
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unordered-containers-0.2.4.0/Data/HashMap/PopCount.hs&quot;, srcSpanStartLine = 15, srcSpanStartColumn = 1, srcSpanEndLine = 15, srcSpanEndColumn = 75}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unordered-containers-0.2.4.0/Data/HashMap/PopCount.hs&quot;, srcSpanStartLine = 15, srcSpanStartColumn = 1, srcSpanEndLine = 15, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/unordered-containers-0"><span class="mpre">foreign import ccall unsafe &quot;popc.h popcount&quot; c_popcount :: CUInt -&gt; CUInt</span></span><span class="mpre">
+
+</span><a href="#loc_18_1_18_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_1_18_9&#39;)"><span class="mpre">popCount</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">Word</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+</span><a name="loc_18_1_18_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_1_18_9&#39;)"><span class="hl_fundecl"><span class="mpre">popCount</span></span></a><span class="mpre"> </span><a name="loc_18_10_18_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_10_18_11&#39;)"><span class="hl_vardecl"><span class="mpre">w</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">c_popcount</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">fromIntegral</span></span><span class="mpre"> </span><a href="#loc_18_10_18_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_10_18_11&#39;)"><span class="hl_varref"><span class="mpre">w</span></span></a><span class="mpre">))
+#endif</span></div></body></html>

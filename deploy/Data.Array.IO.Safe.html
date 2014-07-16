@@ -1,0 +1,37 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Array.IO.Safe</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (uses Data.Array.MArray)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Mutable boxed and unboxed arrays in the IO monad.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- .</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Safe API only of &quot;Data.Array.IO&quot;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 0.4.0.0/</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Array.IO.Safe (
+    </span><span class="hl_comment"><span class="mpre">-- * @IO@ arrays with boxed elements</span></span><span class="mpre">
+    IOArray,             </span><span class="hl_comment"><span class="mpre">-- instance of: Eq, Typeable</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * @IO@ arrays with unboxed elements</span></span><span class="mpre">
+    IOUArray,            </span><span class="hl_comment"><span class="mpre">-- instance of: Eq, Typeable</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Overloaded mutable array interface</span></span><span class="mpre">
+    module Data.Array.MArray.Safe,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Doing I\/O with @IOUArray@s</span></span><span class="mpre">
+    hGetArray,           </span><span class="hl_comment"><span class="mpre">-- :: Handle -&gt; IOUArray Int Word8 -&gt; Int -&gt; IO Int</span></span><span class="mpre">
+    hPutArray,           </span><span class="hl_comment"><span class="mpre">-- :: Handle -&gt; IOUArray Int Word8 -&gt; Int -&gt; IO ()</span></span><span class="mpre">
+  ) where
+
+import Data.Array.IO
+import Data.Array.MArray.Safe
+</span></div></body></html>

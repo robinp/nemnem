@@ -1,0 +1,355 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
+</span><span class="hl_comment"><span class="mpre">{-| @pipes-group@ builds upon @pipes@ to establish idioms for grouping streams
+    into sub-streams without collecting elements into memory.  This tutorial
+    assumes familiarity with @pipes@ and @pipes-parse@.
+-}</span></span><span class="mpre">
+
+module Pipes.Group.Tutorial (
+    </span><span class="hl_comment"><span class="mpre">-- * Motivation</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $motivation</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * FreeT</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $freeT</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * How FreeT Works</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $advanced</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Conclusion</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $conclusion</span></span><span class="mpre">
+    ) where
+
+import Pipes
+import Pipes.Group
+
+</span><span class="hl_comment"><span class="mpre">{- $motivation
+    Dividing a stream into sub-streams is non-trivial.  To illustrate the
+    problem, consider the following task: limit a stream to the first three
+    groups of elements (a group means consecutive equal elements).
+
+    The wrong way to do it is to read each group into memory like this:
+
+&gt; import Lens.Family.State.Strict (zoom)
+&gt; import Pipes
+&gt; import Pipes.Parse
+&gt; import qualified Pipes.Prelude as P
+&gt; 
+&gt; threeGroups :: (Monad m, Eq a) =&gt; Producer a m () -&gt; Producer a m ()
+&gt; threeGroups p0 = loop 3 p0
+&gt;   where
+&gt;     loop 0 _ = return ()
+&gt;     loop n p = do
+&gt;         (as, p&#39;) &lt;- lift $ runStateT (zoom group drawAll) p
+&gt;         each as
+&gt;         loop (n - 1) p&#39;
+
+    The first problem is that this approach does not output any elements from
+    each group until after parsing the entire group:
+
+&gt;&gt;&gt; runEffect $ threeGroups P.stdinLn &gt;-&gt; P.stdoutLn
+1&lt;Enter&gt;
+1&lt;Enter&gt;
+2&lt;Enter&gt;
+1
+1
+2&lt;Enter&gt;
+2&lt;Enter&gt;
+3&lt;Enter&gt;
+2
+2
+2
+4&lt;Enter&gt;
+3
+&gt;&gt;&gt;
+
+    Worse, this program will crash without outputting a single value if fed an
+    infinitely long group of identical elements:
+
+&gt;&gt;&gt; runEffect $ threeGroups (each (repeat 1)) &gt;-&gt; P.print
+&lt;Consumes all memory and crashes&gt;
+
+    A better approach is to just stream directly from the first three groups
+    instead of storing the groups in intermediate lists:
+
+&gt; import Lens.Family ((^.))
+&gt; import Pipes
+&gt; import Pipes.Parse
+&gt; import qualified Pipes.Prelude as P
+&gt; 
+&gt; threeGroups :: (Monad m, Eq a) =&gt; Producer a m () -&gt; Producer a m ()
+&gt; threeGroups p0 = loop 3 p0
+&gt;   where
+&gt;     loop 0 _ = return ()
+&gt;     loop n p = do
+&gt;         p&#39; &lt;- p ^. group
+&gt;         loop (n - 1) p&#39;
+
+    This will run in constant memory and stream values immediately:
+
+&gt;&gt;&gt; runEffect $ threeGroups P.stdinLn &gt;-&gt; P.stdoutLn
+1&lt;Enter&gt;
+1
+1&lt;Enter&gt;
+1
+2&lt;Enter&gt;
+2
+2&lt;Enter&gt;
+2
+2&lt;Enter&gt;
+2
+3&lt;Enter&gt;
+3
+4&lt;Enter&gt;
+
+    However, this code is not very modular: we have to integrate our group
+    creation logic with our group consumption logic.  This conflicts with the
+    @pipes@ philosophy of decoupling streaming programs into modular components.
+
+    An more modular approach would be to split our logic into three steps:
+
+    * Split our &#39;Producer&#39; into groups
+
+    * Take the first three groups
+
+    * Join these three groups back into a &#39;Producer&#39;
+
+    But how do we split our &#39;Producer&#39; into groups without loading an entire
+    group into memory?  We want to avoid solutions like the following code:
+
+&gt; import Control.Monad (when, liftM2)
+&gt; import Lens.Family.State.Strict (zoom)
+&gt; import Pipes.Parse
+&gt; 
+&gt; split :: (Monad m, Eq a) =&gt; Producer a m () -&gt; Producer [a] m ()
+&gt; split p = do
+&gt;     ((as, eof), p&#39;) &lt;- lift (runStateT parser p)
+&gt;     yield as
+&gt;     when (not eof) (split p&#39;)
+&gt;   where
+&gt;     parser = liftM2 (,) (zoom group drawAll) isEndOfInput
+
+    ... because then we&#39;re back where we started, loading entire groups into
+    memory.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $freeT
+    Fortunately, you can group elements while still streaming individual
+    elements at a time.  The &#39;FreeT&#39; type from the @free@ package solves this
+    problem by allowing us to build \&quot;linked lists\&quot; of &#39;Producer&#39;s.  This lets
+    you work with streams in a list-like manner.
+
+    The key idea is that:
+
+&gt; -- &#39;~&#39; means &quot;is analogous to&quot;
+&gt;
+&gt; -- If a Producer is like a list
+&gt; Producer a m ()            ~   [a]
+&gt;
+&gt; -- ... then a &#39;FreeT&#39;-delimited &#39;Producer&#39; is like a list of lists
+&gt; FreeT (Producer a m) m ()  ~  [[a]]
+
+    Think of @(FreeT (Producer a m) m ())@ as a \&quot;list of &#39;Producer&#39;s\&quot;.
+    &#39;FreeT&#39; nests each subsequent &#39;Producer&#39; within the return value of the
+    previous &#39;Producer&#39; so that you cannot access the next &#39;Producer&#39; until you
+    completely drain the current &#39;Producer&#39;.  However, you rarely need to work
+    with &#39;FreeT&#39; directly.  Instead, you can structure most things using
+    \&quot;splitters\&quot;, \&quot;transformations\&quot; and \&quot;joiners\&quot;:
+
+&gt; -- A &quot;splitter&quot;
+&gt; Producer a m ()           -&gt; FreeT (Producer a m) m ()  ~   [a]  -&gt; [[a]]
+&gt;
+&gt; -- A &quot;transformation&quot;
+&gt; FreeT (Producer a m) m () -&gt; FreeT (Producer a m) m ()  ~  [[a]] -&gt; [[a]]
+&gt;
+&gt; -- A &quot;joiner&quot;
+&gt; FreeT (Producer a m) m () -&gt; Producer a m ()            ~  [[a]] -&gt;  [a]
+
+    An example splitter is @(view groups)@, which splits a &#39;Producer&#39; into
+    &#39;FreeT&#39;-delimited &#39;Producer&#39;s, one for each group of consecutive equal
+    elements:
+
+&gt; view groups :: (Eq a, Monad m) =&gt; Producer a m x -&gt; FreeT (Producer a m) m x
+
+    An example transformation is @(takes 3)@, which takes the first three
+    &#39;Producer&#39;s from a &#39;FreeT&#39; and drops the rest:
+
+&gt; takes 3 :: Monad m =&gt; FreeT (Producer a m) m () -&gt; FreeT (Producer a m) m ()
+
+    An example joiner is @concats@, which collapses a &#39;FreeT&#39; of &#39;Producer&#39;s
+    back down into a single &#39;Producer&#39;:
+
+&gt; concats :: Monad m =&gt; FreeT (Producer a m) m x -&gt; Producer a m x
+
+    If you compose these three functions together, you will create a function
+    that transforms a &#39;Producer&#39; to keep only the first three groups of
+    consecutive equal elements:
+
+&gt; import Lens.Family
+&gt; import Pipes
+&gt; import Pipes.Group
+&gt; import qualified Pipes.Prelude as P
+&gt;
+&gt; threeGroups :: (Monad m, Eq a) =&gt; Producer a m () -&gt; Producer a m ()
+&gt; threeGroups = concats . takes 3 . view groups
+
+    Both splitting and joining preserve the streaming nature of &#39;Producer&#39;s and
+    do not collect or buffer any values.  The transformed &#39;Producer&#39; still
+    outputs values immediately and does not wait for groups to complete before
+    producing results.
+
+&gt;&gt;&gt; runEffect $ threeGroups P.stdinLn &gt;-&gt; P.stdoutLn
+1&lt;Enter&gt;
+1
+1&lt;Enter&gt;
+1
+2&lt;Enter&gt;
+2
+2&lt;Enter&gt;
+2
+2&lt;Enter&gt;
+2
+3&lt;Enter&gt;
+3
+4&lt;Enter&gt;
+&gt;&gt;&gt;
+
+    Also, lenses simplify things even further.  The reason that &#39;groups&#39; is a
+    lens is because it actually combines both a splitter and joiner into a
+    single package.  We can then use &#39;over&#39; to handle both the splitting and
+    joining for us:
+
+&gt;&gt;&gt; runEffect $ over groups (takes 3) P.stdinLn &gt;-&gt; P.stdoutLn
+&lt;Exact same behavior&gt;
+
+    This behaves the same because &#39;over&#39; takes care of calling the splitter
+    before applying the transformation, then calling the inverse joiner
+    afterward.
+
+    Another useful lens is &#39;individually&#39;, which lets you apply transformations
+    to each &#39;Producer&#39; layer of a &#39;FreeT&#39;.  For example, if we wanted to
+    add an extra @&quot;!&quot;@ line to the end of every group, we would write:
+
+&gt;&gt;&gt; import Control.Applicative ((&lt;*))
+&gt;&gt;&gt; runEffect $ over (groups . individually) (&lt;* yield &quot;!&quot;) P.stdinLn &gt;-&gt; P.stdoutLn
+1&lt;Enter&gt;
+1
+1&lt;Enter&gt;
+1
+2&lt;Enter&gt;
+!
+2
+2&lt;Enter&gt;
+2
+2&lt;Enter&gt;
+2
+3&lt;Enter&gt;
+!
+3
+4&lt;Enter&gt;
+!
+&gt;&gt;&gt;
+
+    Note that &#39;individually&#39; is only compatible with the @lens@ package.  You
+    can alternatively use &#39;maps&#39; if you are using @lens-family-core@:
+
+&gt;&gt;&gt; runEffect $ over groups (maps (&lt;* yield &quot;!&quot;)) P.stdinLn &gt;-&gt; P.stdoutLn
+&lt;Exact same behavior&gt;
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $advanced
+    You don&#39;t necessarily have to restrict yourself to predefined &#39;FreeT&#39;
+    functions.  You can also manually build or recurse over &#39;FreeT&#39;s of
+    &#39;Producer&#39;s.
+
+    For example, here is how &#39;concats&#39; is implemented, which collapses all the
+    &#39;Producer&#39;s within a &#39;FreeT&#39; into a single &#39;Producer&#39;:
+
+&gt; concats :: Monad m =&gt; FreeT (Producer a m) m x -&gt; Producer a m x
+&gt; concats = go
+&gt;   where
+&gt;     go f = do
+&gt;         x &lt;- lift (runFreeT f)  -- Match against the &quot;head&quot; of the &quot;list&quot;
+&gt;         case x of
+&gt;             Pure r -&gt; return r  -- The &quot;list&quot; is empty
+&gt;             Free p -&gt; do        -- The &quot;list&quot; is non-empty
+&gt;                 f&#39; &lt;- p         -- The return value of the &#39;Producer&#39; is
+&gt;                 go f&#39;           --     the &quot;tail&quot; of the &quot;list&quot;
+
+    Many patterns for &#39;FreeT&#39;s have equivalent analogs for lists.  &#39;runFreeT&#39;
+    behaves like pattern matching on the list, except that you have to bind the
+    result.  &#39;Pure&#39; is analogous to @[]@ and &#39;Free&#39; is analogous to @(:)@.
+
+    When you receive a &#39;Free&#39; constructor that means you have a &#39;Producer&#39; whose
+    return value is the rest of the list (i.e. another &#39;FreeT&#39;).  You cannot
+    access the rest of the list without running the &#39;Producer&#39; to completion to
+    retrieve this return value.  The above example just runs the entire
+    &#39;Producer&#39;, binds the remainder of the list to @f&#39;@ and then recurses on
+    that value.
+
+    You can also build &#39;FreeT&#39;s in a manner similar to lists.  For example, the
+    &#39;chunksOf&#39; lens uses the following splitter function internally:
+
+&gt; _chunksOf :: Monad m =&gt; Producer a m x -&gt; FreeT (Producer a m) m x
+&gt; _chunksOf p = FreeT $ do
+&gt;     x &lt;- next p                     -- Pattern match on the &#39;Producer&#39;
+&gt;     return $ case x of
+&gt;         Left   r      -&gt; Pure r     -- Build an empty &quot;list&quot;
+&gt;         Right (a, p&#39;) -&gt; Free $ do  -- Build a non-empty &quot;list&quot;
+&gt;             p&#39;&#39; &lt;- (yield a &gt;&gt; p&#39;)^.splitAt n0  -- Emit the &quot;head&quot;
+&gt;             return (_chunksOf p&#39;&#39;)              -- Return the &quot;tail&quot;
+
+    &#39;Pure&#39; signifies an empty &#39;FreeT&#39; (one with no &#39;Producer&#39; layers), just like
+    @[]@ signifies an empty list (one with no elements).  We return &#39;Pure&#39;
+    whenever we cannot emit any more &#39;Producer&#39;s.
+
+    &#39;Free&#39; indicates that we wish to emit a &#39;Producer&#39; followed by another
+    \&quot;list\&quot;.  The &#39;Producer&#39; we run directly within the body of the &#39;Free&#39;.
+    However, we store the remainder of the \&quot;list\&quot; within the return value of
+    the &#39;Producer&#39;.  This is where @_chunksOf@ recurses to build the rest of the
+    \&quot;list\&quot;.
+
+    To gain a better understanding for how &#39;FreeT&#39; works, consult the definition
+    of the type, which you can find in &quot;Control.Monad.Trans.Free&quot;:
+
+&gt; newtype FreeT f m a = FreeT { runFreeT :: m (FreeF f a (FreeT f m a)) }
+&gt;
+&gt; data FreeF f a b = Pure a | Free (f b)
+
+    ... and just replace all occurences of @f@ with @(Producer e m)@:
+
+&gt; -- This is pseudocode
+&gt;
+&gt; newtype FreeT&#39; m a = FreeT { runFreeT :: m (FreeF&#39; a (FreeT&#39; m a)) }
+&gt;
+&gt; data FreeF&#39; a b = Pure a | Free (Producer e m b)
+
+    ... which you can further think of as:
+
+&gt; -- More pseudocode
+&gt;
+&gt; newtype FreeT&#39; m a =
+&gt;     FreeT { runFreeT :: m (Pure a | Producer e m (FreeT&#39; m a)) }
+
+    In other words, &#39;runFreeT&#39; unwraps a &#39;FreeT&#39; to produce an action in the
+    base monad which either finishes with a value of type @a@ or continues with
+    a &#39;Producer&#39; which returns a new &#39;FreeT&#39;.  Vice versa, if you want to build
+    a &#39;FreeT&#39;, you must create an action in the base monad which returns either
+    a &#39;Pure&#39; or a &#39;Producer&#39; wrapping another &#39;FreeT&#39;.
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $conclusion
+    This library is very small since it only contains element-agnostic grouping
+    utilities.  Downstream libraries that provide richer grouping utilities
+    include @pipes-bytestring@ and @pipes-text@.
+
+    To learn more about @pipes-group@, ask questions, or follow development, you
+    can subscribe to the @haskell-pipes@ mailing list at:
+
+    &lt;https://groups.google.com/forum/#!forum/haskell-pipes&gt;
+
+    ... or you can mail the list directly at:
+
+    &lt;mailto:haskell-pipes@googlegroups.com&gt;
+-}</span></span><span class="mpre">
+</span></div></body></html>

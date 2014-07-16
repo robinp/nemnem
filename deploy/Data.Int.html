@@ -1,0 +1,56 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Int</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Signed integer types</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Int
+  ( 
+        </span><span class="hl_comment"><span class="mpre">-- * Signed integer types</span></span><span class="mpre">
+        Int,
+        Int8, Int16, Int32, Int64,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Notes</span></span><span class="mpre">
+
+        </span><span class="hl_comment"><span class="mpre">-- $notes</span></span><span class="mpre">
+        ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Int.hs&quot;, srcSpanStartLine = 29, srcSpanStartColumn = 8, srcSpanEndLine = 29, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre"> ( Int )
+import GHC.Int  ( </span><a href="GHC.Int.html#loc_53_29_53_33" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Int.html#loc_53_29_53_33&#39;)"><span class="mpre">Int8</span></a><span class="mpre">, </span><a href="GHC.Int.html#loc_212_30_212_35" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Int.html#loc_212_30_212_35&#39;)"><span class="mpre">Int16</span></a><span class="mpre">, </span><a href="GHC.Int.html#loc_376_30_376_35" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Int.html#loc_376_30_376_35&#39;)"><span class="mpre">Int32</span></a><span class="mpre">, </span><a href="GHC.Int.html#loc_551_30_551_35" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Int.html#loc_551_30_551_35&#39;)"><span class="mpre">Int64</span></a><span class="mpre"> )
+
+</span><span class="hl_comment"><span class="mpre">{- $notes
+
+* All arithmetic is performed modulo 2^n, where @n@ is the number of
+  bits in the type.
+
+* For coercing between any two integer types, use &#39;Prelude.fromIntegral&#39;,
+  which is specialized for all the common cases so should be fast
+  enough.  Coercing word types (see &quot;Data.Word&quot;) to and from integer
+  types preserves representation, not sign.
+
+* The rules that hold for &#39;Prelude.Enum&#39; instances over a
+  bounded type such as &#39;Int&#39; (see the section of the
+  Haskell report dealing with arithmetic sequences) also hold for the
+  &#39;Prelude.Enum&#39; instances over the various
+  &#39;Int&#39; types defined here.
+
+* Right and left shifts by amounts greater than or equal to the width
+  of the type result in either zero or -1, depending on the sign of
+  the value being shifted.  This is contrary to the behaviour in C,
+  which is undefined; a common interpretation is to truncate the shift
+  count to the width of the type, for example @1 \&lt;\&lt; 32
+  == 1@ in some C implementations.
+-}</span></span><span class="mpre">
+
+</span></div></body></html>

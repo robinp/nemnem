@@ -1,0 +1,45 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE FlexibleContexts #-}
+
+#if __GLASGOW_HASKELL__ &gt;= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+
+</span><span class="hl_comment"><span class="mpre">{- |
+Module      :  Foreign.Marshal.Utils.Lifted
+Copyright   :  Bas van Dijk, Anders Kaseorg, Michael Steele
+License     :  BSD-style
+
+Maintainer  :  Bas van Dijk &lt;v.dijk.bas@gmail.com&gt;
+Stability   :  experimental
+Portability :  non-portable (extended exceptions)
+
+This is a wrapped version of &quot;Foreign.Marshal.Utils&quot; with types generalized
+from &#39;IO&#39; to all monads in either &#39;MonadBase&#39; or &#39;MonadBaseControl&#39;.
+-}</span></span><span class="mpre">
+
+module Foreign.Marshal.Utils.Lifted
+  ( with
+  ) where
+
+</span><span class="hl_comment"><span class="mpre">-- from base:</span></span><span class="mpre">
+import qualified Foreign as F
+import System.IO     ( IO )
+import Prelude ( (.) )
+
+</span><span class="hl_comment"><span class="mpre">-- from monad-control:</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Foreign/Marshal/Utils/Lifted.hs&quot;, srcSpanStartLine = 32, srcSpanStartColumn = 8, srcSpanEndLine = 32, srcSpanEndColumn = 35}, srcInfoPoints = []}) &quot;Control.Monad.Trans.Control&quot;"><span class="mpre">Control.Monad.Trans.Control</span></span><span class="mpre"> ( MonadBaseControl
+                                   , liftBaseOp )
+
+</span><span class="hl_comment"><span class="mpre">-- |Generalized version of &#39;F.with&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note, when the given function throws an exception any monadic side</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- effects in @m@ will be discarded.</span></span><span class="mpre">
+</span><a href="#loc_43_1_43_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_5&#39;)"><span class="mpre">with</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxTuple (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Foreign/Marshal/Utils/Lifted.hs&quot;, srcSpanStartLine = 39, srcSpanStartColumn = 9, srcSpanEndLine = 40, srcSpanEndColumn = 8}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Foreign/Marshal/Utils/Lifted.hs&quot;, srcSpanStartLine = 39, srcSpanStartColumn = 9, srcSpanEndLine = 39, srcSpanEndColumn = 10},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/lifted-base-0.2.3.0/Forei"><span class="mpre">(MonadBaseControl IO m, F.Storable a)
+     =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">                </span><span class="hl_comment"><span class="mpre">-- ^ value to be poked</span></span><span class="mpre">
+     -&gt; (</span><span class="hl_tyconref"><span class="mpre">F.Ptr</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) </span><span class="hl_comment"><span class="mpre">-- ^ computation to run</span></span><span class="mpre">
+     -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_43_1_43_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_43_1_43_5&#39;)"><span class="hl_vardecl"><span class="mpre">with</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">liftBaseOp</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">F.with</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{-# INLINEABLE with #-}</span></span><span class="mpre">
+</span></div></body></html>

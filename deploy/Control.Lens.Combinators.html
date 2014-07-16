@@ -1,0 +1,147 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Lens.Combinators</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (C) 2013-14 Edward Kmett</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This lets the subset of users who vociferously disagree about the full</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- scope and set of operators that should be exported from lens to not have</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- to look at any operator with which they disagree.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; import Control.Lens.Combinators</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--------------------------------------------------------------------------------</span></span><span class="mpre">
+module Control.Lens.Combinators
+    ( module Control.Lens
+    ) where
+
+import Control.Lens hiding
+  ( </span><span class="hl_comment"><span class="mpre">-- output from scripts/operators</span></span><span class="mpre">
+    </span><a href="Control.Lens.Action.html#loc_94_3_94_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Action.html#loc_94_3_94_5&#39;)"><span class="mpre">(^!)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Action.html#loc_107_3_107_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Action.html#loc_107_3_107_6&#39;)"><span class="mpre">(^!!)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Action.html#loc_119_3_119_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Action.html#loc_119_3_119_6&#39;)"><span class="mpre">(^!?)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Action.html#loc_181_3_181_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Action.html#loc_181_3_181_6&#39;)"><span class="mpre">(^@!)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Action.html#loc_186_3_186_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Action.html#loc_186_3_186_7&#39;)"><span class="mpre">(^@!!)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Action.html#loc_193_3_193_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Action.html#loc_193_3_193_7&#39;)"><span class="mpre">(^@!?)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Cons.html#loc_162_1_162_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Cons.html#loc_162_1_162_5&#39;)"><span class="mpre">(&lt;|)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Cons.html#loc_469_1_469_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Cons.html#loc_469_1_469_5&#39;)"><span class="mpre">(|&gt;)</span></a><span class="mpre">
+  , (^..)
+  , </span><a href="Control.Lens.Fold.html#loc_1117_3_1117_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Fold.html#loc_1117_3_1117_5&#39;)"><span class="mpre">(^?)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Fold.html#loc_1136_3_1136_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Fold.html#loc_1136_3_1136_6&#39;)"><span class="mpre">(^?!)</span></a><span class="mpre">
+  , (^@..)
+  , </span><a href="Control.Lens.Fold.html#loc_2309_3_2309_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Fold.html#loc_2309_3_2309_6&#39;)"><span class="mpre">(^@?)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Fold.html#loc_2321_3_2321_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Fold.html#loc_2321_3_2321_7&#39;)"><span class="mpre">(^@?!)</span></a><span class="mpre">
+  , (^.)
+  , (^@.)
+  , (&lt;.)
+  , (.&gt;)
+  , (&lt;.&gt;)
+  , </span><a href="Control.Lens.Lens.html#loc_274_1_274_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_274_1_274_6&#39;)"><span class="mpre">(%%~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_299_3_299_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_299_3_299_6&#39;)"><span class="mpre">(%%=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_334_3_334_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_334_3_334_4&#39;)"><span class="mpre">(&amp;)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_237_3_237_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_237_3_237_5&#39;)"><span class="mpre">(&amp;~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_343_4_343_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_343_4_343_7&#39;)"><span class="mpre">(&lt;&amp;&gt;)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_354_5_354_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_354_5_354_7&#39;)"><span class="mpre">(??)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_514_3_514_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_514_3_514_6&#39;)"><span class="mpre">(&lt;%~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_526_3_526_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_526_3_526_6&#39;)"><span class="mpre">(&lt;+~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_538_3_538_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_538_3_538_6&#39;)"><span class="mpre">(&lt;-~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_551_3_551_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_551_3_551_6&#39;)"><span class="mpre">(&lt;*~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_563_3_563_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_563_3_563_7&#39;)"><span class="mpre">(&lt;//~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_576_3_576_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_576_3_576_6&#39;)"><span class="mpre">(&lt;^~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_589_3_589_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_589_3_589_7&#39;)"><span class="mpre">(&lt;^^~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_602_3_602_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_602_3_602_7&#39;)"><span class="mpre">(&lt;**~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_614_3_614_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_614_3_614_7&#39;)"><span class="mpre">(&lt;||~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_626_3_626_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_626_3_626_7&#39;)"><span class="mpre">(&lt;&amp;&amp;~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_639_1_639_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_639_1_639_7&#39;)"><span class="mpre">(&lt;&lt;%~)</span></a><span class="mpre">
+  , (&lt;&lt;.~)
+  , </span><a href="Control.Lens.Lens.html#loc_670_3_670_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_670_3_670_7&#39;)"><span class="mpre">(&lt;&lt;+~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_688_3_688_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_688_3_688_7&#39;)"><span class="mpre">(&lt;&lt;-~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_706_3_706_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_706_3_706_7&#39;)"><span class="mpre">(&lt;&lt;*~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_724_3_724_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_724_3_724_8&#39;)"><span class="mpre">(&lt;&lt;//~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_736_3_736_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_736_3_736_7&#39;)"><span class="mpre">(&lt;&lt;^~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_748_3_748_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_748_3_748_8&#39;)"><span class="mpre">(&lt;&lt;^^~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_766_3_766_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_766_3_766_8&#39;)"><span class="mpre">(&lt;&lt;**~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_784_3_784_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_784_3_784_8&#39;)"><span class="mpre">(&lt;&lt;||~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_802_3_802_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_802_3_802_8&#39;)"><span class="mpre">(&lt;&lt;&amp;&amp;~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_820_3_820_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_820_3_820_8&#39;)"><span class="mpre">(&lt;&lt;&lt;&gt;~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_841_3_841_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_841_3_841_6&#39;)"><span class="mpre">(&lt;%=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_856_3_856_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_856_3_856_6&#39;)"><span class="mpre">(&lt;+=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_870_3_870_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_870_3_870_6&#39;)"><span class="mpre">(&lt;-=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_884_3_884_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_884_3_884_6&#39;)"><span class="mpre">(&lt;*=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_897_3_897_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_897_3_897_7&#39;)"><span class="mpre">(&lt;//=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_910_3_910_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_910_3_910_6&#39;)"><span class="mpre">(&lt;^=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_923_3_923_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_923_3_923_7&#39;)"><span class="mpre">(&lt;^^=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_936_3_936_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_936_3_936_7&#39;)"><span class="mpre">(&lt;**=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_949_3_949_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_949_3_949_7&#39;)"><span class="mpre">(&lt;||=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_962_3_962_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_962_3_962_7&#39;)"><span class="mpre">(&lt;&amp;&amp;=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_981_3_981_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_981_3_981_7&#39;)"><span class="mpre">(&lt;&lt;%=)</span></a><span class="mpre">
+  , (&lt;&lt;.=)
+  , </span><a href="Control.Lens.Lens.html#loc_1011_3_1011_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1011_3_1011_7&#39;)"><span class="mpre">(&lt;&lt;+=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1024_3_1024_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1024_3_1024_7&#39;)"><span class="mpre">(&lt;&lt;-=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1037_3_1037_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1037_3_1037_7&#39;)"><span class="mpre">(&lt;&lt;*=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1050_3_1050_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1050_3_1050_8&#39;)"><span class="mpre">(&lt;&lt;//=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1063_3_1063_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1063_3_1063_7&#39;)"><span class="mpre">(&lt;&lt;^=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1076_3_1076_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1076_3_1076_8&#39;)"><span class="mpre">(&lt;&lt;^^=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1089_3_1089_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1089_3_1089_8&#39;)"><span class="mpre">(&lt;&lt;**=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1102_3_1102_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1102_3_1102_8&#39;)"><span class="mpre">(&lt;&lt;||=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1115_3_1115_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1115_3_1115_8&#39;)"><span class="mpre">(&lt;&lt;&amp;&amp;=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1128_3_1128_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1128_3_1128_8&#39;)"><span class="mpre">(&lt;&lt;&lt;&gt;=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1141_3_1141_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1141_3_1141_6&#39;)"><span class="mpre">(&lt;&lt;~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1152_3_1152_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1152_3_1152_7&#39;)"><span class="mpre">(&lt;&lt;&gt;~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1160_3_1160_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1160_3_1160_7&#39;)"><span class="mpre">(&lt;&lt;&gt;=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1200_3_1200_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1200_3_1200_7&#39;)"><span class="mpre">(&lt;%@~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1212_3_1212_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1212_3_1212_8&#39;)"><span class="mpre">(&lt;&lt;%@~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1235_1_1235_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1235_1_1235_7&#39;)"><span class="mpre">(%%@~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1250_3_1250_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1250_3_1250_7&#39;)"><span class="mpre">(%%@=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1268_3_1268_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1268_3_1268_7&#39;)"><span class="mpre">(&lt;%@=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1281_3_1281_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1281_3_1281_8&#39;)"><span class="mpre">(&lt;&lt;%@=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1299_3_1299_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1299_3_1299_5&#39;)"><span class="mpre">(^#)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1315_1_1315_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1315_1_1315_7&#39;)"><span class="mpre">( #~ )</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1323_1_1323_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1323_1_1323_8&#39;)"><span class="mpre">( #%~ )</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1331_1_1331_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1331_1_1331_9&#39;)"><span class="mpre">( #%%~ )</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1336_3_1336_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1336_3_1336_5&#39;)"><span class="mpre">( #= )</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1341_3_1341_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1341_3_1341_6&#39;)"><span class="mpre">( #%= )</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1349_3_1349_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1349_3_1349_7&#39;)"><span class="mpre">(&lt;#%~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1354_3_1354_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1354_3_1354_7&#39;)"><span class="mpre">(&lt;#%=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1360_3_1360_7" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1360_3_1360_7&#39;)"><span class="mpre">( #%%= )</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1375_3_1375_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1375_3_1375_6&#39;)"><span class="mpre">(&lt;#~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Lens.html#loc_1380_3_1380_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Lens.html#loc_1380_3_1380_6&#39;)"><span class="mpre">(&lt;#=)</span></a><span class="mpre">
+  , (...)
+  , </span><a href="Control.Lens.Review.html#loc_185_1_185_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Review.html#loc_185_1_185_6&#39;)"><span class="mpre">( # )</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_444_1_444_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_444_1_444_5&#39;)"><span class="mpre">(%~)</span></a><span class="mpre">
+  , (.~)
+  , </span><a href="Control.Lens.Setter.html#loc_494_3_494_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_494_3_494_5&#39;)"><span class="mpre">(?~)</span></a><span class="mpre">
+  , (&lt;.~)
+  , </span><a href="Control.Lens.Setter.html#loc_539_3_539_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_539_3_539_6&#39;)"><span class="mpre">(&lt;?~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_563_3_563_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_563_3_563_5&#39;)"><span class="mpre">(+~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_587_3_587_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_587_3_587_5&#39;)"><span class="mpre">(*~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_611_3_611_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_611_3_611_5&#39;)"><span class="mpre">(-~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_632_3_632_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_632_3_632_6&#39;)"><span class="mpre">(//~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_647_3_647_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_647_3_647_5&#39;)"><span class="mpre">(^~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_663_3_663_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_663_3_663_6&#39;)"><span class="mpre">(^^~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_684_3_684_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_684_3_684_6&#39;)"><span class="mpre">(**~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_702_3_702_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_702_3_702_6&#39;)"><span class="mpre">(||~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_720_3_720_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_720_3_720_6&#39;)"><span class="mpre">(&amp;&amp;~)</span></a><span class="mpre">
+  , (.=)
+  , </span><a href="Control.Lens.Setter.html#loc_791_3_791_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_791_3_791_5&#39;)"><span class="mpre">(%=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_810_3_810_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_810_3_810_5&#39;)"><span class="mpre">(?=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_837_3_837_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_837_3_837_5&#39;)"><span class="mpre">(+=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_852_3_852_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_852_3_852_5&#39;)"><span class="mpre">(-=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_867_3_867_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_867_3_867_5&#39;)"><span class="mpre">(*=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_882_3_882_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_882_3_882_6&#39;)"><span class="mpre">(//=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_894_3_894_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_894_3_894_5&#39;)"><span class="mpre">(^=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_906_3_906_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_906_3_906_6&#39;)"><span class="mpre">(^^=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_921_3_921_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_921_3_921_6&#39;)"><span class="mpre">(**=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_936_3_936_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_936_3_936_6&#39;)"><span class="mpre">(&amp;&amp;=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_951_3_951_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_951_3_951_6&#39;)"><span class="mpre">(||=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_980_3_980_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_980_3_980_5&#39;)"><span class="mpre">(&lt;~)</span></a><span class="mpre">
+  , (&lt;.=)
+  , </span><a href="Control.Lens.Setter.html#loc_1022_3_1022_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_1022_3_1022_6&#39;)"><span class="mpre">(&lt;?=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_1045_3_1045_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_1045_3_1045_6&#39;)"><span class="mpre">(&lt;&gt;~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_1063_3_1063_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_1063_3_1063_6&#39;)"><span class="mpre">(&lt;&gt;=)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_1169_3_1169_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_1169_3_1169_6&#39;)"><span class="mpre">(%@~)</span></a><span class="mpre">
+  , </span><a href="Control.Lens.Setter.html#loc_1187_3_1187_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Lens.Setter.html#loc_1187_3_1187_6&#39;)"><span class="mpre">(%@=)</span></a><span class="mpre">
+  )
+</span></div></body></html>

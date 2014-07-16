@@ -1,0 +1,442 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">module System.IO.Streams.Tutorial (
+    </span><span class="hl_comment"><span class="mpre">-- * Introduction</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $introduction</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Build Input Streams</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $createinput</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Build Output Streams</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $createoutput</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Connect Streams</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $connect</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Transform Streams</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $transform</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Resource and Exception Safety</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $safety</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Pushback</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $pushback</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Thread Safety</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $threadsafety</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Examples</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $examples</span></span><span class="mpre">
+    ) where
+
+</span><span class="hl_comment"><span class="mpre">{- $introduction
+
+The @io-streams@ package defines two \&quot;smart handles\&quot; for stream processing:
+
+  * &#39;System.IO.Streams.InputStream&#39;: a read-only smart handle
+
+  * &#39;System.IO.Streams.OutputStream&#39;: a write-only smart handle
+
+The &#39;System.IO.Streams.InputStream&#39; type implements all the core operations we
+expect for a read-only handle. We consume values using &#39;read&#39;, which returns a
+&#39;Nothing&#39; when the resource is done:
+
+@
+&#39;System.IO.Streams.read&#39; :: &#39;System.IO.Streams.InputStream&#39; c -&gt; &#39;IO&#39; (&#39;Maybe&#39; c)
+@
+
+... and we can push back values using &#39;System.IO.Streams.unRead&#39;:
+
+@
+&#39;System.IO.Streams.unRead&#39; :: c -&gt; &#39;System.IO.Streams.InputStream&#39; c -&gt; &#39;IO&#39; ()
+@
+
+The &#39;System.IO.Streams.OutputStream&#39; type implements the
+&#39;System.IO.Streams.write&#39; operation which feeds it output, supplying &#39;Nothing&#39;
+to signal resource exhaustion:
+
+@
+&#39;System.IO.Streams.write&#39; :: &#39;Maybe&#39; c -&gt; &#39;System.IO.Streams.OutputStream&#39; c -&gt; &#39;IO&#39; ()
+@
+
+These streams slightly resemble Haskell &#39;System.IO.Handle&#39;s, but support a
+wider range of sources and sinks. For example, you can convert an ordinary list
+to an &#39;System.IO.Streams.InputStream&#39; source and interact with it using the
+handle-based API:
+
+@
+ghci&gt; import qualified System.IO.Streams as S
+ghci&gt; listHandle \&lt;- S.&#39;System.IO.Streams.fromList&#39; [1, 2]
+ghci&gt; S.&#39;System.IO.Streams.read&#39; listHandle
+Just 1
+ghci&gt; S.&#39;System.IO.Streams.read&#39; listHandle
+Just 2
+ghci&gt; S.&#39;System.IO.Streams.read&#39; listHandle
+Nothing
+@
+
+Additionally, IO streams come with a library of stream transformations that
+preserve their handle-like API. For example, you can map a function over an
+&#39;System.IO.Streams.InputStream&#39;, which generates a new handle to the same
+stream that returns transformed values:
+
+@
+ghci&gt; oldHandle \&lt;- S.&#39;System.IO.Streams.List.fromList&#39; [1, 2, 3]
+ghci&gt; newHandle \&lt;- S.&#39;System.IO.Streams.Combinators.mapM&#39; (\\x -\&gt; &#39;return&#39; (x * 10)) oldHandle
+ghci&gt; S.&#39;System.IO.Streams.read&#39; newHandle
+10
+ghci&gt; -- We can still view the stream through the old handle
+ghci&gt; S.&#39;System.IO.Streams.read&#39; oldHandle
+2
+ghci&gt; -- ... and switch back again
+ghci&gt; S.&#39;System.IO.Streams.read&#39; newHandle
+30
+@
+
+IO streams focus on preserving the convention of traditional handles while
+offering a wider library of stream-processing utilities.
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $createinput
+
+
+The @io-streams@ library provides a simple interface for creating your own
+&#39;System.IO.Streams.InputStream&#39;s and &#39;System.IO.Streams.OutputStream&#39;s.
+
+You can build an &#39;System.IO.Streams.InputStream&#39; from any &#39;IO&#39; action that
+generates output, as long as it wraps results in &#39;Just&#39; and uses &#39;Nothing&#39; to
+signal EOF:
+
+@
+&#39;System.IO.Streams.makeInputStream&#39; :: &#39;IO&#39; (&#39;Maybe&#39; a) -&gt; &#39;IO&#39; (&#39;System.IO.Streams.InputStream&#39; a)
+@
+
+As an example, let&#39;s wrap an ordinary read-only &#39;System.IO.Handle&#39; in an
+&#39;System.IO.Streams.InputStream&#39;:
+
+@
+import &quot;Data.ByteString&quot; (&#39;Data.ByteString.ByteString&#39;)
+import qualified &quot;Data.ByteString&quot; as S
+import &quot;System.IO.Streams&quot; (&#39;System.IO.Streams.InputStream&#39;)
+import qualified &quot;System.IO.Streams&quot; as Streams
+import &quot;System.IO&quot; (&#39;System.IO.Handle&#39;, &#39;System.IO.hFlush&#39;)
+
+bUFSIZ = 32752
+
+upgradeReadOnlyHandle :: &#39;System.IO.Handle&#39; -&gt; &#39;IO&#39; (&#39;System.IO.Streams.InputStream&#39; &#39;Data.ByteString.ByteString&#39;)
+upgradeReadOnlyHandle h = Streams.&#39;System.IO.Streams.makeInputStream&#39; f
+  where
+    f = do
+        x &lt;- S.&#39;Data.ByteString.hGetSome&#39; h bUFSIZ
+        &#39;return&#39; $! if S.&#39;Data.ByteString.null&#39; x then &#39;Nothing&#39; else &#39;Just&#39; x
+@
+
+We didn&#39;t even really need to write the @upgradeReadOnlyHandle@ function,
+because &quot;System.IO.Streams.Handle&quot; already provides one that uses the exact
+same implementation given above:
+
+@
+&#39;System.IO.Streams.handleToInputStream&#39; :: &#39;System.IO.Handle&#39; -&gt; &#39;IO&#39; (&#39;System.IO.Streams.InputStream&#39; &#39;Data.ByteString.ByteString&#39;)
+@
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $createoutput
+
+Similarly, you can build any &#39;System.IO.Streams.OutputStream&#39; from an &#39;IO&#39;
+action that accepts input, as long as it interprets &#39;Just&#39; as more input and
+&#39;Nothing&#39; as EOF:
+
+@
+&#39;System.IO.Streams.makeOutputStream&#39; :: (&#39;Maybe&#39; a -&gt; &#39;IO&#39; ()) -&gt; &#39;IO&#39; (&#39;System.IO.Streams.OutputStream&#39; a)
+@
+
+A simple &#39;System.IO.Streams.OutputStream&#39; might wrap &#39;putStrLn&#39; for &#39;Data.ByteString.ByteString&#39;s:
+
+@
+import &quot;Data.ByteString&quot; (&#39;Data.ByteString.ByteString&#39;)
+import qualified &quot;Data.ByteString&quot; as S
+import &quot;System.IO.Streams&quot; (&#39;System.IO.Streams.OutputStream&#39;)
+import qualified &quot;System.IO.Streams&quot; as Streams
+\
+writeConsole :: &#39;IO&#39; (&#39;System.IO.Streams.OutputStream&#39; &#39;Data.ByteString.ByteString&#39;)
+writeConsole = Streams.&#39;System.IO.Streams.makeOutputStream&#39; $ \\m -&gt; case m of
+    &#39;Just&#39; bs -&gt; S.&#39;Data.ByteString.putStrLn&#39; bs
+    &#39;Nothing&#39; -&gt; &#39;return&#39; ()
+@
+
+The &#39;Just&#39; wraps more incoming data, whereas &#39;Nothing&#39; indicates the data is
+exhausted. In principle, you can feed &#39;System.IO.Streams.OutputStream&#39;s more
+input after writing a &#39;Nothing&#39; to them, but IO streams only guarantee a
+well-defined behavior up to the first &#39;Nothing&#39;. After receiving the first
+&#39;Nothing&#39;, an &#39;System.IO.Streams.OutputStream&#39; could respond to additional
+input by:
+
+  * Using the input
+
+  * Ignoring the input
+
+  * Throwing an exception
+
+Ideally, you should adhere to well-defined behavior and ensure that after you
+write a &#39;Nothing&#39; to an &#39;System.IO.Streams.OutputStream&#39;, you don&#39;t write
+anything else.
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $connect
+
+@io-streams@ provides two ways to connect an &#39;System.IO.Streams.InputStream&#39;
+and &#39;System.IO.Streams.OutputStream&#39;:
+
+@
+&#39;System.IO.Streams.connect&#39; :: &#39;System.IO.Streams.InputStream&#39; a -&gt; &#39;System.IO.Streams.OutputStream&#39; a -&gt; &#39;IO&#39; ()
+&#39;System.IO.Streams.supply&#39;  :: &#39;System.IO.Streams.InputStream&#39; a -&gt; &#39;System.IO.Streams.OutputStream&#39; a -&gt; &#39;IO&#39; ()
+@
+
+&#39;System.IO.Streams.connect&#39; feeds the &#39;System.IO.Streams.OutputStream&#39;
+exclusively with the given &#39;System.IO.Streams.InputStream&#39; and passes along the
+end-of-stream notification to the &#39;System.IO.Streams.OutputStream&#39;.
+
+&#39;System.IO.Streams.supply&#39; feeds the &#39;System.IO.Streams.OutputStream&#39;
+non-exclusively with the given &#39;System.IO.Streams.InputStream&#39; and does not
+pass along the end-of-stream notification to the
+&#39;System.IO.Streams.OutputStream&#39;.
+
+You can combine both &#39;System.IO.Streams.supply&#39; and &#39;System.IO.Streams.connect&#39;
+to feed multiple &#39;System.IO.Streams.InputStream&#39;s into a single
+&#39;System.IO.Streams.OutputStream&#39;:
+
+@
+import qualified &quot;System.IO.Streams&quot; as Streams
+import &quot;System.IO&quot; (&#39;System.IO.IOMode&#39;(&#39;System.IO.WriteMode&#39;))
+
+main = do
+   Streams.&#39;System.IO.Streams.withFileAsOutput&#39; \&quot;out.txt\&quot; &#39;System.IO.WriteMode&#39; $ \\outStream -&gt;
+   Streams.&#39;System.IO.Streams.withFileAsInput&#39;  \&quot;in1.txt\&quot; $ \\inStream1 -&gt;
+   Streams.&#39;System.IO.Streams.withFileAsInput&#39;  \&quot;in2.txt\&quot; $ \\inStream2 -&gt;
+   Streams.&#39;System.IO.Streams.withFileAsInput&#39;  \&quot;in3.txt\&quot; $ \\inStream3 -&gt;
+   Streams.&#39;System.IO.Streams.supply&#39;  inStream1 outStream
+   Streams.&#39;System.IO.Streams.supply&#39;  inStream2 outStream
+   Streams.&#39;System.IO.Streams.connect&#39; inStream3 outStream
+@
+
+The final &#39;System.IO.Streams.connect&#39; seals the
+&#39;System.IO.Streams.OutputStream&#39; when the final &#39;System.IO.Streams.InputStream&#39;
+terminates.
+
+Keep in mind that you do not need to use &#39;System.IO.Streams.connect&#39; or
+&#39;System.IO.Streams.supply&#39; at all: @io-streams@ mainly provides them for user
+convenience. You can always build your own abstractions on top of the
+&#39;System.IO.Streams.read&#39; and &#39;System.IO.Streams.write&#39; operations.
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $transform
+
+When we build or use &#39;IO&#39; streams we can tap into all the stream-processing
+features the @io-streams@ library provides. For example, we can decompress any
+&#39;System.IO.Streams.InputStream&#39; of &#39;Data.ByteString.ByteString&#39;s:
+
+@
+import &quot;Control.Monad&quot; ((&gt;=&gt;))
+import &quot;Data.ByteString&quot; (&#39;Data.ByteString.ByteString&#39;)
+import &quot;System.IO&quot; (&#39;System.IO.Handle&#39;)
+import &quot;System.IO.Streams&quot; (&#39;System.IO.Streams.InputStream&#39;, &#39;System.IO.Streams.OutputStream&#39;)
+import qualified &quot;System.IO.Streams&quot; as Streams
+import qualified &quot;System.IO.Streams.File&quot; as Streams
+
+unzipHandle :: &#39;System.IO.Handle&#39; -&gt; &#39;IO&#39; (&#39;System.IO.Streams.InputStream&#39; &#39;Data.ByteString.ByteString&#39;)
+unzipHandle = Streams.&#39;System.IO.Streams.handleToInputStream&#39; &gt;=&gt; Streams.&#39;System.IO.Streams.decompress&#39;
+@
+
+... or we can guard it against a denial-of-service attack:
+
+@
+protectHandle :: &#39;System.IO.Handle&#39; -&gt; &#39;IO&#39; (&#39;System.IO.Streams.InputStream&#39; &#39;Data.ByteString.ByteString&#39;)
+protectHandle =
+    Streams.&#39;System.IO.Streams.handleToInputStream&#39; &gt;=&gt; Streams.&#39;System.IO.Streams.throwIfProducesMoreThan&#39; 1000000
+@
+
+@io-streams@ provides many useful functions such as these in its standard
+library and you take advantage of them by defining IO streams that wrap your
+resources.
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $safety
+
+IO streams use standard Haskell idioms for resource safety. Since all
+operations occur in the IO monad, you can use &#39;Control.Exception.catch&#39;,
+&#39;Control.Exception.bracket&#39;, or various \&quot;@with...@\&quot; functions to guard any
+&#39;System.IO.Streams.read&#39; or &#39;System.IO.Streams.write&#39; without any special
+considerations:
+
+@
+import qualified &quot;Data.ByteString&quot; as S
+import &quot;System.IO&quot;
+import &quot;System.IO.Streams&quot; (&#39;System.IO.Streams.InputStream&#39;, &#39;System.IO.Streams.OutputStream&#39;)
+import qualified &quot;System.IO.Streams&quot; as Streams
+import qualified &quot;System.IO.Streams.File&quot; as Streams
+
+main =
+    &#39;System.IO.withFile&#39; \&quot;test.txt\&quot; &#39;System.IO.ReadMode&#39; $ \\handle -&gt; do
+        stream &lt;- Streams.&#39;System.IO.Streams.handleToInputStream&#39; handle
+        mBytes &lt;- Streams.&#39;System.IO.Streams.read&#39; stream
+        case mBytes of
+            &#39;Just&#39; bytes -&gt; S.&#39;Data.ByteString.putStrLn&#39; bytes
+            &#39;Nothing&#39;    -&gt; &#39;System.IO.putStrLn&#39; \&quot;EOF\&quot;
+@
+
+However, you can also simplify the above example by using the convenience
+function &#39;System.IO.Streams.File.withFileAsInput&#39; from
+&quot;System.IO.Streams.File&quot;:
+
+@
+&#39;System.IO.Streams.withFileAsInput&#39;
+ :: &#39;System.IO.FilePath&#39; -&gt; (&#39;System.IO.Streams.InputStream&#39; &#39;Data.ByteString.ByteString&#39; -&gt; &#39;IO&#39; a) -&gt; &#39;IO&#39; a
+@
+
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $pushback
+
+All &#39;System.IO.Streams.InputStream&#39;s support pushback, which simplifies many
+types of operations. For example, we can &#39;System.IO.Streams.peek&#39; at an
+&#39;System.IO.Streams.InputStream&#39; by combining &#39;System.IO.Streams.read&#39; and
+&#39;System.IO.Streams.unRead&#39;:
+
+@
+&#39;System.IO.Streams.peek&#39; :: &#39;System.IO.Streams.InputStream&#39; c -&gt; &#39;IO&#39; (&#39;Maybe&#39; c)
+&#39;System.IO.Streams.peek&#39; s = do
+    x &lt;- Streams.&#39;System.IO.Streams.read&#39; s
+    case x of
+        &#39;Nothing&#39; -&gt; &#39;return&#39; ()
+        &#39;Just&#39; c  -&gt; Streams.&#39;System.IO.Streams.unRead&#39; c s
+    &#39;return&#39; x
+@
+
+... although &quot;System.IO.Streams&quot; already exports the above function.
+
+&#39;System.IO.Streams.InputStream&#39;s can customize pushback behavior to support
+more sophisticated support for pushback. For example, if you protect a stream
+using &#39;System.IO.Streams.throwIfProducesMoreThan&#39; and
+&#39;System.IO.Streams.unRead&#39; input, it will subtract the unread input from the
+total byte count. However, these extra features will not interfere with the
+basic pushback contract, given by the following law:
+
+@
+&#39;System.IO.Streams.unRead&#39; c stream &gt;&gt; &#39;System.IO.Streams.read&#39; stream == &#39;return&#39; (&#39;Just&#39; c)
+@
+
+When you build an &#39;System.IO.Streams.InputStream&#39; using
+&#39;System.IO.Streams.makeInputStream&#39;, it supplies the default pushback behavior
+which just saves the input for the next &#39;System.IO.Streams.read&#39; call. More
+advanced users can use &quot;System.IO.Streams.Internal&quot; to customize their own
+pushback routines.
+
+{- NOTE: The library only exports pushback API for Sources, which are a
+         completely internal type, so should we teach the user how to define
+         custom pushback or not?  Maybe that belongs in some sort of separate
+         &quot;advanced&quot; tutorial for System.IO.Streams.Internal. -}
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $threadsafety
+
+IO stream operations are not thread-safe by default for performance reasons.
+However, you can transform an existing IO stream into a thread-safe one using
+the provided locking functions:
+
+@
+&#39;System.IO.Streams.lockingInputStream&#39;  :: &#39;System.IO.Streams.InputStream&#39;  a -&gt; &#39;IO&#39; (&#39;System.IO.Streams.InputStream&#39;  a)
+&#39;System.IO.Streams.lockingOutputStream&#39; :: &#39;System.IO.Streams.OutputStream&#39; a -&gt; &#39;IO&#39; (&#39;System.IO.Streams.OutputStream&#39; a)
+@
+
+These functions do not prevent access to the previous IO stream, so you must
+take care to not save the reference to the previous stream.
+
+    {- NOTE: Should I give specific performance numbers or just say something
+             like &quot;a slight cost to performance&quot; for locking? -}
+    {- NOTE: This could use a concrete example of a race condition that a user
+             might encounter without this protection. -}
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $examples</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The following examples show how to use the standard library to implement</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- traditional command-line utilities:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--{-\# LANGUAGE OverloadedStrings #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--import Control.Monad ((&gt;=&gt;), join)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--import qualified Data.ByteString.Char8 as S</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--import Data.Int (Int64)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--import Data.Monoid ((\&lt;&gt;))</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--import &quot;System.IO.Streams&quot; (&#39;System.IO.Streams.InputStream&#39;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--import qualified &quot;System.IO.Streams&quot; as Streams</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--import System.IO</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--import Prelude hiding (head)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--cat :: &#39;FilePath&#39; -&gt; IO ()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--cat file = &#39;System.IO.withFile&#39; file ReadMode $ \\h -&gt; do</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    is &lt;- Streams.&#39;System.IO.Streams.handleToInputStream&#39; h</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    Streams.&#39;System.IO.Streams.connect&#39; is Streams.&#39;System.IO.Streams.stdout&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--grep :: S.&#39;Data.ByteString.ByteString&#39; -&gt; &#39;FilePath&#39; -&gt; IO ()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--grep pattern file = &#39;System.IO.withFile&#39; file ReadMode $ \\h -&gt; do</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    is \&lt;- Streams.&#39;System.IO.Streams.handleToInputStream&#39; h &gt;&gt;=</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          Streams.&#39;System.IO.Streams.lines&#39;                 &gt;&gt;=</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          Streams.&#39;System.IO.Streams.filter&#39; (S.isInfixOf pattern)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    os &lt;- Streams.&#39;System.IO.Streams.unlines&#39; Streams.&#39;System.IO.Streams.stdout&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    Streams.&#39;System.IO.Streams.connect&#39; is os</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--data Option = Bytes | Words | Lines</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--len :: &#39;System.IO.Streams.InputStream&#39; a -&gt; IO Int64</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--len = Streams.&#39;System.IO.Streams.fold&#39; (\\n _ -&gt; n + 1) 0</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--wc :: Option -&gt; &#39;FilePath&#39; -&gt; IO ()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--wc opt file = &#39;System.IO.withFile&#39; file ReadMode $</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    Streams.&#39;System.IO.Streams.handleToInputStream&#39; &gt;=&gt; count &gt;=&gt; print</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  where</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    count = case opt of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--        Bytes -&gt; \\is -&gt; do</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--            (is&#39;, cnt) &lt;- Streams.&#39;System.IO.Streams.countInput&#39; is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--            Streams.&#39;System.IO.Streams.skipToEof&#39; is&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--            cnt</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--        Words -&gt; Streams.&#39;System.IO.Streams.words&#39; &gt;=&gt; len</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--        Lines -&gt; Streams.&#39;System.IO.STreams.lines&#39; &gt;=&gt; len</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--nl :: &#39;FilePath&#39; -&gt; IO ()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--nl file = &#39;System.IO.withFile&#39; file ReadMode $ \\h -&gt; do</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    nats &lt;- Streams.&#39;System.IO.Streams.fromList&#39; [1..]</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    ls   \&lt;- Streams.&#39;System.IO.Streams.handleToInputStream&#39; h &gt;&gt;= Streams.&#39;System.IO.Streams.lines&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    is   &lt;- Streams.&#39;System.IO.Streams.zipWith&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (\\n bs -&gt; S.pack (show n) \&lt;&gt; \&quot; \&quot; \&lt;&gt; bs)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                nats</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                ls</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    os   &lt;- Streams.&#39;System.IO.Streams.unlines&#39; Streams.&#39;System.IO.Streams.stdout&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    Streams.&#39;System.IO.Streams.connect&#39; is os</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--head :: Int64 -&gt; &#39;FilePath&#39; -&gt; IO ()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--head n file = &#39;System.IO.withFile&#39; file ReadMode $ \\h -&gt; do</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    is \&lt;- Streams.&#39;System.IO.Streams.handleToInputStream&#39; h &gt;&gt;= Streams.&#39;System.IO.Streams.lines&#39; &gt;&gt;= Streams.&#39;System.IO.Streams.take&#39; n</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    os &lt;- Streams.&#39;System.IO.Streams.unlines&#39; Streams.&#39;System.IO.Streams.stdout&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    Streams.&#39;System.IO.Streams.connect&#39; is os</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--paste :: &#39;FilePath&#39; -&gt; &#39;FilePath&#39; -&gt; IO ()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--paste file1 file2 =</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    &#39;System.IO.withFile&#39; file1 ReadMode $ \\h1 -&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    &#39;System.IO.withFile&#39; file2 ReadMode $ \\h2 -&gt; do</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    is1 \&lt;- Streams.&#39;System.IO.Streams.handleToInputStream&#39; h1 &gt;&gt;= Streams.&#39;System.IO.Streams.lines&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    is2 \&lt;- Streams.&#39;System.IO.Streams.handleToInputStream&#39; h2 &gt;&gt;= Streams.&#39;System.IO.Streams.lines&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    isT \&lt;- Streams.&#39;System.IO.Streams.zipWith&#39; (\\l1 l2 -&gt; l1 \&lt;&gt; \&quot;\\t\&quot; \&lt;&gt; l2) is1 is2</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    os  &lt;- Streams.&#39;System.IO.Streams.unlines&#39; Streams.&#39;System.IO.Streams.stdout&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    Streams.connect isT os</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--yes :: IO ()</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--yes = do</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    is &lt;- Streams.fromList (repeat \&quot;y\&quot;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    os &lt;- Streams.unlines Streams.stdout</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--    Streams.connect is os</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @</span></span><span class="mpre">
+</span></div></body></html>

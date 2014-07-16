@@ -1,0 +1,31 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      : Network.TLS.Session</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     : BSD-style</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  : Vincent Hanquez &lt;vincent@snarc.org&gt;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   : experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability : unknown</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+module Network.TLS.Session
+    ( SessionManager(..)
+    , noSessionManager
+    ) where
+
+import Network.TLS.Types
+
+</span><span class="hl_comment"><span class="mpre">-- | A session manager</span></span><span class="mpre">
+data </span><a name="loc_16_6_16_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_16_6_16_20&#39;)"><span class="hl_tycondecl"><span class="mpre">SessionManager</span></span></a><span class="mpre"> = </span><span class="hl_condecl"><span class="mpre">SessionManager</span></span><span class="mpre">
+    { </span><span class="hl_comment"><span class="mpre">-- | used on server side to decide whether to resume a client session.</span></span><span class="mpre">
+      </span><a name="loc_18_7_18_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_7_18_20&#39;)"><span class="hl_fielddecl"><span class="mpre">sessionResume</span></span></a><span class="mpre">     :: </span><span class="hl_tyconref"><span class="mpre">SessionID</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> (</span><span class="hl_tyconref"><span class="mpre">Maybe</span></span><span class="mpre"> </span><a href="Network.TLS.Types.html#loc_31_6_31_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Types.html#loc_31_6_31_17&#39;)"><span class="hl_tyconref"><span class="mpre">SessionData</span></span></a><span class="mpre">)
+      </span><span class="hl_comment"><span class="mpre">-- | used when a session is established.</span></span><span class="mpre">
+    , </span><a name="loc_20_7_20_23" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_20_7_20_23&#39;)"><span class="hl_fielddecl"><span class="mpre">sessionEstablish</span></span></a><span class="mpre">  :: </span><span class="hl_tyconref"><span class="mpre">SessionID</span></span><span class="mpre"> -&gt; </span><a href="Network.TLS.Types.html#loc_31_6_31_17" onmouseover="nemnem.highlightLocalToRemote(&#39;Network.TLS.Types.html#loc_31_6_31_17&#39;)"><span class="hl_tyconref"><span class="mpre">SessionData</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+      </span><span class="hl_comment"><span class="mpre">-- | used when a session is invalidated.</span></span><span class="mpre">
+    , </span><a name="loc_22_7_22_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_22_7_22_24&#39;)"><span class="hl_fielddecl"><span class="mpre">sessionInvalidate</span></span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">SessionID</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+    }
+
+</span><a href="#loc_26_1_26_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_26_1_26_17&#39;)"><span class="mpre">noSessionManager</span></a><span class="mpre"> :: </span><a href="#loc_16_6_16_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_16_6_16_20&#39;)"><span class="hl_tyconref"><span class="mpre">SessionManager</span></span></a><span class="mpre">
+</span><a name="loc_26_1_26_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_26_1_26_17&#39;)"><span class="hl_vardecl"><span class="mpre">noSessionManager</span></span></a><span class="mpre"> = </span><span class="warning" data-warning="ExpRecConstr (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Session.hs&quot;, srcSpanStartLine = 26, srcSpanStartColumn = 20, srcSpanEndLine = 30, srcSpanEndColumn = 6}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Session.hs&quot;, srcSpanStartLine = 27, srcSpanStartColumn = 5, srcSpanEndLine = 27, srcSpanEndColumn = 6},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/tls-1.2.8/Network/TLS/Session.hs&quot;, srcSpanStartLine = 28, src"><span class="mpre">SessionManager
+    { sessionResume     = \_   -&gt; return Nothing
+    , sessionEstablish  = \_ _ -&gt; return ()
+    , sessionInvalidate = \_   -&gt; return ()
+    }</span></span><span class="mpre">
+</span></div></body></html>

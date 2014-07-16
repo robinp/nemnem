@@ -1,0 +1,67 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  GHC.Magic</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2009</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  see libraries/ghc-prim/LICENSE</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  cvs-ghc@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  internal</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (GHC Extensions)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- GHC magic.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Use GHC.Exts from the base package instead of importing this</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- module directly.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module GHC.Magic ( inline, lazy ) where
+
+</span><span class="hl_comment"><span class="mpre">-- | The call &#39;(inline f)&#39; arranges that &#39;f&#39; is inlined, regardless of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- its size. More precisely, the call &#39;(inline f)&#39; rewrites to the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- right-hand side of &#39;f&#39;\&#39;s definition. This allows the programmer to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- control inlining from a particular call site rather than the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- definition site of the function (c.f. &#39;INLINE&#39; pragmas).</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This inlining occurs regardless of the argument to the call or the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- size of &#39;f&#39;\&#39;s definition; it is unconditional. The main caveat is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that &#39;f&#39;\&#39;s definition must be visible to the compiler; it is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- therefore recommended to mark the function with an &#39;INLINABLE&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- pragma at its definition so that GHC guarantees to record its</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- unfolding regardless of size.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If no inlining takes place, the &#39;inline&#39; function expands to the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- identity function in Phase zero, so its use imposes no overhead.</span></span><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# NOINLINE[0] </span><a href="#loc_39_1_39_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_1_39_7&#39;)"><span class="mpre">inline</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><a href="#loc_39_1_39_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_1_39_7&#39;)"><span class="mpre">inline</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_39_1_39_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_1_39_7&#39;)"><span class="hl_fundecl"><span class="mpre">inline</span></span></a><span class="mpre"> </span><a name="loc_39_8_39_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_8_39_9&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="#loc_39_8_39_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_8_39_9&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;lazy&#39; function restrains strictness analysis a little. The</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- call &#39;(lazy e)&#39; means the same as &#39;e&#39;, but &#39;lazy&#39; has a magical</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- property so far as strictness analysis is concerned: it is lazy in</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- its first argument, even though its semantics is strict. After</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- strictness analysis has run, calls to &#39;lazy&#39; are inlined to be the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- identity function.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This behaviour is occasionally useful when controlling evaluation</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- order. Notably, &#39;lazy&#39; is used in the library definition of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;Control.Parallel.par&#39;:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; par :: a -&gt; b -&gt; b</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &gt; par x y = case (par# x) of _ -&gt; lazy y</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- If &#39;lazy&#39; were not lazy, &#39;par&#39; would look strict in &#39;y&#39; which</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- would defeat the whole purpose of &#39;par&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Like &#39;seq&#39;, the argument of &#39;lazy&#39; can have an unboxed type.</span></span><span class="mpre">
+</span><a href="#loc_60_1_60_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_5&#39;)"><span class="mpre">lazy</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_60_1_60_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_1_60_5&#39;)"><span class="hl_fundecl"><span class="mpre">lazy</span></span></a><span class="mpre"> </span><a name="loc_60_6_60_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_6_60_7&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="#loc_60_6_60_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_60_6_60_7&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Implementation note: its strictness and unfolding are over-ridden</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- by the definition in MkId.lhs; in both cases to nothing at all.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- That way, &#39;lazy&#39; does not get inlined, and the strictness analyser</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- sees it as lazy.  Then the worker/wrapper phase inlines it.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Result: happiness</span></span><span class="mpre">
+
+</span></div></body></html>

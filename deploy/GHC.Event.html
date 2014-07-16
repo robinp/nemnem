@@ -1,0 +1,45 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+
+</span><span class="hl_comment"><span class="mpre">-- ----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | This module provides scalable event notification for file</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- descriptors and timeouts.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This module should be considered GHC internal.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- ----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module GHC.Event
+    ( </span><span class="hl_comment"><span class="mpre">-- * Types</span></span><span class="mpre">
+      EventManager
+
+      </span><span class="hl_comment"><span class="mpre">-- * Creation</span></span><span class="mpre">
+    , getSystemEventManager
+    , new
+    , getSystemTimerManager
+
+      </span><span class="hl_comment"><span class="mpre">-- * Registering interest in I/O events</span></span><span class="mpre">
+    , Event
+    , evtRead
+    , evtWrite
+    , IOCallback
+    , FdKey(keyFd)
+    , registerFd
+    , registerFd_
+    , unregisterFd
+    , unregisterFd_
+    , closeFd
+
+      </span><span class="hl_comment"><span class="mpre">-- * Registering interest in timeout events</span></span><span class="mpre">
+    , TimeoutCallback
+    , TimeoutKey
+    , registerTimeout
+    , updateTimeout
+    , unregisterTimeout
+    ) where
+
+import GHC.Event.Manager
+import GHC.Event.TimerManager (TimeoutCallback, </span><a href="GHC.Event.TimerManager.html#loc_70_9_70_19" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.TimerManager.html#loc_70_9_70_19&#39;)"><span class="mpre">TimeoutKey</span></a><span class="mpre">, </span><a href="GHC.Event.TimerManager.html#loc_241_1_241_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.TimerManager.html#loc_241_1_241_16&#39;)"><span class="mpre">registerTimeout</span></a><span class="mpre">,
+                               </span><a href="GHC.Event.TimerManager.html#loc_261_1_261_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.TimerManager.html#loc_261_1_261_14&#39;)"><span class="mpre">updateTimeout</span></a><span class="mpre">, </span><a href="GHC.Event.TimerManager.html#loc_254_1_254_18" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.TimerManager.html#loc_254_1_254_18&#39;)"><span class="mpre">unregisterTimeout</span></a><span class="mpre">)
+import GHC.Event.Thread (</span><a href="GHC.Event.Thread.html#loc_165_1_165_22" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_165_1_165_22&#39;)"><span class="mpre">getSystemEventManager</span></a><span class="mpre">, </span><a href="GHC.Event.Thread.html#loc_206_1_206_22" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.Event.Thread.html#loc_206_1_206_22&#39;)"><span class="mpre">getSystemTimerManager</span></a><span class="mpre">)
+
+</span></div></body></html>

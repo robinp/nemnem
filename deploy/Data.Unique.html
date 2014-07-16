@@ -1,0 +1,75 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE MagicHash, DeriveDataTypeable #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Data.Unique</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- An abstract interface to a unique symbol generator.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Data.Unique (
+   </span><span class="hl_comment"><span class="mpre">-- * Unique objects</span></span><span class="mpre">
+   Unique,
+   newUnique,
+   hashUnique
+ ) where
+
+import Prelude
+
+import System.IO.Unsafe (</span><a href="GHC.IO.html#loc_165_1_165_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_165_1_165_16&#39;)"><span class="mpre">unsafePerformIO</span></a><span class="mpre">)
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Unique.hs&quot;, srcSpanStartLine = 29, srcSpanStartColumn = 8, srcSpanEndLine = 29, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Unique.hs&quot;, srcSpanStartLine = 30, srcSpanStartColumn = 8, srcSpanEndLine = 30, srcSpanEndColumn = 15}, srcInfoPoints = []}) &quot;GHC.Num&quot;"><span class="mpre">GHC.Num</span></span><span class="mpre">
+import Data.Typeable
+import Data.IORef
+
+</span><span class="hl_comment"><span class="mpre">-- | An abstract unique object.  Objects of type &#39;Unique&#39; may be</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- compared for equality and ordering and hashed into &#39;Int&#39;.</span></span><span class="mpre">
+newtype </span><a name="loc_36_9_36_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_9_36_15&#39;)"><span class="hl_tycondecl"><span class="mpre">Unique</span></span></a><span class="mpre"> = </span><a name="loc_36_18_36_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_18_36_24&#39;)"><span class="hl_condecl"><span class="mpre">Unique</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Integer</span></span><span class="mpre"> </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Unique.hs&quot;, srcSpanStartLine = 36, srcSpanStartColumn = 33, srcSpanEndLine = 36, srcSpanEndColumn = 59}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Unique.hs&quot;, srcSpanStartLine = 36, srcSpanStartColumn = 33, srcSpanEndLine = 36, srcSpanEndColumn = 41},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Data/Unique.hs&quot;, srcSpanStartLine = 36, srcSpanStartColu"><span class="mpre">deriving (Eq,Ord,Typeable)</span></span><span class="mpre">
+
+</span><a href="#loc_39_1_39_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_1_39_11&#39;)"><span class="mpre">uniqSource</span></a><span class="mpre"> :: </span><a href="GHC.IORef.html#loc_34_9_34_14" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_34_9_34_14&#39;)"><span class="hl_tyconref"><span class="mpre">IORef</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Integer</span></span><span class="mpre">
+</span><a name="loc_39_1_39_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_1_39_11&#39;)"><span class="hl_vardecl"><span class="mpre">uniqSource</span></span></a><span class="mpre"> = </span><a href="GHC.IO.html#loc_165_1_165_16" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_165_1_165_16&#39;)"><span class="hl_varref"><span class="mpre">unsafePerformIO</span></span></a><span class="mpre"> (</span><a href="GHC.IORef.html#loc_42_1_42_9" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IORef.html#loc_42_1_42_9&#39;)"><span class="hl_varref"><span class="mpre">newIORef</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">0</span></span><span class="mpre">)
+</span><span class="hl_pragma"><span class="mpre">{-# NOINLINE </span><a href="#loc_39_1_39_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_1_39_11&#39;)"><span class="mpre">uniqSource</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Creates a new object of type &#39;Unique&#39;.  The value returned will</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- not compare equal to any other value of type &#39;Unique&#39; returned by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- previous calls to &#39;newUnique&#39;.  There is no limit on the number of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- times &#39;newUnique&#39; may be called.</span></span><span class="mpre">
+</span><a href="#loc_47_1_47_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_10&#39;)"><span class="mpre">newUnique</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><a href="#loc_36_9_36_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_9_36_15&#39;)"><span class="hl_tyconref"><span class="mpre">Unique</span></span></a><span class="mpre">
+</span><a name="loc_47_1_47_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_47_1_47_10&#39;)"><span class="hl_vardecl"><span class="mpre">newUnique</span></span></a><span class="mpre"> = do
+  </span><a name="loc_48_3_48_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_3_48_4&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre"> &lt;- </span><a href="Data.IORef.html#loc_108_1_108_19" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.IORef.html#loc_108_1_108_19&#39;)"><span class="hl_varref"><span class="mpre">atomicModifyIORef&#39;</span></span></a><span class="mpre"> </span><a href="#loc_39_1_39_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_39_1_39_11&#39;)"><span class="hl_varref"><span class="mpre">uniqSource</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_48_41_48_42" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_41_48_42&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> -&gt; let </span><a name="loc_48_50_48_51" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_50_48_51&#39;)"><span class="hl_vardecl"><span class="mpre">z</span></span></a><span class="mpre"> = </span><a href="#loc_48_41_48_42" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_41_48_42&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="hl_infix"><span class="mpre">+</span></span><span class="hl_num"><span class="mpre">1</span></span><span class="mpre"> in (</span><a href="#loc_48_50_48_51" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_50_48_51&#39;)"><span class="hl_varref"><span class="mpre">z</span></span></a><span class="mpre">,</span><a href="#loc_48_50_48_51" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_50_48_51&#39;)"><span class="hl_varref"><span class="mpre">z</span></span></a><span class="mpre">)
+  </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> (</span><a href="#loc_36_18_36_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_18_36_24&#39;)"><span class="hl_conref"><span class="mpre">Unique</span></span></a><span class="mpre"> </span><a href="#loc_48_3_48_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_48_3_48_4&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre">)
+
+</span><span class="hl_comment"><span class="mpre">-- SDM (18/3/2010): changed from MVar to STM.  This fixes</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  1. there was no async exception protection</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  2. there was a space leak (now new value is strict)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  3. using atomicModifyIORef would be slightly quicker, but can</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     suffer from adverse scheduling issues (see #3838)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  4. also, the STM version is faster.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- SDM (30/4/2012): changed to IORef using atomicModifyIORef.  Reasons:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  1. STM version could not be used inside unsafePerformIO, if it</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     happened to be poked inside an STM transaction.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  2. IORef version can be used with unsafeIOToSTM inside STM,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     because if the transaction retries then we just get a new</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--     Unique.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  3. IORef version is very slightly faster.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- IGL (08/06/2013): changed to using atomicModifyIORef&#39; instead.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  This feels a little safer, from the point of view of not leaking</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--  memory, but the resulting core is identical.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Hashes a &#39;Unique&#39; into an &#39;Int&#39;.  Two &#39;Unique&#39;s may hash to the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- same value, although in practice this is unlikely.  The &#39;Int&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- returned makes a good hash key.</span></span><span class="mpre">
+</span><a href="#loc_74_1_74_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_1_74_11&#39;)"><span class="mpre">hashUnique</span></a><span class="mpre"> :: </span><a href="#loc_36_9_36_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_9_36_15&#39;)"><span class="hl_tyconref"><span class="mpre">Unique</span></span></a><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre">
+</span><a name="loc_74_1_74_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_1_74_11&#39;)"><span class="hl_fundecl"><span class="mpre">hashUnique</span></span></a><span class="mpre"> (</span><a href="#loc_36_18_36_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_36_18_36_24&#39;)"><span class="hl_conref"><span class="mpre">Unique</span></span></a><span class="mpre"> </span><a name="loc_74_20_74_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_20_74_21&#39;)"><span class="hl_vardecl"><span class="mpre">i</span></span></a><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">I#</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">hashInteger</span></span><span class="mpre"> </span><a href="#loc_74_20_74_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_20_74_21&#39;)"><span class="hl_varref"><span class="mpre">i</span></span></a><span class="mpre">)
+</span></div></body></html>

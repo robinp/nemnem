@@ -1,0 +1,296 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
+module Pipes.Text.Tutorial (
+    </span><span class="hl_comment"><span class="mpre">-- * Effectful Text</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $intro</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Lenses</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $lenses</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** @view@ \/ @(^.)@</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $view</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** @over@ \/ @(%~)@</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $over</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** @zoom@</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $zoom</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Special types: @Producer Text m (Producer Text m r)@ and @FreeT (Producer Text m) m r@</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $special</span></span><span class="mpre">
+    ) where
+      
+import Pipes
+import Pipes.Text
+import Pipes.Text.IO
+import Pipes.Text.Encoding
+      
+</span><span class="hl_comment"><span class="mpre">{- $intro
+    This package provides @pipes@ utilities for /text streams/ or /character streams/,
+    realized as streams of &#39;Text&#39; chunks. The individual chunks are uniformly /strict/,
+    and thus you will generally want @Data.Text@ in scope.  But the type
+    @Producer Text m r@ ,as we are using it, is a sort of /pipes/ equivalent of the lazy @Text@ type.
+
+    The main @Pipes.Text@ module provides many functions equivalent in one way or another to
+    the pure functions in
+    &lt;https://hackage.haskell.org/package/text-1.1.0.0/docs/Data-Text-Lazy.html Data.Text.Lazy&gt;.
+    They transform, divide, group and fold text streams. Though @Producer Text m r@
+    is the type of \&#39;effectful Text\&#39;, the functions in this module are \&#39;pure\&#39;
+    in the sense that they are uniformly monad-independent.
+    Simple /IO/ operations are defined in @Pipes.Text.IO@ -- as lazy IO @Text@
+    operations are in @Data.Text.Lazy.IO@. Inter-operation with @ByteString@
+    is provided in @Pipes.Text.Encoding@, which parallels @Data.Text.Lazy.Encoding@.
+
+    The Text type exported by @Data.Text.Lazy@ is basically that of a lazy list of
+    strict Text: the implementation is arranged so that the individual strict &#39;Text&#39;
+    chunks are kept to a reasonable size; the user is not aware of the divisions
+    between the connected &#39;Text&#39; chunks.
+    So also here: the functions in this module are designed to operate on streams that
+    are insensitive to text boundaries. This means that they may freely split
+    text into smaller texts and /discard empty texts/.  The objective, though, is
+    that they should /never concatenate texts/ in order to provide strict upper
+    bounds on memory usage.
+
+    For example, to stream only the first three lines of &#39;stdin&#39; to &#39;stdout&#39; you
+    might write:
+
+&gt; import Pipes
+&gt; import qualified Pipes.Text as Text
+&gt; import qualified Pipes.Text.IO as Text
+&gt; import Pipes.Group (takes&#39;)
+&gt; import Lens.Family
+&gt;
+&gt; main = runEffect $ takeLines 3 Text.stdin &gt;-&gt; Text.stdout
+&gt;   where
+&gt;     takeLines n = Text.unlines . takes&#39; n . view Text.lines
+
+    The above program will never bring more than one chunk of text (~ 32 KB) into
+    memory, no matter how long the lines are.
+
+-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{- $lenses
+    As this example shows, one superficial difference from @Data.Text.Lazy@
+    is that many of the operations, like &#39;lines&#39;, are \&#39;lensified\&#39;; this has a
+    number of advantages (where it is possible); in particular it facilitates their
+    use with &#39;Parser&#39;s of Text (in the general &lt;http://hackage.haskell.org/package/pipes-parse-3.0.1/docs/Pipes-Parse-Tutorial.html pipes-parse&gt;
+    sense.) The disadvantage, famously, is that the messages you get for type errors can be
+    a little alarming. The remarks that follow in this section are for non-lens adepts.
+
+    Each lens exported here, e.g. &#39;lines&#39;, &#39;chunksOf&#39; or &#39;splitAt&#39;, reduces to the
+    intuitively corresponding function when used with @view@ or @(^.)@. Instead of
+    writing:
+
+    &gt; splitAt 17 producer
+
+    as we would with the Prelude or Text functions, we write
+
+    &gt; view (splitAt 17) producer
+
+    or equivalently
+
+    &gt; producer ^. splitAt 17
+
+    This may seem a little indirect, but note that many equivalents of
+    @Text -&gt; Text@ functions are exported here as &#39;Pipe&#39;s. Here too we recover the intuitively
+    corresponding functions by prefixing them with @(&gt;-&gt;)@. Thus something like
+
+&gt;  stripLines = Text.unlines . Group.maps (&gt;-&gt; Text.stripStart) . view Text.lines
+
+    would drop the leading white space from each line.
+
+    The lenses in this library are marked as /improper/; this just means that
+    they don&#39;t admit all the operations of an ideal lens, but only /getting/ and /focusing/.
+    Just for this reason, though, the magnificent complexities of the lens libraries
+    are a distraction. The lens combinators to keep in mind, the ones that make sense for
+    our lenses, are @view@ \/ @(^.)@), @over@ \/ @(%~)@ , and @zoom@.
+
+    One need only keep in mind that if @l@ is a @Lens&#39; a b@, then:
+
+-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{- $view
+    @view l@ is a function @a -&gt; b@ . Thus @view l a@ (also written @a ^. l@ )
+    is the corresponding @b@; as was said above, this function will be exactly the
+    function you think it is, given its name. Thus to uppercase the first n characters
+    of a Producer, leaving the rest the same, we could write:
+
+
+    &gt; upper n p = do p&#39; &lt;- p ^. Text.splitAt n &gt;-&gt; Text.toUpper
+    &gt;                p&#39;
+-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{- $over
+    @over l@ is a function @(b -&gt; b) -&gt; a -&gt; a@.  Thus, given a function that modifies
+    @b@s, the lens lets us modify an @a@ by applying @f :: b -&gt; b@ to
+    the @b@ that we can \&quot;see\&quot; through the lens. So  @over l f :: a -&gt; a@
+    (it can also be written @l %~ f@).
+    For any particular @a@, then, @over l f a@ or @(l %~ f) a@ is a revised @a@.
+    So above we might have written things like these:
+
+    &gt; stripLines = Text.lines %~ maps (&gt;-&gt; Text.stripStart)
+    &gt; stripLines = over Text.lines (maps (&gt;-&gt; Text.stripStart))
+    &gt; upper n    =  Text.splitAt n %~ (&gt;-&gt; Text.toUpper)
+
+-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{- $zoom
+    @zoom l@, finally, is a function from a @Parser b m r@
+    to a @Parser a m r@ (or more generally a @StateT (Producer b m x) m r@).
+    Its use is easiest to see with an decoding lens like &#39;utf8&#39;, which
+    \&quot;sees\&quot; a Text producer hidden inside a ByteString producer:
+    @drawChar@ is a Text parser, returning a @Maybe Char@, @zoom utf8 drawChar@ is
+    a /ByteString/ parser, returning a @Maybe Char@. @drawAll@ is a Parser that returns
+    a list of everything produced from a Producer, leaving only the return value; it would
+    usually be unreasonable to use it. But @zoom (splitAt 17) drawAll@
+    returns a list of Text chunks containing the first seventeen Chars, and returns the rest of
+    the Text Producer for further parsing. Suppose that we want, inexplicably, to
+    modify the casing of a Text Producer according to any instruction it might
+    contain at the start. Then we might write something like this:
+
+&gt;     obey :: Monad m =&gt; Producer Text m b -&gt; Producer Text m b
+&gt;     obey p = do (ts, p&#39;) &lt;- lift $ runStateT (zoom (Text.splitAt 7) drawAll) p
+&gt;                 let seven = T.concat ts
+&gt;                 case T.toUpper seven of
+&gt;                    &quot;TOUPPER&quot; -&gt; p&#39; &gt;-&gt; Text.toUpper
+&gt;                    &quot;TOLOWER&quot; -&gt; p&#39; &gt;-&gt; Text.toLower
+&gt;                    _         -&gt; do yield seven
+&gt;                                    p&#39;
+
+
+&gt; &gt;&gt;&gt; let doc = each [&quot;toU&quot;,&quot;pperTh&quot;,&quot;is document.\n&quot;]
+&gt; &gt;&gt;&gt; runEffect $ obey doc &gt;-&gt; Text.stdout
+&gt; THIS DOCUMENT.
+
+    The purpose of exporting lenses is the mental economy achieved with this three-way
+    applicability. That one expression, e.g. @lines@ or @splitAt 17@ can have these
+    three uses is no more surprising than that a pipe can act as a function modifying
+    the output of a producer, namely by using @&gt;-&gt;@ to its left: @producer &gt;-&gt; pipe@
+    -- but can /also/ modify the inputs to a consumer by using @&gt;-&gt;@ to its right:
+    @pipe &gt;-&gt; consumer@
+
+    The three functions, @view@ \/ @(^.)@, @over@ \/ @(%~)@ and @zoom@ are supplied by
+    both &lt;http://hackage.haskell.org/package/lens lens&gt; and
+    &lt;http://hackage.haskell.org/package/lens-family lens-family&gt; The use of &#39;zoom&#39; is explained
+    in &lt;http://hackage.haskell.org/package/pipes-parse-3.0.1/docs/Pipes-Parse-Tutorial.html Pipes.Parse.Tutorial&gt;
+    and to some extent in the @Pipes.Text.Encoding@ module here.
+
+-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{- $special
+    These simple &#39;lines&#39; examples reveal a more important difference from @Data.Text.Lazy@ .
+    This is in the types that are most closely associated with our central text type,
+    @Producer Text m r@.  In @Data.Text@ and @Data.Text.Lazy@ we find functions like
+
+&gt;   splitAt  :: Int -&gt; Text -&gt; (Text, Text)
+&gt;   lines    ::        Text -&gt; [Text]
+&gt;   chunksOf :: Int -&gt; Text -&gt; [Text]
+
+    which relate a Text with a pair of Texts or a list of Texts.
+    The corresponding functions here (taking account of \&#39;lensification\&#39;) are
+
+&gt;   view . splitAt  :: (Monad m, Integral n) =&gt; n -&gt; Producer Text m r -&gt; Producer Text m (Producer Text m r)
+&gt;   view lines      :: Monad m               =&gt;      Producer Text m r -&gt; FreeT (Producer Text m) m r
+&gt;   view . chunksOf :: (Monad m, Integral n) =&gt; n -&gt; Producer Text m r -&gt; FreeT (Producer Text m) m r
+
+    Some of the types may be more readable if you imagine that we have introduced
+    our own type synonyms
+
+&gt;   type Text m r  = Producer T.Text m r
+&gt;   type Texts m r = FreeT (Producer T.Text m) m r
+
+    Then we would think of the types above as
+
+&gt;   view . splitAt  :: (Monad m, Integral n) =&gt; n -&gt; Text m r -&gt; Text m (Text m r)
+&gt;   view lines      :: (Monad m)             =&gt;      Text m r -&gt; Texts m r
+&gt;   view . chunksOf :: (Monad m, Integral n) =&gt; n -&gt; Text m r -&gt; Texts m r
+
+    which brings one closer to the types of the similar functions in @Data.Text.Lazy@
+
+    In the type @Producer Text m (Producer Text m r)@ the second
+    element of the \&#39;pair\&#39; of effectful Texts cannot simply be retrieved
+    with something like &#39;snd&#39;. This is an \&#39;effectful\&#39; pair, and one must work
+    through the effects of the first element to arrive at the second Text stream, even
+    if you are proposing to throw the Text in the first element away.
+    Note that we use Control.Monad.join to fuse the pair back together, since it specializes to
+
+&gt;    join :: Monad m =&gt; Producer Text m (Producer m r) -&gt; Producer m r
+
+    The return type of &#39;lines&#39;, &#39;words&#39;, &#39;chunksOf&#39; and the other /splitter/ functions,
+    @FreeT (Producer m Text) m r@ -- our @Texts m r@ -- is the type of (effectful)
+    lists of (effectful) texts. The type @([Text],r)@ might be seen to gather
+    together things of the forms:
+
+&gt; r
+&gt; (Text,r)
+&gt; (Text, (Text, r))
+&gt; (Text, (Text, (Text, r)))
+&gt; (Text, (Text, (Text, (Text, r))))
+&gt; ...
+
+    (We might also have identified the sum of those types with @Free ((,) Text) r@
+    -- or, more absurdly, @FreeT ((,) Text) Identity r@.)
+
+    Similarly, our type @Texts m r@, or @FreeT (Text m) m r@ -- in fact called
+    @FreeT (Producer Text m) m r@ here -- encompasses all the members of the sequence:
+
+&gt; m r
+&gt; Text m r
+&gt; Text m (Text m r)
+&gt; Text m (Text m (Text m r))
+&gt; Text m (Text m (Text m (Text m r)))
+&gt; ...
+
+    We might have used a more specialized type in place of @FreeT (Producer a m) m r@,
+    or indeed of @FreeT (Producer Text m) m r@, but it is clear that the correct
+    result type of &#39;lines&#39; will be isomorphic to @FreeT (Producer Text m) m r@ .
+
+    One might think that
+
+&gt;   lines :: Monad m =&gt; Lens&#39; (Producer Text m r) (FreeT (Producer Text m) m r)
+&gt;   view . lines :: Monad m =&gt; Producer Text m r -&gt; FreeT (Producer Text m) m r
+
+    should really have the type
+
+&gt;   lines :: Monad m =&gt; Pipe Text Text m r
+
+    as e.g. &#39;toUpper&#39; does. But this would spoil the control we are
+    attempting to maintain over the size of chunks. It is in fact just
+    as unreasonable to want such a pipe as to want
+
+&gt; Data.Text.Lazy.lines :: Text -&gt; Text
+
+    to &#39;rechunk&#39; the strict Text chunks inside the lazy Text to respect
+    line boundaries. In fact we have
+
+&gt; Data.Text.Lazy.lines :: Text -&gt; [Text]
+&gt; Prelude.lines :: String -&gt; [String]
+
+    where the elements of the list are themselves lazy Texts or Strings; the use
+    of @FreeT (Producer Text m) m r@ is simply the &#39;effectful&#39; version of this.
+
+    The @Pipes.Group@ module, which can generally be imported without qualification,
+    provides many functions for working with things of type @FreeT (Producer a m) m r@.
+    In particular it conveniently exports the constructors for @FreeT@ and the associated
+    @FreeF@ type -- a fancy form of @Either@, namely
+
+&gt; data FreeF f a b = Pure a | Free (f b)
+
+    for pattern-matching. Consider the implementation of the &#39;words&#39; function, or
+    of the part of the lens that takes us to the words; it is compact but exhibits many
+    of the points under discussion, including explicit handling of the @FreeT@ and @FreeF@
+    constuctors.  Keep in mind that
+
+&gt;  newtype FreeT f m a  = FreeT (m (FreeF f a (FreeT f m a)))
+&gt;  next :: Monad m =&gt; Producer a m r -&gt; m (Either r (a, Producer a m r))
+
+   Thus the @do@ block after the @FreeT@ constructor is in the base monad, e.g. &#39;IO&#39; or &#39;Identity&#39;;
+   the later subordinate block, opened by the @Free@ constructor, is in the @Producer@ monad:
+
+&gt; words :: Monad m =&gt; Producer Text m r -&gt; FreeT (Producer Text m) m r
+&gt; words p = FreeT $ do                   -- With &#39;next&#39; we will inspect p&#39;s first chunk, excluding spaces;
+&gt;   x &lt;- next (p &gt;-&gt; dropWhile isSpace)  --   note that &#39;dropWhile isSpace&#39; is a pipe, and is thus *applied* with &#39;&gt;-&gt;&#39;.
+&gt;   return $ case x of                   -- We use &#39;return&#39; and so need something of type &#39;FreeF (Text m) r (Texts m r)&#39;
+&gt;     Left   r       -&gt; Pure r           -- &#39;Left&#39; means we got no Text chunk, but only the return value; so we are done.
+&gt;     Right (txt, p&#39;) -&gt; Free $ do       -- If we get a chunk and the rest of the producer, p&#39;, we enter the &#39;Producer&#39; monad
+&gt;         p&#39;&#39; &lt;- view (break isSpace)    -- When we apply &#39;break isSpace&#39;, we get a Producer that returns a Producer;
+&gt;                     (yield txt &gt;&gt; p&#39;)  --   so here we yield everything up to the next space, and get the rest back.
+&gt;         return (words p&#39;&#39;)             -- We then carry on with the rest, which is likely to begin with space.
+
+-}</span></span><span class="mpre">
+</span></div></body></html>

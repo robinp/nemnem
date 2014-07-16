@@ -1,0 +1,169 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE CPP, NoImplicitPrelude, BangPatterns #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Prelude</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  stable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The Prelude: a standard module. The Prelude is imported by default</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- into all Haskell modules unless either there is an explicit import</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- statement for it, or the NoImplicitPrelude extension is enabled.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Prelude (
+
+    </span><span class="hl_comment"><span class="mpre">-- * Standard types, classes and related functions</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Basic data types</span></span><span class="mpre">
+    Bool(False, True),
+    (&amp;&amp;), (||), not, otherwise,
+
+    Maybe(Nothing, Just),
+    maybe,
+
+    Either(Left, Right),
+    either,
+
+    Ordering(LT, EQ, GT),
+    Char, String,
+
+    </span><span class="hl_comment"><span class="mpre">-- *** Tuples</span></span><span class="mpre">
+    fst, snd, curry, uncurry,
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Basic type classes</span></span><span class="mpre">
+    Eq((==), (/=)),
+    Ord(compare, (&lt;), (&lt;=), (&gt;=), (&gt;), max, min),
+    Enum(succ, pred, toEnum, fromEnum, enumFrom, enumFromThen,
+         enumFromTo, enumFromThenTo),
+    Bounded(minBound, maxBound),
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Numbers</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- *** Numeric types</span></span><span class="mpre">
+    Int, Integer, Float, Double,
+    Rational,
+
+    </span><span class="hl_comment"><span class="mpre">-- *** Numeric type classes</span></span><span class="mpre">
+    Num((+), (-), (*), negate, abs, signum, fromInteger),
+    Real(toRational),
+    Integral(quot, rem, div, mod, quotRem, divMod, toInteger),
+    Fractional((/), recip, fromRational),
+    Floating(pi, exp, log, sqrt, (**), logBase, sin, cos, tan,
+             asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh),
+    RealFrac(properFraction, truncate, round, ceiling, floor),
+    RealFloat(floatRadix, floatDigits, floatRange, decodeFloat,
+              encodeFloat, exponent, significand, scaleFloat, isNaN,
+              isInfinite, isDenormalized, isIEEE, isNegativeZero, atan2),
+
+    </span><span class="hl_comment"><span class="mpre">-- *** Numeric functions</span></span><span class="mpre">
+    subtract, even, odd, gcd, lcm, (^), (^^),
+    fromIntegral, realToFrac,
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Monads and functors</span></span><span class="mpre">
+    Monad((&gt;&gt;=), (&gt;&gt;), return, fail),
+    Functor(fmap),
+    mapM, mapM_, sequence, sequence_, (=&lt;&lt;),
+
+    </span><span class="hl_comment"><span class="mpre">-- ** Miscellaneous functions</span></span><span class="mpre">
+    id, const, (.), flip, ($), until,
+    asTypeOf, error, undefined,
+    seq, ($!),
+
+    </span><span class="hl_comment"><span class="mpre">-- * List operations</span></span><span class="mpre">
+    map, (++), filter,
+    head, last, tail, init, null, length, (!!),
+    reverse,
+    </span><span class="hl_comment"><span class="mpre">-- ** Reducing lists (folds)</span></span><span class="mpre">
+    foldl, foldl1, foldr, foldr1,
+    </span><span class="hl_comment"><span class="mpre">-- *** Special folds</span></span><span class="mpre">
+    and, or, any, all,
+    sum, product,
+    concat, concatMap,
+    maximum, minimum,
+    </span><span class="hl_comment"><span class="mpre">-- ** Building lists</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- *** Scans</span></span><span class="mpre">
+    scanl, scanl1, scanr, scanr1,
+    </span><span class="hl_comment"><span class="mpre">-- *** Infinite lists</span></span><span class="mpre">
+    iterate, repeat, replicate, cycle,
+    </span><span class="hl_comment"><span class="mpre">-- ** Sublists</span></span><span class="mpre">
+    take, drop, splitAt, takeWhile, dropWhile, span, break,
+    </span><span class="hl_comment"><span class="mpre">-- ** Searching lists</span></span><span class="mpre">
+    elem, notElem, lookup,
+    </span><span class="hl_comment"><span class="mpre">-- ** Zipping and unzipping lists</span></span><span class="mpre">
+    zip, zip3, zipWith, zipWith3, unzip, unzip3,
+    </span><span class="hl_comment"><span class="mpre">-- ** Functions on strings</span></span><span class="mpre">
+    lines, words, unlines, unwords,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Converting to and from @String@</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- ** Converting to @String@</span></span><span class="mpre">
+    ShowS,
+    Show(showsPrec, showList, show),
+    shows,
+    showChar, showString, showParen,
+    </span><span class="hl_comment"><span class="mpre">-- ** Converting from @String@</span></span><span class="mpre">
+    ReadS,
+    Read(readsPrec, readList),
+    reads, readParen, read, lex,
+
+    </span><span class="hl_comment"><span class="mpre">-- * Basic Input and output</span></span><span class="mpre">
+    IO,
+    </span><span class="hl_comment"><span class="mpre">-- ** Simple I\/O operations</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- All I/O functions defined here are character oriented.  The</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- treatment of the newline character will vary on different systems.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- For example, two characters of input, return and linefeed, may</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- read as a single newline character.  These functions cannot be</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- used portably for binary I/O.</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- *** Output functions</span></span><span class="mpre">
+    putChar,
+    putStr, putStrLn, print,
+    </span><span class="hl_comment"><span class="mpre">-- *** Input functions</span></span><span class="mpre">
+    getChar,
+    getLine, getContents, interact,
+    </span><span class="hl_comment"><span class="mpre">-- *** Files</span></span><span class="mpre">
+    FilePath,
+    readFile, writeFile, appendFile, readIO, readLn,
+    </span><span class="hl_comment"><span class="mpre">-- ** Exception handling in the I\/O monad</span></span><span class="mpre">
+    IOError, ioError, userError,
+
+  ) where
+
+import Control.Monad
+import System.IO
+import System.IO.Error
+import Data.List
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Prelude.hs&quot;, srcSpanStartLine = 141, srcSpanStartColumn = 8, srcSpanEndLine = 141, srcSpanEndColumn = 19}, srcInfoPoints = []}) &quot;Data.Either&quot;"><span class="mpre">Data.Either</span></span><span class="mpre">
+import Data.Maybe
+import Data.Tuple
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Prelude.hs&quot;, srcSpanStartLine = 145, srcSpanStartColumn = 8, srcSpanEndLine = 145, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+import Text.Read
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Prelude.hs&quot;, srcSpanStartLine = 147, srcSpanStartColumn = 8, srcSpanEndLine = 147, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Enum&quot;"><span class="mpre">GHC.Enum</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Prelude.hs&quot;, srcSpanStartLine = 148, srcSpanStartColumn = 8, srcSpanEndLine = 148, srcSpanEndColumn = 15}, srcInfoPoints = []}) &quot;GHC.Num&quot;"><span class="mpre">GHC.Num</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Prelude.hs&quot;, srcSpanStartLine = 149, srcSpanStartColumn = 8, srcSpanEndLine = 149, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Real&quot;"><span class="mpre">GHC.Real</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Prelude.hs&quot;, srcSpanStartLine = 150, srcSpanStartColumn = 8, srcSpanEndLine = 150, srcSpanEndColumn = 17}, srcInfoPoints = []}) &quot;GHC.Float&quot;"><span class="mpre">GHC.Float</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Prelude.hs&quot;, srcSpanStartLine = 151, srcSpanStartColumn = 8, srcSpanEndLine = 151, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Show&quot;"><span class="mpre">GHC.Show</span></span><span class="mpre">
+
+</span><span class="warning" data-warning="DeclInfixDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Prelude.hs&quot;, srcSpanStartLine = 153, srcSpanStartColumn = 1, srcSpanEndLine = 153, srcSpanEndColumn = 12}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Prelude.hs&quot;, srcSpanStartLine = 153, srcSpanStartColumn = 8, srcSpanEndLine = 153, srcSpanEndColumn = 9}]}) (AssocRight (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Prelude.hs&quot;, srcSpa"><span class="mpre">infixr 0 $!</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- -----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Miscellaneous functions</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Strict (call-by-value) application, defined in terms of &#39;seq&#39;.</span></span><span class="mpre">
+</span><a href="#loc_160_3_160_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_3_160_5&#39;)"><span class="mpre">($!)</span></a><span class="mpre">    :: (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">) -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_160_1_160_2" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_1_160_2&#39;)"><span class="hl_vardecl"><span class="mpre">f</span></span></a><span class="mpre"> </span><a name="loc_160_3_160_5" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_3_160_5&#39;)"><span class="hl_fundecl"><span class="mpre">$!</span></span></a><span class="mpre"> </span><a name="loc_160_6_160_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_6_160_7&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">  = let !</span><a name="loc_160_16_160_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_16_160_18&#39;)"><span class="hl_vardecl"><span class="mpre">vx</span></span></a><span class="mpre"> = </span><a href="#loc_160_6_160_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_6_160_7&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> in </span><a href="#loc_160_1_160_2" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_1_160_2&#39;)"><span class="hl_varref"><span class="mpre">f</span></span></a><span class="mpre"> </span><a href="#loc_160_16_160_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_160_16_160_18&#39;)"><span class="hl_varref"><span class="mpre">vx</span></span></a><span class="mpre">  </span><span class="hl_comment"><span class="mpre">-- see #2273</span></span><span class="mpre">
+
+#ifdef __HADDOCK__
+</span><span class="hl_comment"><span class="mpre">-- | The value of @&#39;seq&#39; a b@ is bottom if @a@ is bottom, and otherwise</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- equal to @b@.  &#39;seq&#39; is usually introduced to improve performance by</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- avoiding unneeded laziness.</span></span><span class="mpre">
+</span><a href="#loc_167_1_167_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_1_167_4&#39;)"><span class="mpre">seq</span></a><span class="mpre"> :: </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_167_1_167_4" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_1_167_4&#39;)"><span class="hl_fundecl"><span class="mpre">seq</span></span></a><span class="mpre"> _ </span><a name="loc_167_7_167_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_7_167_8&#39;)"><span class="hl_vardecl"><span class="mpre">y</span></span></a><span class="mpre"> = </span><a href="#loc_167_7_167_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_7_167_8&#39;)"><span class="hl_varref"><span class="mpre">y</span></span></a><span class="mpre">
+#endif
+</span></div></body></html>

@@ -1,0 +1,278 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Unsafe #-}
+{-# LANGUAGE MagicHash, UnboxedTuples #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Debug.Trace</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Functions for tracing and monitoring execution.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- These can be useful for investigating bugs or performance problems.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- They should /not/ be used in production code.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Debug.Trace (
+        </span><span class="hl_comment"><span class="mpre">-- * Tracing</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- $tracing</span></span><span class="mpre">
+        trace,
+        traceId,
+        traceShow,
+        traceShowId,
+        traceStack,
+        traceIO,
+        traceM,
+        traceShowM,
+        putTraceMsg,
+
+        </span><span class="hl_comment"><span class="mpre">-- * Eventlog tracing</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- $eventlog_tracing</span></span><span class="mpre">
+        traceEvent,
+        traceEventIO,
+        
+        </span><span class="hl_comment"><span class="mpre">-- * Execution phase markers</span></span><span class="mpre">
+        </span><span class="hl_comment"><span class="mpre">-- $markers</span></span><span class="mpre">
+        traceMarker,
+        traceMarkerIO,
+  ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 45, srcSpanStartColumn = 8, srcSpanEndLine = 45, srcSpanEndColumn = 15}, srcInfoPoints = []}) &quot;Prelude&quot;"><span class="mpre">Prelude</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 46, srcSpanStartColumn = 8, srcSpanEndLine = 46, srcSpanEndColumn = 24}, srcInfoPoints = []}) &quot;System.IO.Unsafe&quot;"><span class="mpre">System.IO.Unsafe</span></span><span class="mpre">
+import Control.Monad
+
+import Foreign.C.String
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 50, srcSpanStartColumn = 8, srcSpanEndLine = 50, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre">
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 51, srcSpanStartColumn = 18, srcSpanEndLine = 51, srcSpanEndColumn = 29}, srcInfoPoints = []}) &quot;GHC.Foreign&quot;"><span class="mpre">GHC.Foreign</span></span><span class="mpre">
+import GHC.IO.Encoding
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 53, srcSpanStartColumn = 8, srcSpanEndLine = 53, srcSpanEndColumn = 15}, srcInfoPoints = []}) &quot;GHC.Ptr&quot;"><span class="mpre">GHC.Ptr</span></span><span class="mpre">
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 54, srcSpanStartColumn = 8, srcSpanEndLine = 54, srcSpanEndColumn = 17}, srcInfoPoints = []}) &quot;GHC.Stack&quot;"><span class="mpre">GHC.Stack</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- $tracing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- The &#39;trace&#39;, &#39;traceShow&#39; and &#39;traceIO&#39; functions print messages to an output</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- stream. They are intended for \&quot;printf debugging\&quot;, that is: tracing the flow</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- of execution and printing interesting values.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- The usual output stream is &#39;System.IO.stderr&#39;. For Windows GUI applications</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- (that have no stderr) the output is directed to the Windows debug console.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Some implementations of these functions may decorate the string that\&#39;s</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- output to indicate that you\&#39;re tracing.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;traceIO&#39; function outputs the trace message from the IO monad.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This sequences the output with respect to other IO actions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.5.0.0/</span></span><span class="mpre">
+</span><a href="#loc_72_1_72_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_8&#39;)"><span class="mpre">traceIO</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_72_1_72_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_8&#39;)"><span class="hl_fundecl"><span class="mpre">traceIO</span></span></a><span class="mpre"> </span><a name="loc_72_9_72_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_9_72_12&#39;)"><span class="hl_vardecl"><span class="mpre">msg</span></span></a><span class="mpre"> = do
+    </span><span class="hl_varref"><span class="mpre">withCString</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;%s\n&quot;</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_73_27_73_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_27_73_31&#39;)"><span class="hl_vardecl"><span class="mpre">cfmt</span></span></a><span class="mpre"> -&gt;
+     </span><span class="hl_varref"><span class="mpre">withCString</span></span><span class="mpre"> </span><a href="#loc_72_9_72_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_9_72_12&#39;)"><span class="hl_varref"><span class="mpre">msg</span></span></a><span class="mpre">  </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_74_26_74_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_26_74_30&#39;)"><span class="hl_vardecl"><span class="mpre">cmsg</span></span></a><span class="mpre"> -&gt;
+      </span><span class="hl_varref"><span class="mpre">debugBelch</span></span><span class="mpre"> </span><a href="#loc_73_27_73_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_73_27_73_31&#39;)"><span class="hl_varref"><span class="mpre">cfmt</span></span></a><span class="mpre"> </span><a href="#loc_74_26_74_30" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_74_26_74_30&#39;)"><span class="hl_varref"><span class="mpre">cmsg</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- don&#39;t use debugBelch() directly, because we cannot call varargs functions</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- using the FFI.</span></span><span class="mpre">
+</span><span class="warning" data-warning="DeclForImp (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 79, srcSpanStartColumn = 1, srcSpanEndLine = 80, srcSpanEndColumn = 45}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 79, srcSpanStartColumn = 1, srcSpanEndLine = 79, srcSpanEndColumn = 8},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 79, srcSpanStartColumn = "><span class="mpre">foreign import ccall unsafe &quot;HsBase.h debugBelch2&quot;
+   debugBelch :: CString -&gt; CString -&gt; IO ()</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><a href="#loc_84_1_84_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_12&#39;)"><span class="mpre">putTraceMsg</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_84_1_84_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_84_1_84_12&#39;)"><span class="hl_vardecl"><span class="mpre">putTraceMsg</span></span></a><span class="mpre"> = </span><a href="#loc_72_1_72_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_8&#39;)"><span class="hl_varref"><span class="mpre">traceIO</span></span></a><span class="mpre">
+</span><span class="warning" data-warning="DeclDeprPragmaDecl (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 85, srcSpanStartColumn = 1, srcSpanEndLine = 85, srcSpanEndColumn = 59}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 85, srcSpanStartColumn = 1, srcSpanEndLine = 85, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 85, srcSpanStart"><span class="mpre">{-# DEPRECATED putTraceMsg &quot;Use &#39;Debug.Trace.traceIO&#39;&quot; #-}</span></span><span class="mpre"> </span><span class="hl_comment"><span class="mpre">-- deprecated in 7.4</span></span><span class="mpre">
+
+
+</span><span class="hl_pragma"><span class="mpre">{-# NOINLINE </span><a href="#loc_103_1_103_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_6&#39;)"><span class="mpre">trace</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">{-|
+The &#39;trace&#39; function outputs the trace message given as its first argument,
+before returning the second argument as its result.
+
+For example, this returns the value of @f x@ but first outputs the message.
+
+&gt; trace (&quot;calling f with x = &quot; ++ show x) (f x)
+
+The &#39;trace&#39; function should /only/ be used for debugging, or for monitoring
+execution. The function is not referentially transparent: its type indicates
+that it is a pure function but it has the side effect of outputting the
+trace message.
+-}</span></span><span class="mpre">
+</span><a href="#loc_103_1_103_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_6&#39;)"><span class="mpre">trace</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_103_1_103_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_6&#39;)"><span class="hl_fundecl"><span class="mpre">trace</span></span></a><span class="mpre"> </span><a name="loc_103_7_103_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_7_103_13&#39;)"><span class="hl_vardecl"><span class="mpre">string</span></span></a><span class="mpre"> </span><a name="loc_103_14_103_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_14_103_18&#39;)"><span class="hl_vardecl"><span class="mpre">expr</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">unsafePerformIO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+    </span><a href="#loc_72_1_72_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_8&#39;)"><span class="hl_varref"><span class="mpre">traceIO</span></span></a><span class="mpre"> </span><a href="#loc_103_7_103_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_7_103_13&#39;)"><span class="hl_varref"><span class="mpre">string</span></span></a><span class="mpre">
+    </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_103_14_103_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_14_103_18&#39;)"><span class="hl_varref"><span class="mpre">expr</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-|
+Like &#39;trace&#39; but returns the message instead of a third value.
+
+/Since: 4.7.0.0/
+-}</span></span><span class="mpre">
+</span><a href="#loc_113_1_113_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_1_113_8&#39;)"><span class="mpre">traceId</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre">
+</span><a name="loc_113_1_113_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_1_113_8&#39;)"><span class="hl_fundecl"><span class="mpre">traceId</span></span></a><span class="mpre"> </span><a name="loc_113_9_113_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_9_113_10&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> = </span><a href="#loc_103_1_103_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_6&#39;)"><span class="hl_varref"><span class="mpre">trace</span></span></a><span class="mpre"> </span><a href="#loc_113_9_113_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_9_113_10&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre"> </span><a href="#loc_113_9_113_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_9_113_10&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-|
+Like &#39;trace&#39;, but uses &#39;show&#39; on the argument to convert it to a &#39;String&#39;.
+
+This makes it convenient for printing the values of interesting variables or
+expressions inside a function. For example here we print the value of the
+variables @x@ and @z@:
+
+&gt; f x y =
+&gt;     traceShow (x, z) $ result
+&gt;   where
+&gt;     z = ...
+&gt;     ...
+-}</span></span><span class="mpre">
+</span><a href="#loc_129_1_129_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_129_1_129_10&#39;)"><span class="mpre">traceShow</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 128, srcSpanStartColumn = 14, srcSpanEndLine = 128, srcSpanEndColumn = 25}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 128, srcSpanStartColumn = 14, srcSpanEndLine = 128, srcSpanEndColumn = 15},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 128, srcSpanStart"><span class="mpre">(Show a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">b</span></span><span class="mpre">
+</span><a name="loc_129_1_129_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_129_1_129_10&#39;)"><span class="hl_vardecl"><span class="mpre">traceShow</span></span></a><span class="mpre"> = </span><a href="#loc_103_1_103_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_6&#39;)"><span class="hl_varref"><span class="mpre">trace</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-|
+Like &#39;traceShow&#39; but returns the shown value instead of a third value.
+
+/Since: 4.7.0.0/
+-}</span></span><span class="mpre">
+</span><a href="#loc_137_1_137_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_1_137_12&#39;)"><span class="mpre">traceShowId</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 136, srcSpanStartColumn = 16, srcSpanEndLine = 136, srcSpanEndColumn = 27}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 136, srcSpanStartColumn = 16, srcSpanEndLine = 136, srcSpanEndColumn = 17},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 136, srcSpanStart"><span class="mpre">(Show a) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_137_1_137_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_1_137_12&#39;)"><span class="hl_fundecl"><span class="mpre">traceShowId</span></span></a><span class="mpre"> </span><a name="loc_137_13_137_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_13_137_14&#39;)"><span class="hl_vardecl"><span class="mpre">a</span></span></a><span class="mpre"> = </span><a href="#loc_103_1_103_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_6&#39;)"><span class="hl_varref"><span class="mpre">trace</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre"> </span><a href="#loc_137_13_137_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_13_137_14&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">) </span><a href="#loc_137_13_137_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_137_13_137_14&#39;)"><span class="hl_varref"><span class="mpre">a</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-|
+Like &#39;trace&#39; but returning unit in an arbitrary monad. Allows for convenient
+use in do-notation. Note that the application of &#39;trace&#39; is not an action in the
+monad, as &#39;traceIO&#39; is in the &#39;IO&#39; monad.
+
+&gt; ... = do
+&gt;   x &lt;- ...
+&gt;   traceM $ &quot;x: &quot; ++ show x
+&gt;   y &lt;- ...
+&gt;   traceM $ &quot;y: &quot; ++ show y
+
+/Since: 4.7.0.0/
+-}</span></span><span class="mpre">
+</span><a href="#loc_153_1_153_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_1_153_7&#39;)"><span class="mpre">traceM</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxParen (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 152, srcSpanStartColumn = 11, srcSpanEndLine = 152, srcSpanEndColumn = 23}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 152, srcSpanStartColumn = 11, srcSpanEndLine = 152, srcSpanEndColumn = 12},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 152, srcSpanStart"><span class="mpre">(Monad m) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_153_1_153_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_1_153_7&#39;)"><span class="hl_fundecl"><span class="mpre">traceM</span></span></a><span class="mpre"> </span><a name="loc_153_8_153_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_8_153_14&#39;)"><span class="hl_vardecl"><span class="mpre">string</span></span></a><span class="mpre"> = </span><a href="#loc_103_1_103_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_103_1_103_6&#39;)"><span class="hl_varref"><span class="mpre">trace</span></span></a><span class="mpre"> </span><a href="#loc_153_8_153_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_8_153_14&#39;)"><span class="hl_varref"><span class="mpre">string</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{-|
+Like &#39;traceM&#39;, but uses &#39;show&#39; on the argument to convert it to a &#39;String&#39;.
+
+&gt; ... = do
+&gt;   x &lt;- ...
+&gt;   traceMShow $ x
+&gt;   y &lt;- ...
+&gt;   traceMShow $ x + y
+
+/Since: 4.7.0.0/
+-}</span></span><span class="mpre">
+</span><a href="#loc_167_1_167_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_1_167_11&#39;)"><span class="mpre">traceShowM</span></a><span class="mpre"> :: </span><span class="warning" data-warning="ContextCxTuple (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 166, srcSpanStartColumn = 15, srcSpanEndLine = 166, srcSpanEndColumn = 35}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 166, srcSpanStartColumn = 15, srcSpanEndLine = 166, srcSpanEndColumn = 16},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Debug/Trace.hs&quot;, srcSpanStartLine = 166, srcSpanStart"><span class="mpre">(Show a, Monad m) =&gt;</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">m</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_167_1_167_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_167_1_167_11&#39;)"><span class="hl_vardecl"><span class="mpre">traceShowM</span></span></a><span class="mpre"> = </span><a href="#loc_153_1_153_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_153_1_153_7&#39;)"><span class="hl_varref"><span class="mpre">traceM</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">.</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">show</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | like &#39;trace&#39;, but additionally prints a call stack if one is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- available.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- In the current GHC implementation, the call stack is only</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- availble if the program was compiled with @-prof@; otherwise</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;traceStack&#39; behaves exactly like &#39;trace&#39;.  Entries in the call</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- stack correspond to @SCC@ annotations, so it is a good idea to use</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- @-fprof-auto@ or @-fprof-auto-calls@ to add SCC annotations automatically.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.5.0.0/</span></span><span class="mpre">
+</span><a href="#loc_180_1_180_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_1_180_11&#39;)"><span class="mpre">traceStack</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_180_1_180_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_1_180_11&#39;)"><span class="hl_fundecl"><span class="mpre">traceStack</span></span></a><span class="mpre"> </span><a name="loc_180_12_180_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_12_180_15&#39;)"><span class="hl_vardecl"><span class="mpre">str</span></span></a><span class="mpre"> </span><a name="loc_180_16_180_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_16_180_20&#39;)"><span class="hl_vardecl"><span class="mpre">expr</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">unsafePerformIO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+   </span><a href="#loc_72_1_72_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_8&#39;)"><span class="hl_varref"><span class="mpre">traceIO</span></span></a><span class="mpre"> </span><a href="#loc_180_12_180_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_12_180_15&#39;)"><span class="hl_varref"><span class="mpre">str</span></span></a><span class="mpre">
+   </span><a name="loc_182_4_182_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_182_4_182_9&#39;)"><span class="hl_vardecl"><span class="mpre">stack</span></span></a><span class="mpre"> &lt;- </span><span class="hl_varref"><span class="mpre">currentCallStack</span></span><span class="mpre">
+   </span><a href="Control.Monad.html#loc_265_1_265_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_265_1_265_5&#39;)"><span class="hl_varref"><span class="mpre">when</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">not</span></span><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">null</span></span><span class="mpre"> </span><a href="#loc_182_4_182_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_182_4_182_9&#39;)"><span class="hl_varref"><span class="mpre">stack</span></span></a><span class="mpre">)) </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_72_1_72_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_72_1_72_8&#39;)"><span class="hl_varref"><span class="mpre">traceIO</span></span></a><span class="mpre"> (</span><span class="hl_varref"><span class="mpre">renderStack</span></span><span class="mpre"> </span><a href="#loc_182_4_182_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_182_4_182_9&#39;)"><span class="hl_varref"><span class="mpre">stack</span></span></a><span class="mpre">)
+   </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_180_16_180_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_180_16_180_20&#39;)"><span class="hl_varref"><span class="mpre">expr</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- $eventlog_tracing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Eventlog tracing is a performance profiling system. These functions emit</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- extra events into the eventlog. In combination with eventlog profiling</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- tools these functions can be used for monitoring execution and</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- investigating performance problems.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Currently only GHC provides eventlog profiling, see the GHC user guide for</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- details on how to use it. These function exists for other Haskell</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- implementations but no events are emitted. Note that the string message is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- always evaluated, whether or not profiling is available or enabled.</span></span><span class="mpre">
+
+</span><span class="hl_pragma"><span class="mpre">{-# NOINLINE </span><a href="#loc_213_1_213_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_213_1_213_11&#39;)"><span class="mpre">traceEvent</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;traceEvent&#39; function behaves like &#39;trace&#39; with the difference that</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the message is emitted to the eventlog, if eventlog profiling is available</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- and enabled at runtime.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- It is suitable for use in pure code. In an IO context use &#39;traceEventIO&#39;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- instead.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that when using GHC&#39;s SMP runtime, it is possible (but rare) to get</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- duplicate events emitted if two CPUs simultaneously evaluate the same thunk</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that uses &#39;traceEvent&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.5.0.0/</span></span><span class="mpre">
+</span><a href="#loc_213_1_213_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_213_1_213_11&#39;)"><span class="mpre">traceEvent</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_213_1_213_11" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_213_1_213_11&#39;)"><span class="hl_fundecl"><span class="mpre">traceEvent</span></span></a><span class="mpre"> </span><a name="loc_213_12_213_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_213_12_213_15&#39;)"><span class="hl_vardecl"><span class="mpre">msg</span></span></a><span class="mpre"> </span><a name="loc_213_16_213_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_213_16_213_20&#39;)"><span class="hl_vardecl"><span class="mpre">expr</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">unsafeDupablePerformIO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+    </span><a href="#loc_225_1_225_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_225_1_225_13&#39;)"><span class="hl_varref"><span class="mpre">traceEventIO</span></span></a><span class="mpre"> </span><a href="#loc_213_12_213_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_213_12_213_15&#39;)"><span class="hl_varref"><span class="mpre">msg</span></span></a><span class="mpre">
+    </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_213_16_213_20" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_213_16_213_20&#39;)"><span class="hl_varref"><span class="mpre">expr</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;traceEventIO&#39; function emits a message to the eventlog, if eventlog</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- profiling is available and enabled at runtime.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Compared to &#39;traceEvent&#39;, &#39;traceEventIO&#39; sequences the event with respect to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- other IO actions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.5.0.0/</span></span><span class="mpre">
+</span><a href="#loc_225_1_225_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_225_1_225_13&#39;)"><span class="mpre">traceEventIO</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_225_1_225_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_225_1_225_13&#39;)"><span class="hl_fundecl"><span class="mpre">traceEventIO</span></span></a><span class="mpre"> </span><a name="loc_225_14_225_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_225_14_225_17&#39;)"><span class="hl_vardecl"><span class="mpre">msg</span></span></a><span class="mpre"> =
+  </span><span class="hl_varref"><span class="mpre">GHC.Foreign.withCString</span></span><span class="mpre"> </span><a href="GHC.IO.Encoding.html#loc_66_1_66_5" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Encoding.html#loc_66_1_66_5&#39;)"><span class="hl_varref"><span class="mpre">utf8</span></span></a><span class="mpre"> </span><a href="#loc_225_14_225_17" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_225_14_225_17&#39;)"><span class="hl_varref"><span class="mpre">msg</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \(</span><span class="hl_conref"><span class="mpre">Ptr</span></span><span class="mpre"> </span><a name="loc_226_44_226_45" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_226_44_226_45&#39;)"><span class="hl_vardecl"><span class="mpre">p</span></span></a><span class="mpre">) -&gt; </span><span class="hl_conref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_226_56_226_57" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_226_56_226_57&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt;
+    case </span><span class="hl_varref"><span class="mpre">traceEvent#</span></span><span class="mpre"> </span><a href="#loc_226_44_226_45" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_226_44_226_45&#39;)"><span class="hl_varref"><span class="mpre">p</span></span></a><span class="mpre"> </span><a href="#loc_226_56_226_57" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_226_56_226_57&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> of </span><a name="loc_227_29_227_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_227_29_227_31&#39;)"><span class="hl_vardecl"><span class="mpre">s&#39;</span></span></a><span class="mpre"> -&gt; (# </span><a href="#loc_227_29_227_31" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_227_29_227_31&#39;)"><span class="hl_varref"><span class="mpre">s&#39;</span></span></a><span class="mpre">, </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre"> #)
+
+</span><span class="hl_comment"><span class="mpre">-- $markers</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- When looking at a profile for the execution of a program we often want to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- be able to mark certain points or phases in the execution and see that</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- visually in the profile.</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- For example, a program might have several distinct phases with different</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- performance or resource behaviour in each phase. To properly interpret the</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- profile graph we really want to see when each phase starts and ends.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Markers let us do this: we can annotate the program to emit a marker at</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- an appropriate point during execution and then see that in a profile.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Currently this feature is only supported in GHC by the eventlog tracing</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- system, but in future it may also be supported by the heap profiling or</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- other profiling tools. These function exists for other Haskell</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- implementations but they have no effect. Note that the string message is</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- always evaluated, whether or not profiling is available or enabled.</span></span><span class="mpre">
+
+</span><span class="hl_pragma"><span class="mpre">{-# NOINLINE </span><a href="#loc_263_1_263_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_263_1_263_12&#39;)"><span class="mpre">traceMarker</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;traceMarker&#39; function emits a marker to the eventlog, if eventlog</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- profiling is available and enabled at runtime. The @String@ is the name of</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the marker. The name is just used in the profiling tools to help you keep</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- clear which marker is which.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- This function is suitable for use in pure code. In an IO context use</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;traceMarkerIO&#39; instead.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Note that when using GHC&#39;s SMP runtime, it is possible (but rare) to get</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- duplicate events emitted if two CPUs simultaneously evaluate the same thunk</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- that uses &#39;traceMarker&#39;.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.7.0.0/</span></span><span class="mpre">
+</span><a href="#loc_263_1_263_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_263_1_263_12&#39;)"><span class="mpre">traceMarker</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_263_1_263_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_263_1_263_12&#39;)"><span class="hl_fundecl"><span class="mpre">traceMarker</span></span></a><span class="mpre"> </span><a name="loc_263_13_263_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_263_13_263_16&#39;)"><span class="hl_vardecl"><span class="mpre">msg</span></span></a><span class="mpre"> </span><a name="loc_263_17_263_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_263_17_263_21&#39;)"><span class="hl_vardecl"><span class="mpre">expr</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">unsafeDupablePerformIO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> do
+    </span><a href="#loc_275_1_275_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_275_1_275_14&#39;)"><span class="hl_varref"><span class="mpre">traceMarkerIO</span></span></a><span class="mpre"> </span><a href="#loc_263_13_263_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_263_13_263_16&#39;)"><span class="hl_varref"><span class="mpre">msg</span></span></a><span class="mpre">
+    </span><span class="hl_varref"><span class="mpre">return</span></span><span class="mpre"> </span><a href="#loc_263_17_263_21" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_263_17_263_21&#39;)"><span class="hl_varref"><span class="mpre">expr</span></span></a><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | The &#39;traceMarkerIO&#39; function emits a marker to the eventlog, if eventlog</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- profiling is available and enabled at runtime.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Compared to &#39;traceMarker&#39;, &#39;traceMarkerIO&#39; sequences the event with respect to</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- other IO actions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- /Since: 4.7.0.0/</span></span><span class="mpre">
+</span><a href="#loc_275_1_275_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_275_1_275_14&#39;)"><span class="mpre">traceMarkerIO</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">()</span></span><span class="mpre">
+</span><a name="loc_275_1_275_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_275_1_275_14&#39;)"><span class="hl_fundecl"><span class="mpre">traceMarkerIO</span></span></a><span class="mpre"> </span><a name="loc_275_15_275_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_275_15_275_18&#39;)"><span class="hl_vardecl"><span class="mpre">msg</span></span></a><span class="mpre"> =
+  </span><span class="hl_varref"><span class="mpre">GHC.Foreign.withCString</span></span><span class="mpre"> </span><a href="GHC.IO.Encoding.html#loc_66_1_66_5" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.Encoding.html#loc_66_1_66_5&#39;)"><span class="hl_varref"><span class="mpre">utf8</span></span></a><span class="mpre"> </span><a href="#loc_275_15_275_18" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_275_15_275_18&#39;)"><span class="hl_varref"><span class="mpre">msg</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \(</span><span class="hl_conref"><span class="mpre">Ptr</span></span><span class="mpre"> </span><a name="loc_276_44_276_45" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_276_44_276_45&#39;)"><span class="hl_vardecl"><span class="mpre">p</span></span></a><span class="mpre">) -&gt; </span><span class="hl_conref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> \</span><a name="loc_276_56_276_57" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_276_56_276_57&#39;)"><span class="hl_vardecl"><span class="mpre">s</span></span></a><span class="mpre"> -&gt;
+    case </span><span class="hl_varref"><span class="mpre">traceMarker#</span></span><span class="mpre"> </span><a href="#loc_276_44_276_45" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_276_44_276_45&#39;)"><span class="hl_varref"><span class="mpre">p</span></span></a><span class="mpre"> </span><a href="#loc_276_56_276_57" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_276_56_276_57&#39;)"><span class="hl_varref"><span class="mpre">s</span></span></a><span class="mpre"> of </span><a name="loc_277_30_277_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_277_30_277_32&#39;)"><span class="hl_vardecl"><span class="mpre">s&#39;</span></span></a><span class="mpre"> -&gt; (# </span><a href="#loc_277_30_277_32" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_277_30_277_32&#39;)"><span class="hl_varref"><span class="mpre">s&#39;</span></span></a><span class="mpre">, </span><span class="hl_conref"><span class="mpre">()</span></span><span class="mpre"> #)
+</span></div></body></html>

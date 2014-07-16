@@ -1,0 +1,19 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE BangPatterns, Rank2Types, OverloadedStrings,
+    RecordWildCards, MagicHash, UnboxedTuples #-}
+
+module Data.Attoparsec.Internal.Fhthagn
+    (
+      inlinePerformIO
+    ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/attoparsec-0.12.1.0/Data/Attoparsec/Internal/Fhthagn.hs&quot;, srcSpanStartLine = 9, srcSpanStartColumn = 8, srcSpanEndLine = 9, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Base&quot;"><span class="mpre">GHC.Base</span></span><span class="mpre"> (realWorld#)
+import GHC.IO (IO(IO))
+
+</span><span class="hl_comment"><span class="mpre">-- | Just like unsafePerformIO, but we inline it. Big performance gains as</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- it exposes lots of things to further inlining. /Very unsafe/. In</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- particular, you should do no memory allocation inside an</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- &#39;inlinePerformIO&#39; block. On Hugs this is just @unsafePerformIO@.</span></span><span class="mpre">
+</span><a href="#loc_17_1_17_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_1_17_16&#39;)"><span class="mpre">inlinePerformIO</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_17_1_17_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_1_17_16&#39;)"><span class="hl_fundecl"><span class="mpre">inlinePerformIO</span></span></a><span class="mpre"> (</span><span class="hl_conref"><span class="mpre">IO</span></span><span class="mpre"> </span><a name="loc_17_21_17_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_21_17_22&#39;)"><span class="hl_vardecl"><span class="mpre">m</span></span></a><span class="mpre">) = case </span><a href="#loc_17_21_17_22" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_21_17_22&#39;)"><span class="hl_varref"><span class="mpre">m</span></span></a><span class="mpre"> </span><span class="hl_varref"><span class="mpre">realWorld#</span></span><span class="mpre"> of (# _, </span><a name="loc_17_53_17_54" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_53_17_54&#39;)"><span class="hl_vardecl"><span class="mpre">r</span></span></a><span class="mpre"> #) -&gt; </span><a href="#loc_17_53_17_54" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_53_17_54&#39;)"><span class="hl_varref"><span class="mpre">r</span></span></a><span class="mpre">
+</span><span class="hl_pragma"><span class="mpre">{-# INLINE </span><a href="#loc_17_1_17_16" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_17_1_17_16&#39;)"><span class="mpre">inlinePerformIO</span></a><span class="mpre"> #-}</span></span><span class="mpre">
+</span></div></body></html>

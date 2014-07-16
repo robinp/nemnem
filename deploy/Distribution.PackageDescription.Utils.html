@@ -1,0 +1,24 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Distribution.PackageDescription.Utils</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  cabal-devel@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Common utils used by modules under Distribution.PackageDescription.*.</span></span><span class="mpre">
+
+module Distribution.PackageDescription.Utils (
+  cabalBug, userBug
+  ) where
+
+</span><span class="hl_comment"><span class="mpre">-- ----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Exception and logging utils</span></span><span class="mpre">
+
+</span><a href="#loc_18_1_18_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_1_18_8&#39;)"><span class="mpre">userBug</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_18_1_18_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_1_18_8&#39;)"><span class="hl_fundecl"><span class="mpre">userBug</span></span></a><span class="mpre"> </span><a name="loc_18_9_18_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_9_18_12&#39;)"><span class="hl_vardecl"><span class="mpre">msg</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_18_9_18_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_9_18_12&#39;)"><span class="hl_varref"><span class="mpre">msg</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;. This is a bug in your .cabal file.&quot;</span></span><span class="mpre">
+
+</span><a href="#loc_21_1_21_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_1_21_9&#39;)"><span class="mpre">cabalBug</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">String</span></span><span class="mpre"> -&gt; </span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">
+</span><a name="loc_21_1_21_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_1_21_9&#39;)"><span class="hl_fundecl"><span class="mpre">cabalBug</span></span></a><span class="mpre"> </span><a name="loc_21_10_21_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_10_21_13&#39;)"><span class="hl_vardecl"><span class="mpre">msg</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">error</span></span><span class="mpre"> </span><span class="hl_infix"><span class="mpre">$</span></span><span class="mpre"> </span><a href="#loc_21_10_21_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_21_10_21_13&#39;)"><span class="hl_varref"><span class="mpre">msg</span></span></a><span class="mpre"> </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;. This is possibly a bug in Cabal.\n&quot;</span></span><span class="mpre">
+               </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;Please report it to the developers: &quot;</span></span><span class="mpre">
+               </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_string"><span class="mpre">&quot;https://github.com/haskell/cabal/issues/new&quot;</span></span><span class="mpre">
+</span></div></body></html>

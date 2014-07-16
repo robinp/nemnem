@@ -1,0 +1,35 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE Safe #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Text.Show</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) The University of Glasgow 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file libraries/base/LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- </span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  provisional</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  portable</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Converting values to readable strings:</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- the &#39;Show&#39; class and associated functions.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Text.Show (
+   ShowS,
+   Show(showsPrec, show, showList),
+   shows,
+   showChar,
+   showString,
+   showParen,
+   showListWith,
+ ) where
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/base-4.7.0.0/Text/Show.hs&quot;, srcSpanStartLine = 29, srcSpanStartColumn = 8, srcSpanEndLine = 29, srcSpanEndColumn = 16}, srcInfoPoints = []}) &quot;GHC.Show&quot;"><span class="mpre">GHC.Show</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">-- | Show a list (using square brackets and commas), given a function</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- for showing elements.</span></span><span class="mpre">
+</span><a href="#loc_34_1_34_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_34_1_34_13&#39;)"><span class="mpre">showListWith</span></a><span class="mpre"> :: (</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre"> -&gt; </span><span class="hl_tyconref"><span class="mpre">ShowS</span></span><span class="mpre">) -&gt; [</span><span class="hl_tyvar"><span class="mpre">a</span></span><span class="mpre">] -&gt; </span><span class="hl_tyconref"><span class="mpre">ShowS</span></span><span class="mpre">
+</span><a name="loc_34_1_34_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_34_1_34_13&#39;)"><span class="hl_vardecl"><span class="mpre">showListWith</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">showList__</span></span><span class="mpre">
+</span></div></body></html>

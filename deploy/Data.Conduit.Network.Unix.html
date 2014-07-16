@@ -1,0 +1,46 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+module Data.Conduit.Network.Unix
+    ( </span><span class="hl_comment"><span class="mpre">-- * Basic utilities</span></span><span class="mpre">
+      sourceSocket
+    , sinkSocket
+      </span><span class="hl_comment"><span class="mpre">-- * Simple server/client interface</span></span><span class="mpre">
+    , SN.AppDataUnix
+    , appSource
+    , appSink
+      </span><span class="hl_comment"><span class="mpre">-- ** Server</span></span><span class="mpre">
+    , SN.ServerSettingsUnix
+    , serverSettings
+    , SN.runUnixServer
+      </span><span class="hl_comment"><span class="mpre">-- ** Client</span></span><span class="mpre">
+    , SN.ClientSettingsUnix
+    , clientSettings
+    , SN.runUnixClient
+      </span><span class="hl_comment"><span class="mpre">-- ** Getters</span></span><span class="mpre">
+    , SN.getPath
+    , SN.getAfterBind
+      </span><span class="hl_comment"><span class="mpre">-- ** Setters</span></span><span class="mpre">
+    , SN.setPath
+    , SN.setAfterBind
+    ) where
+
+import Data.Conduit
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/conduit-extra-1.1.1/Data/Conduit/Network/Unix.hs&quot;, srcSpanStartLine = 30, srcSpanStartColumn = 8, srcSpanEndLine = 30, srcSpanEndColumn = 22}, srcInfoPoints = []}) &quot;Network.Socket&quot;"><span class="mpre">Network.Socket</span></span><span class="mpre"> (Socket)
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/conduit-extra-1.1.1/Data/Conduit/Network/Unix.hs&quot;, srcSpanStartLine = 31, srcSpanStartColumn = 18, srcSpanEndLine = 31, srcSpanEndColumn = 32}, srcInfoPoints = []}) &quot;Network.Socket&quot;"><span class="mpre">Network.Socket</span></span><span class="mpre"> as NS
+import Data.Conduit.Network (</span><a href="Data.Conduit.Network.html#loc_85_1_85_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Conduit.Network.html#loc_85_1_85_10&#39;)"><span class="mpre">appSource</span></a><span class="mpre">, </span><a href="Data.Conduit.Network.html#loc_96_1_96_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Conduit.Network.html#loc_96_1_96_8&#39;)"><span class="mpre">appSink</span></a><span class="mpre">, </span><a href="Data.Conduit.Network.html#loc_61_1_61_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Conduit.Network.html#loc_61_1_61_13&#39;)"><span class="mpre">sourceSocket</span></a><span class="mpre">, </span><a href="Data.Conduit.Network.html#loc_76_1_76_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Conduit.Network.html#loc_76_1_76_11&#39;)"><span class="mpre">sinkSocket</span></a><span class="mpre">)
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/conduit-extra-1.1.1/Data/Conduit/Network/Unix.hs&quot;, srcSpanStartLine = 33, srcSpanStartColumn = 18, srcSpanEndLine = 33, srcSpanEndColumn = 40}, srcInfoPoints = []}) &quot;Data.Streaming.Network&quot;"><span class="mpre">Data.Streaming.Network</span></span><span class="mpre"> as SN
+import Control.Monad.IO.Class (</span><a href="Control.Monad.IO.Class.html#loc_30_20_30_27" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.IO.Class.html#loc_30_20_30_27&#39;)"><span class="mpre">MonadIO</span></a><span class="mpre"> (</span><a href="Control.Monad.IO.Class.html#loc_32_5_32_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.IO.Class.html#loc_32_5_32_11&#39;)"><span class="mpre">liftIO</span></a><span class="mpre">))
+import Control.Exception (</span><a href="GHC.IO.html#loc_304_1_304_8" onmouseover="nemnem.highlightLocalToRemote(&#39;GHC.IO.html#loc_304_1_304_8&#39;)"><span class="mpre">throwIO</span></a><span class="mpre">, SomeException, </span><a href="Control.Exception.Base.html#loc_212_1_212_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_212_1_212_4&#39;)"><span class="mpre">try</span></a><span class="mpre">, </span><a href="Control.Exception.Base.html#loc_273_3_273_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_273_3_273_12&#39;)"><span class="mpre">finally</span></a><span class="mpre">, </span><a href="Control.Exception.Base.html#loc_259_1_259_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_259_1_259_8&#39;)"><span class="mpre">bracket</span></a><span class="mpre">,
+                          </span><a href="Control.Exception.Base.html#loc_291_1_291_15" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_291_1_291_15&#39;)"><span class="mpre">bracketOnError</span></a><span class="mpre">, </span><a href="Control.Exception.Base.html#loc_150_1_150_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Exception.Base.html#loc_150_1_150_6&#39;)"><span class="mpre">catch</span></a><span class="mpre">)
+import Control.Monad (</span><a href="Control.Monad.html#loc_189_1_189_8" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_189_1_189_8&#39;)"><span class="mpre">forever</span></a><span class="mpre">, </span><a href="Control.Monad.html#loc_195_1_195_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_195_1_195_5&#39;)"><span class="mpre">void</span></a><span class="mpre">)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/conduit-extra-1.1.1/Data/Conduit/Network/Unix.hs&quot;, srcSpanStartLine = 38, srcSpanStartColumn = 8, srcSpanEndLine = 38, srcSpanEndColumn = 35}, srcInfoPoints = []}) &quot;Control.Monad.Trans.Control&quot;"><span class="mpre">Control.Monad.Trans.Control</span></span><span class="mpre"> (control)
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/conduit-extra-1.1.1/Data/Conduit/Network/Unix.hs&quot;, srcSpanStartLine = 39, srcSpanStartColumn = 8, srcSpanEndLine = 39, srcSpanEndColumn = 26}, srcInfoPoints = []}) &quot;Control.Concurrent&quot;"><span class="mpre">Control.Concurrent</span></span><span class="mpre"> (forkIO)
+import System.Directory (</span><a href="System.Directory.html#loc_400_1_400_11" onmouseover="nemnem.highlightLocalToRemote(&#39;System.Directory.html#loc_400_1_400_11&#39;)"><span class="mpre">removeFile</span></a><span class="mpre">)
+import System.IO.Error (</span><a href="System.IO.Error.html#loc_135_1_135_20" onmouseover="nemnem.highlightLocalToRemote(&#39;System.IO.Error.html#loc_135_1_135_20&#39;)"><span class="mpre">isDoesNotExistError</span></a><span class="mpre">)
+import Control.Monad.Trans.Resource (MonadBaseControl)
+
+</span><a name="loc_44_1_44_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_44_1_44_15&#39;)"><span class="hl_vardecl"><span class="mpre">clientSettings</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">SN.clientSettingsUnix</span></span><span class="mpre">
+</span><a name="loc_45_1_45_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_45_1_45_15&#39;)"><span class="hl_vardecl"><span class="mpre">serverSettings</span></span></a><span class="mpre"> = </span><span class="hl_varref"><span class="mpre">SN.serverSettingsUnix</span></span><span class="mpre">
+</span></div></body></html>

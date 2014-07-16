@@ -1,0 +1,51 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- |</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Module      :  Control.Monad.Writer.Lazy</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Copyright   :  (c) Andy Gill 2001,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--                (c) Oregon Graduate Institute of Science and Technology, 2001</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- License     :  BSD-style (see the file LICENSE)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Maintainer  :  libraries@haskell.org</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Stability   :  experimental</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Portability :  non-portable (multi-param classes, functional dependencies)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- Lazy writer monads.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      Inspired by the paper</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--      /Functional Programming with Overloading and Higher-Order Polymorphism/,</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--        Mark P Jones (&lt;http://web.cecs.pdx.edu/~mpj/pubs/springschool.html&gt;)</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">--          Advanced School of Functional Programming, 1995.</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-----------------------------------------------------------------------------</span></span><span class="mpre">
+
+module Control.Monad.Writer.Lazy (
+    </span><span class="hl_comment"><span class="mpre">-- * MonadWriter class</span></span><span class="mpre">
+    MonadWriter(..),
+    listens,
+    censor,
+    </span><span class="hl_comment"><span class="mpre">-- * The Writer monad</span></span><span class="mpre">
+    Writer,
+    runWriter,
+    execWriter,
+    mapWriter,
+    </span><span class="hl_comment"><span class="mpre">-- * The WriterT monad transformer</span></span><span class="mpre">
+    WriterT(WriterT),
+    runWriterT,
+    execWriterT,
+    mapWriterT,
+    module Control.Monad,
+    module Control.Monad.Fix,
+    module Control.Monad.Trans,
+    module Data.Monoid,
+  ) where
+
+import Control.Monad.Writer.Class
+
+import Control.Monad.Trans
+import Control.Monad.Trans.Writer.Lazy (
+        Writer, </span><a href="Control.Monad.Trans.Writer.Lazy.html#loc_73_1_73_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Writer.Lazy.html#loc_73_1_73_10&#39;)"><span class="mpre">runWriter</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.Writer.Lazy.html#loc_79_1_79_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Writer.Lazy.html#loc_79_1_79_11&#39;)"><span class="mpre">execWriter</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.Writer.Lazy.html#loc_86_1_86_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Writer.Lazy.html#loc_86_1_86_10&#39;)"><span class="mpre">mapWriter</span></a><span class="mpre">,
+        </span><a href="Control.Monad.Trans.Writer.Lazy.html#loc_97_9_97_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Writer.Lazy.html#loc_97_9_97_16&#39;)"><span class="mpre">WriterT</span></a><span class="mpre">(WriterT), </span><a href="Control.Monad.Trans.Writer.Lazy.html#loc_97_35_97_45" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Writer.Lazy.html#loc_97_35_97_45&#39;)"><span class="mpre">runWriterT</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.Writer.Lazy.html#loc_120_1_120_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Writer.Lazy.html#loc_120_1_120_12&#39;)"><span class="mpre">execWriterT</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.Writer.Lazy.html#loc_129_1_129_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Writer.Lazy.html#loc_129_1_129_11&#39;)"><span class="mpre">mapWriterT</span></a><span class="mpre">)
+
+import Control.Monad
+import Control.Monad.Fix
+import Data.Monoid
+</span></div></body></html>

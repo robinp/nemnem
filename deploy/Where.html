@@ -1,0 +1,126 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# OPTIONS -fglasgow-exts #-}
+
+module Where (tests) where
+
+</span><span class="hl_comment"><span class="mpre">{-
+
+This example illustrates some differences between certain traversal
+schemes. To this end, we use a simple system of datatypes, and the
+running example shall be to replace &quot;T1a 42&quot; by &quot;T1a 88&quot;. It is our
+intention to illustrate a few dimensions of designing traversals.
+
+1. We can decide on whether we prefer &quot;rewrite steps&quot; (i.e.,
+monomorphic functions on data) that succeed either for all input
+patterns or only if the encounter a term pattern to be replaced. In
+the first case, the catch-all equation of such a function describes
+identity (see &quot;stepid&quot; below). In the second case, the catch-call
+equation describes failure using the Maybe type constructor (see
+&quot;stepfail&quot; below). As an intermediate assessment, the failure approach
+is more general because it allows one to observe if a rewrite step was
+meaningful or not. Often the identity approach is more convenient and
+sufficient.
+
+2. We can now also decide on whether we want monadic or simple
+traversals; recall monadic generic functions GenericM from
+Data.Generics.  The monad can serve for success/failure, state,
+environment and others.  One can now subdivide monadic traversal
+schemes with respect to the question whether they simply support
+monadic style of whether they even interact with the relevant
+monad. The scheme &quot;everywereM&quot; from the library belongs to the first
+category while &quot;somewhere&quot; belongs to the second category as it uses
+the operation &quot;mplus&quot; of a monad with addition. So while &quot;everywhereM&quot;
+makes very well sense without a monad --- as demonstrated by
+&quot;everywhere&quot;, the scheme &quot;somewhere&quot; is immediately monadic.
+
+3. We can now also decide on whether we want rewrite steps to succeed
+for all possible subterms, at least for one subterm, exactly for one
+subterm, and others.  The various traversal schemes make different
+assumptions in this respect.
+
+a) everywhere
+
+   By its type, succeeds and requires non-failing rewrite steps.
+   However, we do not get any feedback on whether terms were actually
+   rewritten. (Say, we might have performed accidentally the identity
+   function on all nodes.)
+
+b) everywhereM
+
+   Attempts to reach all nodes where all the sub-traversals are performed
+   in monadic bind-sequence. Failure of the traversal for a given subterm
+   implies failure of the entire traversal. Hence, the argument of 
+   &quot;everywhereM&quot; should be designed in a way that it tends to succeed
+   except for the purpose of propagating a proper error in the sense of
+   violating a pre-/post-condition. For example, &quot;mkM stepfail&quot; should
+   not be passed to &quot;everywhereM&quot; as it will fail for all but one term 
+   pattern; see &quot;recovered&quot; for a way to massage &quot;stepfail&quot; accordingly.
+
+c) somewhere
+
+   Descends into term in a top-down manner, and stops in a given
+   branch when the argument succeeds for the subterm at hand. To this
+   end, it takes an argument that is perfectly intended to fail for
+   certain term patterns. Thanks to the employment of gmapF, the
+   traversal scheme recovers from failure when mapping over the immediate
+   subterms while insisting success for at least one subterm (say, branch).
+   This scheme is appropriate if you want to make sure that a given
+   rewrite step was actually used in a traversal. So failure of the
+   traversal would mean that the argument failed for all subterms.
+
+Contributed by Ralf Laemmel, ralf@cwi.nl
+
+-}</span></span><span class="mpre">
+
+import </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Where.hs&quot;, srcSpanStartLine = 74, srcSpanStartColumn = 8, srcSpanEndLine = 74, srcSpanEndColumn = 18}, srcInfoPoints = []}) &quot;Test.HUnit&quot;"><span class="mpre">Test.HUnit</span></span><span class="mpre">
+
+import Data.Generics
+import Control.Monad
+
+
+</span><span class="hl_comment"><span class="mpre">-- Two mutually recursive datatypes</span></span><span class="mpre">
+data </span><a name="loc_81_6_81_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_6_81_8&#39;)"><span class="hl_tycondecl"><span class="mpre">T1</span></span></a><span class="mpre"> = </span><a name="loc_81_11_81_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_11_81_14&#39;)"><span class="hl_condecl"><span class="mpre">T1a</span></span></a><span class="mpre"> </span><span class="hl_tyconref"><span class="mpre">Int</span></span><span class="mpre"> | </span><a name="loc_81_21_81_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_21_81_24&#39;)"><span class="hl_condecl"><span class="mpre">T1b</span></span></a><span class="mpre"> </span><a href="#loc_82_6_82_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_82_6_82_8&#39;)"><span class="hl_tyconref"><span class="mpre">T2</span></span></a><span class="mpre">  </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Where.hs&quot;, srcSpanStartLine = 81, srcSpanStartColumn = 29, srcSpanEndLine = 81, srcSpanEndColumn = 54}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Where.hs&quot;, srcSpanStartLine = 81, srcSpanStartColumn = 29, srcSpanEndLine = 81, srcSpanEndColumn = 37},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Where.hs&quot;, srcSpanStartLine = 81, srcSpanStartColumn = 38, "><span class="mpre">deriving (Typeable, Data)</span></span><span class="mpre">
+data </span><a name="loc_82_6_82_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_82_6_82_8&#39;)"><span class="hl_tycondecl"><span class="mpre">T2</span></span></a><span class="mpre"> = </span><a name="loc_82_11_82_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_82_11_82_13&#39;)"><span class="hl_condecl"><span class="mpre">T2</span></span></a><span class="mpre"> </span><a href="#loc_81_6_81_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_6_81_8&#39;)"><span class="hl_tyconref"><span class="mpre">T1</span></span></a><span class="mpre">             </span><span class="warning" data-warning="DataDecl DerivingsDeriving (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Where.hs&quot;, srcSpanStartLine = 82, srcSpanStartColumn = 29, srcSpanEndLine = 82, srcSpanEndColumn = 54}, srcInfoPoints = [SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Where.hs&quot;, srcSpanStartLine = 82, srcSpanStartColumn = 29, srcSpanEndLine = 82, srcSpanEndColumn = 37},SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/syb-0.4.2/tests/Where.hs&quot;, srcSpanStartLine = 82, srcSpanStartColumn = 38, "><span class="mpre">deriving (Typeable, Data)</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- A rewrite step with identity as catch-all case</span></span><span class="mpre">
+</span><a name="loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_fundecl"><span class="mpre">stepid</span></span></a><span class="mpre"> (</span><a href="#loc_81_11_81_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_11_81_14&#39;)"><span class="hl_conref"><span class="mpre">T1a</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">42</span></span><span class="mpre">) = </span><a href="#loc_81_11_81_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_11_81_14&#39;)"><span class="hl_conref"><span class="mpre">T1a</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">88</span></span><span class="mpre">
+</span><a href="#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_fundecl"><span class="mpre">stepid</span></span></a><span class="mpre"> </span><a name="loc_87_8_87_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_8_87_9&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre">        = </span><a href="#loc_87_8_87_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_87_8_87_9&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- The same rewrite step but now with failure as catch-all case</span></span><span class="mpre">
+</span><a name="loc_91_1_91_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_9&#39;)"><span class="hl_fundecl"><span class="mpre">stepfail</span></span></a><span class="mpre"> (</span><a href="#loc_81_11_81_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_11_81_14&#39;)"><span class="hl_conref"><span class="mpre">T1a</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">42</span></span><span class="mpre">) = </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> (</span><a href="#loc_81_11_81_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_11_81_14&#39;)"><span class="hl_conref"><span class="mpre">T1a</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">88</span></span><span class="mpre">)
+</span><a href="#loc_91_1_91_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_9&#39;)"><span class="hl_fundecl"><span class="mpre">stepfail</span></span></a><span class="mpre"> _        = </span><span class="hl_conref"><span class="mpre">Nothing</span></span><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- We can let recover potentially failing generic functions from failure;</span></span><span class="mpre">
+</span><span class="hl_comment"><span class="mpre">-- this is illustrated for a generic made from stepfail via mkM.</span></span><span class="mpre">
+</span><a name="loc_97_1_97_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_1_97_10&#39;)"><span class="hl_fundecl"><span class="mpre">recovered</span></span></a><span class="mpre"> </span><a name="loc_97_11_97_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_11_97_12&#39;)"><span class="hl_vardecl"><span class="mpre">x</span></span></a><span class="mpre"> = </span><a href="Data.Generics.Aliases.html#loc_116_1_116_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Aliases.html#loc_116_1_116_4&#39;)"><span class="hl_varref"><span class="mpre">mkM</span></span></a><span class="mpre"> </span><a href="#loc_91_1_91_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_9&#39;)"><span class="hl_varref"><span class="mpre">stepfail</span></span></a><span class="mpre"> </span><a href="#loc_97_11_97_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_11_97_12&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre"> </span><a href="Control.Monad.html#loc_130_4_130_9" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_130_4_130_9&#39;)"><span class="hl_infix"><span class="mpre">`mplus`</span></span></a><span class="mpre"> </span><span class="hl_conref"><span class="mpre">Just</span></span><span class="mpre"> </span><a href="#loc_97_11_97_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_11_97_12&#39;)"><span class="hl_varref"><span class="mpre">x</span></span></a><span class="mpre">
+
+
+</span><span class="hl_comment"><span class="mpre">-- A test term that comprehends a redex</span></span><span class="mpre">
+</span><a name="loc_101_1_101_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_7&#39;)"><span class="hl_vardecl"><span class="mpre">term42</span></span></a><span class="mpre"> = </span><a href="#loc_81_21_81_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_21_81_24&#39;)"><span class="hl_conref"><span class="mpre">T1b</span></span></a><span class="mpre"> (</span><a href="#loc_82_11_82_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_82_11_82_13&#39;)"><span class="hl_conref"><span class="mpre">T2</span></span></a><span class="mpre"> (</span><a href="#loc_81_11_81_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_11_81_14&#39;)"><span class="hl_conref"><span class="mpre">T1a</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">42</span></span><span class="mpre">))
+
+
+</span><span class="hl_comment"><span class="mpre">-- A test term that does not comprehend a redex</span></span><span class="mpre">
+</span><a name="loc_105_1_105_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_7&#39;)"><span class="hl_vardecl"><span class="mpre">term37</span></span></a><span class="mpre"> = </span><a href="#loc_81_21_81_24" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_21_81_24&#39;)"><span class="hl_conref"><span class="mpre">T1b</span></span></a><span class="mpre"> (</span><a href="#loc_82_11_82_13" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_82_11_82_13&#39;)"><span class="hl_conref"><span class="mpre">T2</span></span></a><span class="mpre"> (</span><a href="#loc_81_11_81_14" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_81_11_81_14&#39;)"><span class="hl_conref"><span class="mpre">T1a</span></span></a><span class="mpre"> </span><span class="hl_num"><span class="mpre">37</span></span><span class="mpre">))
+
+
+</span><span class="hl_comment"><span class="mpre">-- A number of traversals</span></span><span class="mpre">
+</span><a name="loc_109_1_109_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_109_1_109_8&#39;)"><span class="hl_vardecl"><span class="mpre">result1</span></span></a><span class="mpre"> = </span><a href="Data.Generics.Schemes.html#loc_59_1_59_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Schemes.html#loc_59_1_59_11&#39;)"><span class="hl_varref"><span class="mpre">everywhere</span></span></a><span class="mpre"> (</span><a href="Data.Generics.Aliases.html#loc_86_1_86_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Aliases.html#loc_86_1_86_4&#39;)"><span class="hl_varref"><span class="mpre">mkT</span></span></a><span class="mpre"> </span><a href="#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_varref"><span class="mpre">stepid</span></span></a><span class="mpre">)    </span><a href="#loc_101_1_101_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_7&#39;)"><span class="hl_varref"><span class="mpre">term42</span></span></a><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- rewrites term accordingly</span></span><span class="mpre">
+</span><a name="loc_110_1_110_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_1_110_8&#39;)"><span class="hl_vardecl"><span class="mpre">result2</span></span></a><span class="mpre"> = </span><a href="Data.Generics.Schemes.html#loc_59_1_59_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Schemes.html#loc_59_1_59_11&#39;)"><span class="hl_varref"><span class="mpre">everywhere</span></span></a><span class="mpre"> (</span><a href="Data.Generics.Aliases.html#loc_86_1_86_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Aliases.html#loc_86_1_86_4&#39;)"><span class="hl_varref"><span class="mpre">mkT</span></span></a><span class="mpre"> </span><a href="#loc_86_1_86_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_86_1_86_7&#39;)"><span class="hl_varref"><span class="mpre">stepid</span></span></a><span class="mpre">)    </span><a href="#loc_105_1_105_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_7&#39;)"><span class="hl_varref"><span class="mpre">term37</span></span></a><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- preserves term without notice</span></span><span class="mpre">
+</span><a name="loc_111_1_111_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_1_111_8&#39;)"><span class="hl_vardecl"><span class="mpre">result3</span></span></a><span class="mpre"> = </span><a href="Data.Generics.Schemes.html#loc_83_1_83_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Schemes.html#loc_83_1_83_12&#39;)"><span class="hl_varref"><span class="mpre">everywhereM</span></span></a><span class="mpre"> (</span><a href="Data.Generics.Aliases.html#loc_116_1_116_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Aliases.html#loc_116_1_116_4&#39;)"><span class="hl_varref"><span class="mpre">mkM</span></span></a><span class="mpre"> </span><a href="#loc_91_1_91_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_9&#39;)"><span class="hl_varref"><span class="mpre">stepfail</span></span></a><span class="mpre">) </span><a href="#loc_101_1_101_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_7&#39;)"><span class="hl_varref"><span class="mpre">term42</span></span></a><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- fails in a harsh manner</span></span><span class="mpre">
+</span><a name="loc_112_1_112_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_1_112_8&#39;)"><span class="hl_vardecl"><span class="mpre">result4</span></span></a><span class="mpre"> = </span><a href="Data.Generics.Schemes.html#loc_83_1_83_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Schemes.html#loc_83_1_83_12&#39;)"><span class="hl_varref"><span class="mpre">everywhereM</span></span></a><span class="mpre"> (</span><a href="Data.Generics.Aliases.html#loc_116_1_116_4" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Aliases.html#loc_116_1_116_4&#39;)"><span class="hl_varref"><span class="mpre">mkM</span></span></a><span class="mpre"> </span><a href="#loc_91_1_91_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_9&#39;)"><span class="hl_varref"><span class="mpre">stepfail</span></span></a><span class="mpre">) </span><a href="#loc_105_1_105_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_7&#39;)"><span class="hl_varref"><span class="mpre">term37</span></span></a><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- fails rather early</span></span><span class="mpre">
+</span><a name="loc_113_1_113_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_1_113_8&#39;)"><span class="hl_vardecl"><span class="mpre">result5</span></span></a><span class="mpre"> = </span><a href="Data.Generics.Schemes.html#loc_83_1_83_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Schemes.html#loc_83_1_83_12&#39;)"><span class="hl_varref"><span class="mpre">everywhereM</span></span></a><span class="mpre"> </span><a href="#loc_97_1_97_10" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_97_1_97_10&#39;)"><span class="hl_varref"><span class="mpre">recovered</span></span></a><span class="mpre">      </span><a href="#loc_105_1_105_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_7&#39;)"><span class="hl_varref"><span class="mpre">term37</span></span></a><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- preserves term without notice</span></span><span class="mpre">
+</span><a name="loc_114_1_114_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_114_1_114_8&#39;)"><span class="hl_vardecl"><span class="mpre">result6</span></span></a><span class="mpre"> = </span><a href="Data.Generics.Schemes.html#loc_94_1_94_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Schemes.html#loc_94_1_94_10&#39;)"><span class="hl_varref"><span class="mpre">somewhere</span></span></a><span class="mpre"> (</span><a href="Data.Generics.Aliases.html#loc_138_1_138_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Aliases.html#loc_138_1_138_5&#39;)"><span class="hl_varref"><span class="mpre">mkMp</span></span></a><span class="mpre"> </span><a href="#loc_91_1_91_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_9&#39;)"><span class="hl_varref"><span class="mpre">stepfail</span></span></a><span class="mpre">)  </span><a href="#loc_101_1_101_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_101_1_101_7&#39;)"><span class="hl_varref"><span class="mpre">term42</span></span></a><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- rewrites term accordingly</span></span><span class="mpre">
+</span><a name="loc_115_1_115_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_1_115_8&#39;)"><span class="hl_vardecl"><span class="mpre">result7</span></span></a><span class="mpre"> = </span><a href="Data.Generics.Schemes.html#loc_94_1_94_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Schemes.html#loc_94_1_94_10&#39;)"><span class="hl_varref"><span class="mpre">somewhere</span></span></a><span class="mpre"> (</span><a href="Data.Generics.Aliases.html#loc_138_1_138_5" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Aliases.html#loc_138_1_138_5&#39;)"><span class="hl_varref"><span class="mpre">mkMp</span></span></a><span class="mpre"> </span><a href="#loc_91_1_91_9" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_91_1_91_9&#39;)"><span class="hl_varref"><span class="mpre">stepfail</span></span></a><span class="mpre">)  </span><a href="#loc_105_1_105_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_105_1_105_7&#39;)"><span class="hl_varref"><span class="mpre">term37</span></span></a><span class="mpre">   </span><span class="hl_comment"><span class="mpre">-- fails to notice lack of redex</span></span><span class="mpre">
+
+</span><a name="loc_117_1_117_6" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_117_1_117_6&#39;)"><span class="hl_vardecl"><span class="mpre">tests</span></span></a><span class="mpre"> = </span><a href="Data.Generics.Text.html#loc_43_1_43_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Generics.Text.html#loc_43_1_43_6&#39;)"><span class="hl_varref"><span class="mpre">gshow</span></span></a><span class="mpre"> ( </span><a href="#loc_109_1_109_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_109_1_109_8&#39;)"><span class="hl_varref"><span class="mpre">result1</span></span></a><span class="mpre">,
+              ( </span><a href="#loc_110_1_110_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_110_1_110_8&#39;)"><span class="hl_varref"><span class="mpre">result2</span></span></a><span class="mpre">,
+              ( </span><a href="#loc_111_1_111_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_111_1_111_8&#39;)"><span class="hl_varref"><span class="mpre">result3</span></span></a><span class="mpre">,
+              ( </span><a href="#loc_112_1_112_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_112_1_112_8&#39;)"><span class="hl_varref"><span class="mpre">result4</span></span></a><span class="mpre">,
+              ( </span><a href="#loc_113_1_113_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_113_1_113_8&#39;)"><span class="hl_varref"><span class="mpre">result5</span></span></a><span class="mpre">,
+              ( </span><a href="#loc_114_1_114_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_114_1_114_8&#39;)"><span class="hl_varref"><span class="mpre">result6</span></span></a><span class="mpre">,
+              ( </span><a href="#loc_115_1_115_8" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_115_1_115_8&#39;)"><span class="hl_varref"><span class="mpre">result7</span></span></a><span class="mpre"> ))))))) </span><span class="hl_infix"><span class="mpre">~=?</span></span><span class="mpre"> </span><a href="#loc_125_1_125_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_7&#39;)"><span class="hl_varref"><span class="mpre">output</span></span></a><span class="mpre">
+
+</span><a name="loc_125_1_125_7" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_125_1_125_7&#39;)"><span class="hl_vardecl"><span class="mpre">output</span></span></a><span class="mpre"> = </span><span class="hl_string"><span class="mpre">&quot;((,) (T1b (T2 (T1a (88)))) ((,) (T1b (T2 (T1a (37)))) ((,) (Nothing) ((,) (Nothing) ((,) (Just (T1b (T2 (T1a (37))))) ((,) (Just (T1b (T2 (T1a (88))))) (Nothing)))))))&quot;</span></span><span class="mpre">
+</span></div></body></html>

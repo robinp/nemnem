@@ -1,0 +1,16 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="mpre">{-# LANGUAGE CPP #-}
+
+module Regress (regressions) where
+
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/hashable-1.2.2.0/tests/Regress.hs&quot;, srcSpanStartLine = 5, srcSpanStartColumn = 18, srcSpanEndLine = 5, srcSpanEndColumn = 32}, srcInfoPoints = []}) &quot;Test.Framework&quot;"><span class="mpre">Test.Framework</span></span><span class="mpre"> as F
+
+#ifdef HAVE_MMAP
+import qualified </span><span class="warning" data-warning="Module not foundModuleName (SrcSpanInfo {srcInfoSpan = SrcSpan {srcSpanFilename = &quot;/home/vagrant/nemnem/pull/hashable-1.2.2.0/tests/Regress.hs&quot;, srcSpanStartLine = 8, srcSpanStartColumn = 18, srcSpanEndLine = 8, srcSpanEndColumn = 30}, srcInfoPoints = []}) &quot;Regress.Mmap&quot;"><span class="mpre">Regress.Mmap</span></span><span class="mpre"> as Mmap
+#endif
+
+</span><a href="#loc_12_1_12_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_12_1_12_12&#39;)"><span class="mpre">regressions</span></a><span class="mpre"> :: [</span><span class="hl_tyconref"><span class="mpre">F.Test</span></span><span class="mpre">]
+</span><a name="loc_12_1_12_12" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_12_1_12_12&#39;)"><span class="hl_vardecl"><span class="mpre">regressions</span></span></a><span class="mpre"> = []
+#ifdef HAVE_MMAP
+              </span><span class="hl_infix"><span class="mpre">++</span></span><span class="mpre"> </span><span class="hl_varref"><span class="mpre">Mmap.regressions</span></span><span class="mpre">
+#endif
+</span></div></body></html>

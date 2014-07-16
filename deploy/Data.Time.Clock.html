@@ -1,0 +1,19 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">-- | Types and functions for UTC and UT1</span></span><span class="mpre">
+module Data.Time.Clock
+(
+        module Data.Time.Clock.Scale,
+        module Data.Time.Clock.UTC,
+        module Data.Time.Clock.UTCDiff,
+        module Data.Time.Clock
+) where
+
+import Data.Time.Clock.Scale
+import Data.Time.Clock.UTCDiff
+import Data.Time.Clock.UTC
+import Data.Time.Clock.POSIX
+import Control.Monad
+
+</span><span class="hl_comment"><span class="mpre">-- | Get the current UTC time from the system clock.</span></span><span class="mpre">
+</span><a href="#loc_18_1_18_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_1_18_15&#39;)"><span class="mpre">getCurrentTime</span></a><span class="mpre"> :: </span><span class="hl_tyconref"><span class="mpre">IO</span></span><span class="mpre"> </span><a href="Data.Time.Clock.UTC.html#loc_31_6_31_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Time.Clock.UTC.html#loc_31_6_31_13&#39;)"><span class="hl_tyconref"><span class="mpre">UTCTime</span></span></a><span class="mpre">
+</span><a name="loc_18_1_18_15" onmouseover="nemnem.highlightLocalToLocal(&#39;loc_18_1_18_15&#39;)"><span class="hl_vardecl"><span class="mpre">getCurrentTime</span></span></a><span class="mpre"> = </span><a href="Control.Monad.html#loc_274_1_274_6" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.html#loc_274_1_274_6&#39;)"><span class="hl_varref"><span class="mpre">liftM</span></span></a><span class="mpre"> </span><a href="Data.Time.Clock.POSIX.html#loc_34_1_34_22" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Time.Clock.POSIX.html#loc_34_1_34_22&#39;)"><span class="hl_varref"><span class="mpre">posixSecondsToUTCTime</span></span></a><span class="mpre"> </span><a href="Data.Time.Clock.POSIX.html#loc_51_1_51_13" onmouseover="nemnem.highlightLocalToRemote(&#39;Data.Time.Clock.POSIX.html#loc_51_1_51_13&#39;)"><span class="hl_varref"><span class="mpre">getPOSIXTime</span></span></a><span class="mpre">
+</span></div></body></html>

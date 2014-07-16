@@ -1,0 +1,145 @@
+<html><head><title>NemNem</title><link rel="stylesheet" type="text/css" href="/static/nemnem.css"><script src="/static/jquery-2.0.3.min.js"></script><script src="/static/nemnem.js"></script></head><body><div id="code"><span class="hl_comment"><span class="mpre">{- |
+Module      :  Control.Monad.Reader
+Copyright   :  (c) Andy Gill 2001,
+               (c) Oregon Graduate Institute of Science and Technology 2001,
+               (c) Jeff Newbern 2003-2007,
+               (c) Andriy Palamarchuk 2007
+License     :  BSD-style (see the file LICENSE)
+
+Maintainer  :  libraries@haskell.org
+Stability   :  experimental
+Portability :  non-portable (multi-param classes, functional dependencies)
+
+[Computation type:] Computations which read values from a shared environment.
+
+[Binding strategy:] Monad values are functions from the environment to a value.
+The bound function is applied to the bound value, and both have access
+to the shared environment.
+
+[Useful for:] Maintaining variable bindings, or other shared environment.
+
+[Zero and plus:] None.
+
+[Example type:] @&#39;Reader&#39; [(String,Value)] a@
+
+The &#39;Reader&#39; monad (also called the Environment monad).
+Represents a computation, which can read values from
+a shared environment, pass values from function to function,
+and execute sub-computations in a modified environment.
+Using &#39;Reader&#39; monad for such computations is often clearer and easier
+than using the &#39;Control.Monad.State.State&#39; monad.
+
+  Inspired by the paper
+  /Functional Programming with Overloading and Higher-Order Polymorphism/,
+    Mark P Jones (&lt;http://web.cecs.pdx.edu/~mpj/&gt;)
+    Advanced School of Functional Programming, 1995.
+-}</span></span><span class="mpre">
+
+module Control.Monad.Reader (
+    </span><span class="hl_comment"><span class="mpre">-- * MonadReader class</span></span><span class="mpre">
+    MonadReader(..),
+    asks,
+    </span><span class="hl_comment"><span class="mpre">-- * The Reader monad</span></span><span class="mpre">
+    Reader,
+    runReader,
+    mapReader,
+    withReader,
+    </span><span class="hl_comment"><span class="mpre">-- * The ReaderT monad transformer</span></span><span class="mpre">
+    ReaderT(ReaderT),
+    runReaderT,
+    mapReaderT,
+    withReaderT,
+    module Control.Monad,
+    module Control.Monad.Fix,
+    module Control.Monad.Trans,
+    </span><span class="hl_comment"><span class="mpre">-- * Example 1: Simple Reader Usage</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $simpleReaderExample</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Example 2: Modifying Reader Content With @local@</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $localExample</span></span><span class="mpre">
+
+    </span><span class="hl_comment"><span class="mpre">-- * Example 3: @ReaderT@ Monad Transformer</span></span><span class="mpre">
+    </span><span class="hl_comment"><span class="mpre">-- $ReaderTExample</span></span><span class="mpre">
+    ) where
+
+import Control.Monad.Reader.Class
+
+import Control.Monad.Trans.Reader (
+    Reader, </span><a href="Control.Monad.Trans.Reader.html#loc_69_1_69_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Reader.html#loc_69_1_69_10&#39;)"><span class="mpre">runReader</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.Reader.html#loc_75_1_75_10" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Reader.html#loc_75_1_75_10&#39;)"><span class="mpre">mapReader</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.Reader.html#loc_85_1_85_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Reader.html#loc_85_1_85_11&#39;)"><span class="mpre">withReader</span></a><span class="mpre">,
+    </span><a href="Control.Monad.Trans.Reader.html#loc_92_9_92_16" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Reader.html#loc_92_9_92_16&#39;)"><span class="mpre">ReaderT</span></a><span class="mpre">(ReaderT), </span><a href="Control.Monad.Trans.Reader.html#loc_92_35_92_45" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Reader.html#loc_92_35_92_45&#39;)"><span class="mpre">runReaderT</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.Reader.html#loc_98_1_98_11" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Reader.html#loc_98_1_98_11&#39;)"><span class="mpre">mapReaderT</span></a><span class="mpre">, </span><a href="Control.Monad.Trans.Reader.html#loc_108_1_108_12" onmouseover="nemnem.highlightLocalToRemote(&#39;Control.Monad.Trans.Reader.html#loc_108_1_108_12&#39;)"><span class="mpre">withReaderT</span></a><span class="mpre">)
+import Control.Monad.Trans
+
+import Control.Monad
+import Control.Monad.Fix
+
+</span><span class="hl_comment"><span class="mpre">{- $simpleReaderExample
+
+In this example the @Reader@ monad provides access to variable bindings.
+Bindings are a @Map@ of integer variables.
+The variable @count@ contains number of variables in the bindings.
+You can see how to run a Reader monad and retrieve data from it
+with &#39;runReader&#39;, how to access the Reader data with &#39;ask&#39; and &#39;asks&#39;.
+
+&gt; type Bindings = Map String Int;
+&gt;
+&gt;-- Returns True if the &quot;count&quot; variable contains correct bindings size.
+&gt;isCountCorrect :: Bindings -&gt; Bool
+&gt;isCountCorrect bindings = runReader calc_isCountCorrect bindings
+&gt;
+&gt;-- The Reader monad, which implements this complicated check.
+&gt;calc_isCountCorrect :: Reader Bindings Bool
+&gt;calc_isCountCorrect = do
+&gt;    count &lt;- asks (lookupVar &quot;count&quot;)
+&gt;    bindings &lt;- ask
+&gt;    return (count == (Map.size bindings))
+&gt;
+&gt;-- The selector function to  use with &#39;asks&#39;.
+&gt;-- Returns value of the variable with specified name.
+&gt;lookupVar :: String -&gt; Bindings -&gt; Int
+&gt;lookupVar name bindings = fromJust (Map.lookup name bindings)
+&gt;
+&gt;sampleBindings = Map.fromList [(&quot;count&quot;,3), (&quot;1&quot;,1), (&quot;b&quot;,2)]
+&gt;
+&gt;main = do
+&gt;    putStr $ &quot;Count is correct for bindings &quot; ++ (show sampleBindings) ++ &quot;: &quot;;
+&gt;    putStrLn $ show (isCountCorrect sampleBindings);
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $localExample
+
+Shows how to modify Reader content with &#39;local&#39;.
+
+&gt;calculateContentLen :: Reader String Int
+&gt;calculateContentLen = do
+&gt;    content &lt;- ask
+&gt;    return (length content);
+&gt;
+&gt;-- Calls calculateContentLen after adding a prefix to the Reader content.
+&gt;calculateModifiedContentLen :: Reader String Int
+&gt;calculateModifiedContentLen = local (&quot;Prefix &quot; ++) calculateContentLen
+&gt;
+&gt;main = do
+&gt;    let s = &quot;12345&quot;;
+&gt;    let modifiedLen = runReader calculateModifiedContentLen s
+&gt;    let len = runReader calculateContentLen s
+&gt;    putStrLn $ &quot;Modified &#39;s&#39; length: &quot; ++ (show modifiedLen)
+&gt;    putStrLn $ &quot;Original &#39;s&#39; length: &quot; ++ (show len)
+-}</span></span><span class="mpre">
+
+</span><span class="hl_comment"><span class="mpre">{- $ReaderTExample
+
+Now you are thinking: &#39;Wow, what a great monad! I wish I could use
+Reader functionality in MyFavoriteComplexMonad!&#39;. Don&#39;t worry.
+This can be easy done with the &#39;ReaderT&#39; monad transformer.
+This example shows how to combine @ReaderT@ with the IO monad.
+
+&gt;-- The Reader/IO combined monad, where Reader stores a string.
+&gt;printReaderContent :: ReaderT String IO ()
+&gt;printReaderContent = do
+&gt;    content &lt;- ask
+&gt;    liftIO $ putStrLn (&quot;The Reader Content: &quot; ++ content)
+&gt;
+&gt;main = do
+&gt;    runReaderT printReaderContent &quot;Some Content&quot;
+-}</span></span><span class="mpre">
+</span></div></body></html>
