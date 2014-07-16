@@ -16,7 +16,7 @@ a:hover {
 	text-decoration : none;
 }
 .hlit {
-  // margin fix suggested by qZeta
+  /* margin fix suggested by qZeta */
 	display: inline-block; 
   border-bottom : 1px solid #b58900;
   margin-bottom : -1px;
