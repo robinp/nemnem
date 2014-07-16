@@ -1,82 +1,82 @@
 body {
-	background-color : #002b36;
+  background-color : #002b36;
 }
 div {
-	color : #839496;
+  color : #839496;
 }
 .mpre {
-	font-family : monospace;
-	white-space : pre;
+  font-family : monospace;
+  white-space : pre;
 }
 a {
-	color : inherit;
-	text-decoration : none;
+  color : inherit;
+  text-decoration : none;
 }
 a:hover {
-	text-decoration : none;
+  text-decoration : none;
 }
 .hlit {
   /* margin fix suggested by qZeta */
-	display: inline-block; 
+  display: inline-block; 
   border-bottom : 1px solid #b58900;
   margin-bottom : -1px;
 }
 .warning {
-	display: inline-block;
-	border-bottom : 1px dashed #dc322f;
+  display: inline-block;
+  border-bottom : 1px dashed #dc322f;
   margin-bottom : -1px;
 }
 span.hl_comment {
-	color : #586e75;
+  color : #586e75;
 }
 span.hl_char {
-	color : #6c71c4;
+  color : #6c71c4;
 }
 span.hl_string {
-	color : #dc322f;
+  color : #dc322f;
 }
 span.hl_num {
-	color : #268bd2;
+  color : #268bd2;
 }
 span.hl_tyvar {
-	color : #b58900;
+  color : #b58900;
 }
 span.hl_tyconref {
-	color : #859900;
+  color : #859900;
 }
 span.hl_tycondecl {
-	color : #2aa198;
+  color : #2aa198;
 }
 span.hl_condecl {
-	color : #839496;
+  color : #839496;
 }
 span.hl_vardecl {
-	color : #839496;
+  color : #839496;
 }
 span.hl_fielddecl {
-	color : #839496;
+  color : #839496;
 }
 span.hl_fundecl {
-	color : #b58900;
+  color : #b58900;
 }
 span.hl_specname {
-	color : #839496;
+  color : #839496;
 }
 span.hl_varref {
-	color : #839496;
+  color : #839496;
 }
 span.hl_conref {
-	color : #859900;
+  color : #859900;
 }
 span.hl_classdecl {
-	color : #839496;
+  color : #839496;
 }
 span.hl_classref {
-	color : #839496;
+  color : #839496;
 }
 span.hl_pragma {
-	color : #586e75;
+  color : #586e75;
 }
 span.hl_infix {
-	color : #2aa198;
+  color : #2aa198;
 }
