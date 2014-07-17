@@ -8,8 +8,12 @@ PKGS=$(ls ../.cabal-sandbox/lib/i386-linux-ghc-7.8.3 /usr/local/lib/ghc-7.8.3 | 
 [ -f list.txt ] && list.txt
 for PKG in $PKGS
 do
-  LINK=https://hackage.haskell.org/package/$PKG/$PKG.tar.gz
-  echo $LINK >> list.txt
+  # haskellXY packages duplicate modules already in base
+  if ! ( echo $PKG | grep -q "^haskell\(98\|2010\)" )
+  then
+    LINK=https://hackage.haskell.org/package/$PKG/$PKG.tar.gz
+    echo $LINK >> list.txt
+  fi
 done
 cat list.txt
 
