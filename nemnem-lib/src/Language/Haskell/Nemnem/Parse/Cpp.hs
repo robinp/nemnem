@@ -13,7 +13,7 @@ data CppLines = CppLines
   { cppErased :: S.Set Int  -- ^ Note: could store as intervals, if worth it.
   , cppExpanded :: S.Set Int
   }
-  deriving (Show)
+  deriving (Eq, Show)
 
 -- | Pity that cpphs runs in IO instead of something more abstract.
 unCpp :: [(String, String)] -> String -> String -> IO (String, CppLines)
