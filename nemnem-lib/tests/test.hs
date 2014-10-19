@@ -1,3 +1,5 @@
+module Test.Language.Haskell.Nemnem where
+
 import qualified Data.Set as S
 import Test.Tasty
 import Test.Tasty.HUnit

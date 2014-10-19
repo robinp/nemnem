@@ -1,6 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 module Language.Haskell.Nemnem.Parse.Cpp
-  ( CppLines(..)
+  ( CppLines
+  , isLineCppErased
+  , isLineCppExpanded
   , unCpp
   ) where
 
@@ -14,6 +16,10 @@ data CppLines = CppLines
   , cppExpanded :: S.Set Int
   }
   deriving (Eq, Show)
+
+isLineCppErased, isLineCppExpanded :: Int -> CppLines -> Bool
+isLineCppErased n = S.member n . cppErased
+isLineCppExpanded n = S.member n . cppExpanded
 
 -- | Pity that cpphs runs in IO instead of something more abstract.
 unCpp :: [(String, String)] -> String -> String -> IO (String, CppLines)

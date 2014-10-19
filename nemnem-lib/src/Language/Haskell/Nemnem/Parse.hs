@@ -4,6 +4,7 @@ module Language.Haskell.Nemnem.Parse
   , processModule
   ) where
 
+import Control.Monad.IO.Class
 import Control.Monad.Trans.State
 import qualified Data.Array as A
 import qualified Data.List as L
@@ -18,6 +19,7 @@ import Text.Regex.TDFA
 import Language.Haskell.Nemnem.Internal.Source
 import Language.Haskell.Nemnem.Internal.Util
 import Language.Haskell.Nemnem.Parse.Module
+import Language.Haskell.Nemnem.Parse.Cpp
 import Hier (mkRange, transformRegions)
 
 data SourceInfo = SourceInfo
@@ -28,35 +30,35 @@ data SourceInfo = SourceInfo
 
 -- | Returns also the parsed src on success.
 processModule
-  :: (Monad m)
+  :: (MonadIO m)
   => [(String, String)]
   -> SourceInfo
   -> String  -- ^ Source content
   -> StateT (Map MName ModuleInfo) m (Either String (String, ModuleInfo))
-processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules ->
-  {-# SCC processModule #-} 
-  let parsed_src = unTab raw_src
-      -- TODO: * exec new unCpp in IO
-      --       * in Parse/Module.hs, discard references that originate from
-      --         included files (hint: different filename in SrcInfo)
-      --       * and someone should skip references to/from cppExpanded lines
-      src = {-# SCC sourceTransform #-} parsed_src -- unCpp cpp_defines parsed_src
-  in case {-# SCC hseParse #-} parse src of
-       fail@(ParseFailed _ _) -> return (Left (show fail), modules)
-       ParseOk (ast, comments) ->
-         -- TODO preprocess comment locations and pass to collectModule, so it can
-         --      link comments to definitions.
-         let comment_hls = {-# SCC comments #-}
-                           map makeCommentHighlight comments
-             m_info0 = (collectModule modules ast)
-                         { miOriginalPath = Just siPath }
-             m_info = {-# SCC concat #-} m_info0
-                        { miHighlights = miHighlights m_info0 ++ comment_hls}
-             new_modules = M.insert
-                             (fromMaybe "Anonymous" . miName $ m_info)
-                             m_info
-                             modules
-         in return (Right (parsed_src, m_info), new_modules)
+processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC processModule #-} do
+  let untabbed_src = unTab raw_src
+  (uncpp_src, cpp_lines) <- liftIO $ unCpp cpp_defines siPath untabbed_src
+  -- TODO: 
+  --       * in Parse/Module.hs, discard references that originate to/from
+  --         included files (hint: different filename in SrcInfo)
+  --       * and someone should skip references to/from cppExpanded lines
+  --         (or make indefinite references)
+  case {-# SCC hseParse #-} parse uncpp_src of
+    fail@(ParseFailed _ _) -> return (Left (show fail), modules)
+    ParseOk (ast, comments) -> do
+      -- TODO preprocess comment locations and pass to collectModule, so it can
+      --      link comments to definitions.
+      let comment_hls = {-# SCC comments #-}
+                        map makeCommentHighlight comments
+          m_info0 = (collectModule modules cpp_lines ast)
+                      { miOriginalPath = Just siPath }
+          m_info = {-# SCC concat #-} m_info0
+                     { miHighlights = miHighlights m_info0 ++ comment_hls}
+          new_modules = M.insert
+                          (fromMaybe "Anonymous" . miName $ m_info)
+                          m_info
+                          modules
+      return (Right (untabbed_src, m_info), new_modules)
   where
   parse =
     let forced_exts =
@@ -79,6 +81,7 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules ->
          -- larger expressions anyway (might be needed for gradient highlight).
          { fixities = Nothing
          , parseFilename = siPath
+         , ignoreLinePragmas = False
          -- TODO user-suppliable list of extra LANG extensions
          , extensions = forced_exts ++ exts
          }

@@ -21,6 +21,8 @@ import qualified Data.Text as T
 import Language.Haskell.Exts.Annotated as HSE
 
 import Language.Haskell.Nemnem.Internal.Util
+import Language.Haskell.Nemnem.Parse.Cpp (CppLines, isLineCppErased,
+                                          isLineCppExpanded)
 
 type LhsSymbols = [SymbolAndLoc]
 
@@ -31,6 +33,7 @@ data ParseCtx = ParseCtx
   -- etc..
   , definitionStack :: [LhsSymbols]
   , parseOpts :: ()
+  , cppLines :: CppLines
   }
 
 showDefinitionStack =
@@ -83,7 +86,7 @@ data SymLoc = SymLoc
   -- which is substituted later by parseModuleSymbols / collectModule
   -- before tying back the knot.
   , symModule :: Maybe String  -- TODO these Strings are ugly
-  -- TODO symPackage
+  -- TODO symPackage to avoid ambiguities
   }
   deriving (Eq, Show)
 
@@ -99,7 +102,8 @@ type SymTab = Map Symbol SymLoc
 
 -- Ref is now suitable for generating visual hyperrefs, but not much for
 -- searching / indexing / more intelligent displays. 
--- TODO should rather be SymbolAndLoc? 
+-- TODO refTarget should rather be SymbolAndLoc
+-- TODO indefinite source and/or target (only line, but no column info), for cpp
 data Ref = Ref
   { refSource :: SymLoc
   , refTarget :: SymLoc
@@ -342,14 +346,15 @@ parseModuleSymbols modules (Module _l mhead _pragmas imports decls) = do
   imported_symtab <- importSyms modules imports
   return $ mkAvailableSymbols imported_symtab module_symtab
 
-collectModule :: Map MName ModuleInfo -> Module S -> ModuleInfo
-collectModule modules m@(Module _l mhead _pragmas imports decls) =
+collectModule :: Map MName ModuleInfo -> CppLines -> Module S -> ModuleInfo
+collectModule modules cpp_lines m@(Module _l mhead _pragmas imports decls) =
   let (av_symtab, _, dlogs) = runRWS (parseModuleSymbols modules m) pctx ()
       logs = DList.toList dlogs
       pctx = ParseCtx
               { inScope = allSymbols av_symtab
               , definitionStack = []
-              , parseOpts = () 
+              , parseOpts = ()
+              , cppLines = cpp_lines
               }
       children =
         let pairs = map (\(p,c) -> (p, [c])) $ logs >>= getChild

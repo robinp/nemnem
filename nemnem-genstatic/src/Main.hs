@@ -58,7 +58,7 @@ parseSourceInfoLine line = case words line of
 
 data ProcessModuleConfig = ProcessModuleConfig
   { pmcOutDir :: String
-  , pmcIdMacroPrefixes :: [String]
+  , pmcCppDefines :: [(String, String)]
   }
 
 main = do
@@ -69,7 +69,7 @@ main = do
                        . filter (not . ("#" `L.isPrefixOf`)) 
                        . lines
                        <$> readFile path_file
-  let config = ProcessModuleConfig "deploy/" ["CHECK_"]
+  let config = ProcessModuleConfig "deploy/" []  -- TODO defines from args
   module_infos <- mapM_ (processModules config) source_infos `execStateT` M.empty
   return ()
   {-
@@ -108,7 +108,7 @@ main = do
                  -> StateT (Map MName ModuleInfo) IO ()
   processModules ProcessModuleConfig{..} source_info = do
     raw_src <- lift $ readFile (siPath source_info)
-    err_or_mi <- processModule pmcIdMacroPrefixes source_info raw_src
+    err_or_mi <- processModule pmcCppDefines source_info raw_src
     case err_or_mi of
       Left err -> lift $ print err
       Right (parsed_src, mi) -> lift $ do
@@ -120,9 +120,8 @@ main = do
     TL.writeFile (outdir ++ fromMaybe "Anonymous" (miName mi) ++ ".html") $
       renderTaggedHtml moduleTransformStatic src mi  
   --
-  renderTaggedHtml :: (Maybe MName -> TL.Text) -> String -> ModuleInfo -> TL.Text
-  renderTaggedHtml module_transform src mi =
-    -- assumes newline is \n (single char)
+  moduleRanges :: String -> ModuleInfo -> [Range Tag]
+  moduleRanges src mi = 
     let lineLens = map ((+1) . length) (lines src)
         bases = basesOf (miRefs mi) (miExports mi)
         ranges = let ofsFun = offsetAt (mkOffsetTable lineLens)
@@ -134,8 +133,14 @@ main = do
                      hlits = map (highlightsToRange ofsFun) (miHighlights mi)
                  in DL.toList . DL.concat . map DL.fromList $
                       [refs, entities, warns, hlits]
-        tagged = tagRanges (tagToBlaze module_transform (miName mi))
-                           ranges (T.pack src)
+    in ranges
+  --
+  renderTaggedHtml :: (Maybe MName -> TL.Text) -> String -> ModuleInfo -> TL.Text
+  renderTaggedHtml module_transform src mi =
+    -- assumes newline is \n (single char)
+    let ranges = moduleRanges src mi
+        tagTransformer = tagToBlaze module_transform (miName mi)
+        tagged = tagRanges tagTransformer ranges (T.pack src)
     in BR.renderHtml . withHeader $ tagged
   break = putStrLn "---"
   putStrBreak x = break >> putStrLn x
@@ -147,6 +152,7 @@ getR (Range t _ _) = t
 startR (Range _ s _) = s
 endR (Range _ _ e) = e
 
+-- |
 -- Note: could check if using Text.Lazy could lower the memory usage
 -- TODO this can blow up if the ranges are messed up, do some checking
 tagRanges
@@ -161,6 +167,16 @@ tagRanges blazer rs txt0 =
       full = Range undefined 0 tlen
   in go ((0, txt0), [(mempty, full)]) ordered
   where
+  -- TODO move to other module, add meaningful type aliases
+  -- | A gap is an untagged piece of text.
+  go :: ((Int, T.Text),  -- ^ Remaining text and the position of its first char.
+         [(B.Markup,  -- ^ Stack, top is markup accumulator and its range,
+           Range (B.Markup -> B.Markup))])  -- ^ holding transform to be applied
+                              -- The accumulator spans from the range start, and
+                              -- eventually reaches the end. Then the top is popped.
+     -> [Range (B.Markup -> B.Markup)]  -- ^ Ranges according to pre-order ordering.
+     -> B.Markup  -- ^ Marked text.
+
   go ((idx, txt), stk) [] = case stk of
     (acc, r):[] -> 
       let (gap, _) = gapAndRest (endR r - idx) txt
@@ -186,7 +202,7 @@ tagRanges blazer rs txt0 =
         result1 = getR r1 $ acc1 <> gap
     in go ((idx + gap_size, txt1),
           (acc2 <> result1, r2):stks) rr
-
+  gapAndRest :: Int -> T.Text -> (B.Markup, T.Text)
   gapAndRest gap_size txt =
     let (gap, txt1) = T.splitAt gap_size txt
         blaze_gap = if T.null gap then mempty else toBlaze gap

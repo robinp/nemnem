@@ -80,6 +80,7 @@ offsetAt :: OffsetTable -> OffsetFun
 offsetAt table (line, col) = table UV.! (line - 1) + col - 1
 
 data Range a = Range a !Int !Int
+  deriving (Show)
 
 refToRange :: OffsetFun -> Ref -> Range Tag
 refToRange lc (Ref (SymLoc (srcStart, srcEnd) _) dst stack) =
