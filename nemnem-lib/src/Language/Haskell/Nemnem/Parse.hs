@@ -33,6 +33,7 @@ data SourceInfo = SourceInfo
 data ProcessedModule = ProcessedModule
   { pmUntabbedSource :: String
   , pmUncppedSource :: String
+  , pmModifiedRegions :: Maybe [LineRegionModification]
   , pmModuleInfo :: ModuleInfo
   } deriving (Show)
 
@@ -49,7 +50,7 @@ processModule
   -> StateT (Map MName ModuleInfo) m (Either ProcessModuleError ProcessedModule)
 processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC processModule #-} do
   let untabbed_src = unTab raw_src
-  (uncpp_src, cpp_lines) <- liftIO $ unCpp cpp_defines siPath untabbed_src
+  (uncpp_src, mb_region_mods) <- liftIO $ unCpp cpp_defines siPath untabbed_src
   -- TODO: 
   --       * in Parse/Module.hs, discard references that originate to/from
   --         included files (hint: different filename in SrcInfo)
@@ -66,7 +67,7 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC 
       --      link comments to definitions.
       let comment_hls = {-# SCC comments #-}
                         map makeCommentHighlight comments
-          m_info0 = (collectModule modules cpp_lines ast)
+          m_info0 = (collectModule modules ast)
                       { miOriginalPath = Just siPath }
           m_info = {-# SCC concat #-} m_info0
                      { miHighlights = miHighlights m_info0 ++ comment_hls}
@@ -77,6 +78,7 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC 
           result = ProcessedModule
                      { pmUntabbedSource = untabbed_src
                      , pmUncppedSource = uncpp_src
+                     , pmModifiedRegions = mb_region_mods
                      , pmModuleInfo = m_info }
       return (Right result, new_modules)
   where

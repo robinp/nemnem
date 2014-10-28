@@ -118,21 +118,19 @@ main = do
         writeCppd pmcOutDir pmeUncppedSource (siPath source_info ++ ".cpp")
       Right (ProcessedModule{..}) -> lift $ do
         print . miName $ pmModuleInfo
-        writeCppd pmcOutDir (removeLinePragmas pmUncppedSource) (siPath source_info ++ ".cpp")
+        -- print pmModuleInfo
+        -- print pmModifiedRegions
+        let source_to_link = pmUncppedSource
+        writeCppd pmcOutDir source_to_link (siPath source_info ++ ".cpp")
         -- TODO write a combination of untabbed/cppd source for full info
         --      content
-        writeLinked pmcOutDir (removeLinePragmas pmUncppedSource) pmModuleInfo
+        writeLinked pmcOutDir source_to_link pmModuleInfo
     lift . putStrLn $ "Done"
   --
   writeLinked :: String -> String -> ModuleInfo -> IO ()
   writeLinked outdir src mi =
     TL.writeFile (outdir ++ fromMaybe "Anonymous" (miName mi) ++ ".html") $
       renderTaggedHtml moduleTransformStatic src mi  
-  --
-  removeLinePragmas :: String -> String
-  removeLinePragmas = unlines
-                    . filter (not . ("{-# LINE" `L.isPrefixOf`))
-                    . lines
   -- | TODO remove when not needed
   writeCppd :: String -> String -> FilePath -> IO ()
   writeCppd outdir src to_path = TL.writeFile to_path . TL.pack $ src
