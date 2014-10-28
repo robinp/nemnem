@@ -108,17 +108,34 @@ main = do
                  -> StateT (Map MName ModuleInfo) IO ()
   processModules ProcessModuleConfig{..} source_info = do
     raw_src <- lift $ readFile (siPath source_info)
-    err_or_mi <- processModule pmcCppDefines source_info raw_src
-    case err_or_mi of
-      Left err -> lift $ print err
-      Right (parsed_src, mi) -> lift $ do
-        print . miName $ mi
-        writeLinked pmcOutDir parsed_src mi
+    lift . putStrLn . siPath $ source_info  -- TODO debug logging
+    err_or_res <- processModule pmcCppDefines source_info raw_src
+    lift . putStrLn $ "Finished"
+    case err_or_res of
+      Left (ProcessModuleError{..}) -> lift $ do
+        print pmeParseFailure
+        -- TODO guard with flag
+        writeCppd pmcOutDir pmeUncppedSource (siPath source_info ++ ".cpp")
+      Right (ProcessedModule{..}) -> lift $ do
+        print . miName $ pmModuleInfo
+        writeCppd pmcOutDir (removeLinePragmas pmUncppedSource) (siPath source_info ++ ".cpp")
+        -- TODO write a combination of untabbed/cppd source for full info
+        --      content
+        writeLinked pmcOutDir (removeLinePragmas pmUncppedSource) pmModuleInfo
+    lift . putStrLn $ "Done"
   --
   writeLinked :: String -> String -> ModuleInfo -> IO ()
   writeLinked outdir src mi =
     TL.writeFile (outdir ++ fromMaybe "Anonymous" (miName mi) ++ ".html") $
       renderTaggedHtml moduleTransformStatic src mi  
+  --
+  removeLinePragmas :: String -> String
+  removeLinePragmas = unlines
+                    . filter (not . ("{-# LINE" `L.isPrefixOf`))
+                    . lines
+  -- | TODO remove when not needed
+  writeCppd :: String -> String -> FilePath -> IO ()
+  writeCppd outdir src to_path = TL.writeFile to_path . TL.pack $ src
   --
   moduleRanges :: String -> ModuleInfo -> [Range Tag]
   moduleRanges src mi = 

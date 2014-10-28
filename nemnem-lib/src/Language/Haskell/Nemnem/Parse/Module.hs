@@ -219,7 +219,7 @@ data ModuleInfo = ModuleInfo
   , miWarns :: [Warn]
   , miHighlights :: [Highlight]
   , miOriginalPath :: Maybe String
-  }
+  } deriving (Show)
 
 exportedKeys :: Map MName ModuleInfo -> ChildMap -> [ExportSpec l]
              -> ([Symbol], [ModuleInfo], SymTab)

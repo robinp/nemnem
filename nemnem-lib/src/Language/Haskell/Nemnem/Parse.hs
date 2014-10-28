@@ -2,6 +2,8 @@
 module Language.Haskell.Nemnem.Parse
   ( SourceInfo(..)
   , processModule
+  , ProcessedModule(..)
+  , ProcessModuleError(..)
   ) where
 
 import Control.Monad.IO.Class
@@ -28,13 +30,23 @@ data SourceInfo = SourceInfo
   , siPath :: FilePath
   }
 
--- | Returns also the parsed src on success.
+data ProcessedModule = ProcessedModule
+  { pmUntabbedSource :: String
+  , pmUncppedSource :: String
+  , pmModuleInfo :: ModuleInfo
+  } deriving (Show)
+
+data ProcessModuleError = ProcessModuleError
+  { pmeUncppedSource :: String
+  , pmeParseFailure :: String
+  } deriving (Show)
+
 processModule
   :: (MonadIO m)
   => [(String, String)]
   -> SourceInfo
   -> String  -- ^ Source content
-  -> StateT (Map MName ModuleInfo) m (Either String (String, ModuleInfo))
+  -> StateT (Map MName ModuleInfo) m (Either ProcessModuleError ProcessedModule)
 processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC processModule #-} do
   let untabbed_src = unTab raw_src
   (uncpp_src, cpp_lines) <- liftIO $ unCpp cpp_defines siPath untabbed_src
@@ -44,7 +56,11 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC 
   --       * and someone should skip references to/from cppExpanded lines
   --         (or make indefinite references)
   case {-# SCC hseParse #-} parse uncpp_src of
-    fail@(ParseFailed _ _) -> return (Left (show fail), modules)
+    fail@(ParseFailed _ _) -> do
+      let err = ProcessModuleError
+                  { pmeUncppedSource = uncpp_src
+                  , pmeParseFailure = show fail }
+      return (Left err, modules)
     ParseOk (ast, comments) -> do
       -- TODO preprocess comment locations and pass to collectModule, so it can
       --      link comments to definitions.
@@ -58,7 +74,11 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC 
                           (fromMaybe "Anonymous" . miName $ m_info)
                           m_info
                           modules
-      return (Right (untabbed_src, m_info), new_modules)
+          result = ProcessedModule
+                     { pmUntabbedSource = untabbed_src
+                     , pmUncppedSource = uncpp_src
+                     , pmModuleInfo = m_info }
+      return (Right result, new_modules)
   where
   parse =
     let forced_exts =
@@ -81,7 +101,7 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC 
          -- larger expressions anyway (might be needed for gradient highlight).
          { fixities = Nothing
          , parseFilename = siPath
-         , ignoreLinePragmas = False
+         -- , ignoreLinePragmas = False
          -- TODO user-suppliable list of extra LANG extensions
          , extensions = forced_exts ++ exts
          }
