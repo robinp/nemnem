@@ -3,6 +3,7 @@
 module Main where
 
 import Control.Applicative ((<$>))
+import Control.Monad (unless)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State (StateT, execStateT)
@@ -69,7 +70,13 @@ main = do
                        . filter (not . ("#" `L.isPrefixOf`)) 
                        . lines
                        <$> readFile path_file
-  let config = ProcessModuleConfig "deploy/" []  -- TODO defines from args
+  let config = ProcessModuleConfig "deploy/"
+                  -- TODO defines from args/cfg
+                  -- TODO LANGUAGE_xy, MIN_VERSION_xy ?
+                 [("UseGHC", "1"),
+                  ("__GLASGOW_HASKELL__", "783"),
+                  ("INTEGER_GMP", "1")
+                 ]  
   module_infos <- mapM_ (processModules config) source_infos `execStateT` M.empty
   return ()
   {-
@@ -115,7 +122,8 @@ main = do
       Left (ProcessModuleError{..}) -> lift $ do
         print pmeParseFailure
         -- TODO guard with flag
-        writeCppd pmcOutDir pmeUncppedSource (siPath source_info ++ ".cpp")
+        unless (null pmeUncppedSource) $
+          writeCppd pmcOutDir pmeUncppedSource (siPath source_info ++ ".cpp")
       Right (ProcessedModule{..}) -> lift $ do
         print . miName $ pmModuleInfo
         -- print pmModuleInfo

@@ -14,3 +14,6 @@ cat out | grep ParseFailed  | grep -o '/home/[^\\]*' | grep -o '^[a-zA-Z/-]*[0-9
 
 # Running
 ./nemnem-genstatic/dist/build/nemnem-genstatic/nemnem-genstatic files.txt +RTS -p
+
+# To get common defines
+find pull |grep hs$ | xargs grep '^#if' | cut -d: -f2 | sort -u
