@@ -91,9 +91,19 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC 
             EnableExtension MultiParamTypeClasses
           , EnableExtension FlexibleContexts
           , EnableExtension FlexibleInstances
-            -- DOH, let's just throw these in for now
+            -- let's just throw these in for now
+            -- TODO from config, maybe per package on module
           , EnableExtension TypeOperators
           , EnableExtension FunctionalDependencies
+          , EnableExtension TypeFamilies
+          , EnableExtension ScopedTypeVariables
+          , EnableExtension BangPatterns
+          , EnableExtension RecordWildCards
+          , EnableExtension EmptyDataDecls
+          , EnableExtension DeriveDataTypeable
+          , EnableExtension GADTs
+          , EnableExtension StandaloneDeriving
+          , EnableExtension ExplicitForAll
           ]
         exts =
           let ge = moGlasgowExts . moduleOptions . T.lines . T.pack $ raw_src
@@ -109,13 +119,33 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC 
          , extensions = forced_exts ++ exts
          }
 
--- | HSE would interpret a tab as 8 position indent, and would return funny
--- source columns, which interfers with text-based tagging. So take initiative
--- and convert tabs to 8 spaces.
+-- | From Haskell Report 9.3:
+-- "Tab stops are 8 characters apart."
+-- "A tab character causes the insertion of enough spaces to align the current
+--  position with the next tab stop."
 unTab :: String -> String
 -- TODO could receive and leave as (lazy) Text instead roundtripping
-unTab = TL.unpack . TL.replace tab spaces . TL.pack
+unTab src =
+  let t = TL.pack src
+  in if not (hasTab t) then src
+     else TL.unpack . convertTabs $ t
   where
-  tab = TL.pack "\t"
-  spaces = TL.pack (replicate 8 ' ')
-
+  isTab = (== '\t')
+  hasTab = TL.any isTab
+  convertTabs = TL.unlines . map convertLine . TL.lines
+  convertLine t =
+    if TL.null t then t
+    else TL.concat . reverse . snd . foldl go (0, []) . TL.split isTab $ t
+    where
+    go :: (Int, [TL.Text]) -> TL.Text -> (Int, [TL.Text])
+    go (col0, acc) frag =
+      let col = col0 + (fromIntegral . TL.length) frag
+          (padsize, pad) = if col /= 0 || TL.null frag
+            then (skip col, TL.pack $ replicate (skip col) ' ')
+            else (0, TL.empty)
+      in (col + padsize, pad:frag:acc)
+      where
+      skip col =
+        let y = col + 8
+            m = y `mod` 8
+        in y - m - col
