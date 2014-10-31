@@ -8,6 +8,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State (StateT, execStateT)
 import Data.Aeson ()
+import qualified Data.ByteString as BS
 import qualified Data.DList as DL
 import qualified Data.List as L
 import Data.Map (Map)
@@ -16,6 +17,8 @@ import Data.Maybe
 import Data.Monoid
 import Data.Ord (comparing)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import qualified Data.Text.Encoding.Error as TE
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TL
 import qualified Text.Blaze as B
@@ -110,13 +113,17 @@ main = do
   where
   hoistMaybe :: Maybe a -> MaybeT IO a
   hoistMaybe = MaybeT . return
-  -- TODO move to lib/Parse.hs
+  -- TODO move to lib/Parse.hs, tear to pieces..
   processModules :: ProcessModuleConfig
                  -> SourceInfo
                  -> StateT (Map MName ModuleInfo) IO ()
   processModules ProcessModuleConfig{..} source_info = do
-    raw_src <- lift $ readFile (siPath source_info)
-    lift . putStrLn . siPath $ source_info  -- TODO debug logging
+    raw_src <- lift
+            -- TODO custom lenientDecode which also debug-logs error
+            . fmap (T.unpack . T.decodeUtf8With TE.lenientDecode)
+            . BS.readFile
+            $ siPath source_info
+    lift . putStrLn . siPath $ source_info
     err_or_res <- processModule pmcCppDefines source_info raw_src
     lift . putStrLn $ "Finished"
     case err_or_res of

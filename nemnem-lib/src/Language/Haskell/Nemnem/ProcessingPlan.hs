@@ -5,6 +5,7 @@ module Language.Haskell.Nemnem.ProcessingPlan
 
 import Control.Applicative
 import Control.Monad
+import qualified Data.ByteString as BS
 import Data.Graph.Inductive
 import qualified Data.IntMap as IM
 import Data.List (nub)
@@ -12,7 +13,8 @@ import qualified Data.Map as M
 import Data.Maybe
 import Data.Monoid
 import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import qualified Data.Text.Encoding as T
+import qualified Data.Text.Encoding.Error as TE
 
 import Language.Haskell.Nemnem.Internal.Source
 
@@ -25,7 +27,8 @@ data FileData = FileData
 -- TODO exceptions handling
 parseFile :: FilePath -> IO FileData
 parseFile path = {-# SCC parseFile #-} do 
-  lines <- T.lines <$> T.readFile path
+  lines <- T.lines . T.decodeUtf8With TE.lenientDecode
+        <$> BS.readFile path
   let import_lines = filter ("import " `T.isPrefixOf`) lines
       imported_modules = nub . map getImportedModule $ import_lines
       module_name = fromMaybe "Unknown" (moduleName lines)

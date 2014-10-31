@@ -15,6 +15,7 @@ executable nemnem-genstatic
   build-depends:       nemnem >= 0.1.0.1,
                        aeson >= 0.7,
                        base >= 4.6,
+                       bytestring >= 0.10,
                        blaze-html >= 0.7,
                        blaze-markup >= 0.6,
                        containers >= 0.5,
