@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, RankNTypes,
-             RecordWildCards, OverloadedStrings #-}
+             RecordWildCards, ScopedTypeVariables, OverloadedStrings #-}
 module Main where
 
 import Control.Applicative ((<$>))
+import Control.Exception (SomeException, try)
 import Control.Monad (unless)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe
@@ -144,9 +145,15 @@ main = do
     lift . putStrLn $ "Done"
   --
   writeLinked :: String -> String -> ModuleInfo -> IO ()
-  writeLinked outdir src mi =
-    TL.writeFile (outdir ++ fromMaybe "Anonymous" (miName mi) ++ ".html") $
-      renderTaggedHtml moduleTransformStatic src mi  
+  writeLinked outdir src mi = do
+    let fn = outdir ++ fromMaybe "Anonymous" (miName mi) ++ ".html"
+    res <- try 
+           . TL.writeFile fn
+           $ renderTaggedHtml moduleTransformStatic src mi
+    case res of
+      Left (ex :: SomeException) ->
+        putStrLn $ "Error hyperlinking " ++ fn ++ ", error: " ++ show ex
+      Right () -> return ()
   -- | TODO remove when not needed
   writeCppd :: String -> String -> FilePath -> IO ()
   writeCppd outdir src to_path = TL.writeFile to_path . TL.pack $ src

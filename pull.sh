@@ -7,7 +7,7 @@ wget $STACKAGE
 
 echo ==== pkgs
 # haskellXY packages duplicate modules already in base
-PKGS=$(cat metadata | grep "^[a-zA-Z0-9\-]\+\-[0-9\.]\+" | grep -v "^haskell\(98|2010\)")
+PKGS=$(cat metadata | grep "^[a-zA-Z0-9\-]\+\-[0-9\.]\+" | grep -v "^haskell\(98\|2010\)")
 
 [ -f list.txt ] && rm list.txt
 for PKG in $PKGS

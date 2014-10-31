@@ -10,16 +10,22 @@ import qualified Data.List as L
 import qualified Data.Set as S
 import Language.Preprocessor.Cpphs
 
+-- TODO return Maybe transformed_source (Nothing if transform was not needed)
 -- | Pity that cpphs runs in IO instead of something more abstract.
 unCpp :: [(String, String)] -> String -> String -> IO (String, Maybe [LineRegionModification])
-unCpp defines src_name source = {-# SCC unCpp #-} do
-  let include_path = []
-      bool_opts = defaultBoolOptions { hashline = False }
-  transformed_src <- macroPass defines bool_opts
-                       <=< cppIfdef src_name defines include_path bool_opts
-                       $ source
-  return (transformed_src, rollup source transformed_src)
-
+unCpp defines src_name source = {-# SCC unCpp #-}
+  if not (cppNeeded source)
+    then return (source, Just [])
+    else do
+      let include_path = []
+          bool_opts = defaultBoolOptions { hashline = False }
+      transformed_src <- macroPass defines bool_opts
+                      <=< cppIfdef src_name defines include_path bool_opts
+                      $ source
+      return (transformed_src, rollup source transformed_src)
+ where
+  cppNeeded = any ("#" `L.isPrefixOf`) . lines
+  
 data RegionModification
   = Generated       -- ^ Mostly line pragmas, should be omitted from display.
   | Deleted String  -- ^ Might be displayed discretely.

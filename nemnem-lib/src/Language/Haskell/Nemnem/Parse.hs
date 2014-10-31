@@ -6,7 +6,7 @@ module Language.Haskell.Nemnem.Parse
   , ProcessModuleError(..)
   ) where
 
-import Control.Exception (evaluate, try, SomeException)
+import Control.Exception (evaluate, try, SomeException, ErrorCall(..))
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State
 import qualified Data.Array as A
@@ -52,36 +52,41 @@ processModule
   -> StateT (Map MName ModuleInfo) m (Either ProcessModuleError ProcessedModule)
 processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC processModule #-} do
   let untabbed_src = unTab raw_src
+  -- TODO move error handling inside unCpp
   uncpp_result <- liftIO . try $ do
     res <- unCpp cpp_defines siPath untabbed_src
     evaluate (length . fst $ res) >> return res
   case uncpp_result of
     Left (ex :: SomeException) -> return (Left (ProcessModuleError "" (show ex)), modules)
-    Right (uncpp_src, mb_region_mods) -> case {-# SCC hseParse #-} parse uncpp_src of
-      fail@(ParseFailed _ _) -> do
-        let err = ProcessModuleError
-                    { pmeUncppedSource = uncpp_src
-                    , pmeParseFailure = show fail }
-        return (Left err, modules)
-      ParseOk (ast, comments) -> do
-        -- TODO preprocess comment locations and pass to collectModule, so it can
-        --      link comments to definitions.
-        let comment_hls = {-# SCC comments #-}
-                          map makeCommentHighlight comments
-            m_info0 = (collectModule modules ast)
-                        { miOriginalPath = Just siPath }
-            m_info = {-# SCC concat #-} m_info0
-                       { miHighlights = miHighlights m_info0 ++ comment_hls}
-            new_modules = M.insert
-                            (fromMaybe "Anonymous" . miName $ m_info)
-                            m_info
-                            modules
-            result = ProcessedModule
-                       { pmUntabbedSource = untabbed_src
-                       , pmUncppedSource = uncpp_src
-                       , pmModifiedRegions = mb_region_mods
-                       , pmModuleInfo = m_info }
-        return (Right result, new_modules)
+    Right (uncpp_src, mb_region_mods) -> do
+      parse_result <- liftIO . try . evaluate $ {-# SCC hseParse #-} parse uncpp_src
+      case parse_result of
+        Left (ErrorCall e) -> return (Left (ProcessModuleError uncpp_src e), modules)
+        Right res -> case res of
+          fail@(ParseFailed _ _) -> do
+            let err = ProcessModuleError
+                        { pmeUncppedSource = uncpp_src
+                        , pmeParseFailure = show fail }
+            return (Left err, modules)
+          ParseOk (ast, comments) -> do
+            -- TODO preprocess comment locations and pass to collectModule, so it can
+            --      link comments to definitions.
+            let comment_hls = {-# SCC comments #-}
+                              map makeCommentHighlight comments
+                m_info0 = (collectModule modules ast)
+                            { miOriginalPath = Just siPath }
+                m_info = {-# SCC concat #-} m_info0
+                           { miHighlights = miHighlights m_info0 ++ comment_hls}
+                new_modules = M.insert
+                                (fromMaybe "Anonymous" . miName $ m_info)
+                                m_info
+                                modules
+                result = ProcessedModule
+                           { pmUntabbedSource = untabbed_src
+                           , pmUncppedSource = uncpp_src
+                           , pmModifiedRegions = mb_region_mods
+                           , pmModuleInfo = m_info }
+            return (Right result, new_modules)
   where
   parse =
     let forced_exts =
