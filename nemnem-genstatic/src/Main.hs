@@ -73,9 +73,10 @@ main = do
   let config = ProcessModuleConfig "deploy/"
                   -- TODO defines from args/cfg
                   -- TODO LANGUAGE_xy, MIN_VERSION_xy ?
-                 [("UseGHC", "1"),
-                  ("__GLASGOW_HASKELL__", "783"),
-                  ("INTEGER_GMP", "1")
+                 [ ("UseGHC", "1")
+                 , ("__GLASGOW_HASKELL__", "783")
+                 , ("INTEGER_GMP", "1")
+                 , ("SIZEOF_HSWORD", "4")
                  ]  
   module_infos <- mapM_ (processModules config) source_infos `execStateT` M.empty
   return ()
