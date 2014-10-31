@@ -30,7 +30,7 @@ library
                        cpphs >= 1.18.5,
                        dlist >= 0.7,
                        fgl >= 5.5,
-                       haskell-src-exts == 1.14.*,
+                       haskell-src-exts >= 1.16,
                        regex-tdfa >= 1.2,
                        text >= 1.1,
                        transformers >= 0.3,

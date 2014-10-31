@@ -91,6 +91,8 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC 
             EnableExtension MultiParamTypeClasses
           , EnableExtension FlexibleContexts
           , EnableExtension FlexibleInstances
+            -- https://github.com/haskell-suite/haskell-src-exts/issues/133
+          , EnableExtension NondecreasingIndentation  -- should be definitely per-module
             -- let's just throw these in for now
             -- TODO from config, maybe per package on module
           , EnableExtension TypeOperators

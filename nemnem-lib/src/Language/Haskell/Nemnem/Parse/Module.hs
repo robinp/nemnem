@@ -1,8 +1,4 @@
-{-# LANGUAGE RecursiveDo, FlexibleContexts, FlexibleInstances, RankNTypes #-}
-{-# LANGUAGE OverloadedStrings #-}
--- TODO remove this once HSE 0.15.0.2 is out
--- See https://github.com/haskell-suite/haskell-src-exts/issues/42
-{-# LANGUAGE Arrows #-} 
+{-# LANGUAGE RecursiveDo, FlexibleContexts, FlexibleInstances, RankNTypes, OverloadedStrings, LambdaCase, RecordWildCards #-}
 module Language.Haskell.Nemnem.Parse.Module where
 
 import Control.Applicative ((<$>), (<*>), (<|>), pure)
@@ -13,6 +9,8 @@ import Data.Aeson.Types as A
 import qualified Data.DList as DList
 import qualified Data.List as L
 import Data.Either
+import Data.Foldable (traverse_)
+import Data.Traversable (traverse)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
@@ -231,7 +229,7 @@ exportedKeys modules children xs =
       EModuleContents _ (ModuleName _ mname) -> M.lookup mname modules
       _ -> Nothing
     directExports x = case x of
-      EVar _ qname -> getQName CTerm qname
+      EVar _ ns qname -> getQName (namespaceCtx ns) qname
       EAbs _ qname -> getQName CType qname
       EThingAll _ qname -> do
         name <- getQName CType qname
@@ -244,6 +242,10 @@ exportedKeys modules children xs =
     getQName ctx =
       -- Conversion to unqualified name happens at callsite.
       maybeToList . fmap (Ctxed ctx . snd) . flattenQName
+
+-- TODO find example where can TypeNamespace happen?
+namespaceCtx (NoNamespace _l) = CTerm
+namespaceCtx (TypeNamespace _l) = CType
 
 getCName (VarName _ name) = hseSymOrIdentValue name
 getCName (ConName _ name) = hseSymOrIdentValue name
@@ -258,15 +260,19 @@ getCPos (ConName l _) = wrapLoc l
 --
 --  Returns the symbols imported from that module, along with reference
 --  locations inside the ImportSpec (not present for the (..) scheme).
-imports :: ChildMap
+imports :: Bool
+        -> ChildMap
         -> ImportSpec S
         -> [(Symbol, Maybe SymLoc)]
-imports children is = case is of
-  IVar _ name -> justSeconds [hseNameToSymbolAndLoc CTerm name]
+imports is_hiding children is = case is of
+  IVar _ ns name -> justSeconds [hseNameToSymbolAndLoc (namespaceCtx ns) name]
   IAbs _ name ->
-    -- See Haskell report 5.3.1 item 2
-    justSeconds $ 
-      [hseNameToSymbolAndLoc CType name, hseNameToSymbolAndLoc CTerm name]
+    let type_symloc = hseNameToSymbolAndLoc CType name
+        term_symloc = hseNameToSymbolAndLoc CTerm name
+    in justSeconds $
+        -- See Haskell report 5.3.1 item 2
+        if is_hiding then [type_symloc, term_symloc]
+        else [type_symloc]
   IThingAll _ name ->
     let n = hseNameToSymbolAndLoc CType name
     in mapSnd Just n :
@@ -280,22 +286,23 @@ imports children is = case is of
 importSyms :: Map MName ModuleInfo -> [ImportDecl S] -> Parse SymTab
 importSyms modules decls = mconcat <$> mapM getImports decls
   where
-  getImports (ImportDecl _l lmname isQual _src _pkg alias mb_specs) =
-    case M.lookup (mname lmname) modules of
+  getImports ImportDecl{..} =
+    case M.lookup (mname importModule) modules of
       Nothing -> do
         -- Imported module not yet processed?
-        warn lmname "Module not found"
+        warn importModule "Module not found"
         return mempty  
       Just mi -> do
         filtered <-
           let exports = miExports mi
-          in case mb_specs of
+          in case importSpecs of
             Just specs -> filterImports (miChildren mi) specs exports
             Nothing -> return exports
         let aliased_symtab = 
-              let alias_name = mname . fromMaybe lmname $ alias
+              let alias_name = mname . fromMaybe importModule $ importAs
               in aliased alias_name filtered
-        return $ aliased_symtab `mappend` if isQual then M.empty else filtered
+        return $ aliased_symtab `mappend`
+                  if importQualified then M.empty else filtered
   --
   aliased mAlias exps =
     let prefix = mAlias ++ "."
@@ -307,7 +314,7 @@ importSyms modules decls = mconcat <$> mapM getImports decls
   --
   filterImports :: ChildMap -> ImportSpecList S -> SymTab -> Parse SymTab
   filterImports children (ImportSpecList _ is_hiding iss) exported_syms =
-    let specified = iss >>= imports children  :: [(Symbol, Maybe SymLoc)]
+    let specified = iss >>= imports is_hiding children  :: [(Symbol, Maybe SymLoc)]
         selected = map fst specified
         passes s = invertIf is_hiding $ s `elem` selected
     in do
@@ -434,11 +441,11 @@ collectDeclWithSigExports signature_export signature_link decl = case decl of
                          mb_classdecls
     return $ insertPair head_symloc decl_symtab
 
-  InstDecl _l mb_ctx inst_head mb_decls -> do
-    warnMay mb_ctx "InstDecl Context"
+  InstDecl _l mb_overlap inst_rule mb_decls -> do
+    warnMay mb_overlap "InstDecl Overlap"
     -- TODO pushDef once supported
-    parseInstHead inst_head
-    maybe (return ()) (mapM_ parseInstanceDecl) mb_decls
+    parseInstRule inst_rule
+    traverse_ (mapM_ parseInstanceDecl) mb_decls
     return M.empty
 
   TypeSig _l names ty -> do
@@ -463,8 +470,7 @@ collectDeclWithSigExports signature_export signature_link decl = case decl of
       mapM_ (parseMatch rest_ref) ms
       return . exceptInSignatureExport $ singletonPair first_sym_and_loc
 
-  PatBind _l pat mb_type rhs mb_binds -> do
-    warnMay mb_type "PatBind type"
+  PatBind _l pat rhs mb_binds -> do
     pattern_symtab <- collectPat pat
     when signature_link . addScopeReferences id . M.toList $ pattern_symtab
     let local_pattern_symtab = if signature_link
@@ -501,17 +507,30 @@ collectDeclWithSigExports signature_export signature_link decl = case decl of
       in LRef . (\remote_loc -> Ref loc remote_loc stack) <$>
            M.lookup sym symtab
 
+parseInstRule :: InstRule S -> Parse ()
+parseInstRule = \case
+  IRule _l mb_foralltyvars mb_ctx ihead -> do
+    traverse_ parseTyVarBinds mb_foralltyvars
+    warnMay mb_ctx "Instance Context"
+    parseInstHead ihead
+  IParen _l irule -> parseInstRule irule
+
 -- TODO could return TypeVars to local context (first they need to be
 --      collected in collectType).
 parseInstHead :: InstHead S -> Parse ()
-parseInstHead ihead = case ihead of
-  IHead _l qname tys -> do
-    -- TODO introduce CClass ctx if can conflict with CType
+parseInstHead = \case
+  IHCon _l qname -> do
     parseQName CType qname
     highlight (ann qname) ClassRef
-    mapM_ collectType tys
-  i@(IHInfix l t1 qname t2) -> warn i "IHInfix"
-  IHParen _l ih -> parseInstHead ih
+  IHInfix _l ty qname -> do
+    parseQName CType qname
+    highlight (ann qname) ClassRef
+    collectType ty
+  IHParen _l ihead ->
+    parseInstHead ihead
+  IHApp _l ihead ty -> do
+    parseInstHead ihead
+    collectType ty
 
 -- TODO return local SymTab and call with feedback, so local signature
 --      definition can point to local function instead of class signature.
@@ -529,8 +548,8 @@ collectRhs rhs = case rhs of
   GuardedRhss _l grhss -> mapM_ expsFrom grhss
   where
   expsFrom (GuardedRhs _l stmts exp) = do
-    mapM_ parseStatement stmts
-    collectExp exp
+    defined_symtab <- parseStatementsNonRecursive stmts
+    local (withLocalSymtab defined_symtab) $ collectExp exp
 
 collectExp :: Exp S -> Parse ()
 collectExp exp = case exp of
@@ -597,25 +616,15 @@ parseLiteral literal = case literal of
   l = ann literal
 
 collectAlt :: Alt S -> Parse ()
-collectAlt (Alt _l pat guarded_alts mb_binds) = do
+collectAlt (Alt _l pat guarded_rhs mb_binds) = do
   pattern_symtab <- collectPat pat  -- only used locally
   binds_symtab <- parseMaybeBinds pattern_symtab mb_binds
   local (withLocalSymtab $ pattern_symtab `M.union` binds_symtab) $
-    collectGuardedAlts guarded_alts
-
-collectGuardedAlts :: GuardedAlts S -> Parse ()
-collectGuardedAlts gas = case gas of
-  UnGuardedAlt _l exp -> collectExp exp
-  GuardedAlts _l galts -> mapM_ parseGuardedAlt galts
-
-parseGuardedAlt :: GuardedAlt S -> Parse ()
-parseGuardedAlt (GuardedAlt _l stmts exp) = do
-  defined_symtab <- parseStatementsNonRecursive stmts
-  local (withLocalSymtab defined_symtab) $ collectExp exp
+    collectRhs guarded_rhs
 
 collectPat :: Pat S -> Parse SymTab
 collectPat p = case p of
-  PLit _l lit -> parseLiteral lit >> return M.empty
+  PLit _l _negated lit -> parseLiteral lit >> return M.empty
   PVar _l name -> do
     highlight (ann name) $ VariableDecl OtherVarDecl
     return . singletonPair $ hseNameToSymbolAndLoc CTerm name
@@ -676,9 +685,11 @@ parseMatch mb_reference_loc m = do
     return defined_sym_and_loc
 
 parseMaybeBinds :: SymTab -> Maybe (Binds S) -> Parse SymTab
-parseMaybeBinds extra_symtab mb_binds = case mb_binds of
-  Nothing -> return M.empty
-  Just binds -> local (withLocalSymtab extra_symtab) $ parseBinds binds
+parseMaybeBinds extra_symtab =
+  let op = traverse (local (withLocalSymtab extra_symtab) . parseBinds)
+  in fmap zeroMaybe . op
+  where
+  zeroMaybe = fromMaybe mempty
 
 parseBinds :: Binds S -> Parse SymTab
 parseBinds binds = case binds of
@@ -703,26 +714,33 @@ parseStatementsNonRecursive stmts = do
         symtab stmts
  
 parseStatement :: Stmt S -> Parse SymTab
-parseStatement stmt = case stmt of
+parseStatement = \case
   Generator _l pat exp -> collectExp exp >> collectPat pat
   Qualifier _l exp -> collectExp exp >> return M.empty
   LetStmt _l binds -> parseBinds binds
   RecStmt _l stmts -> parseStatementsRecursive stmts
 
 collectDeclHead :: HighlightKind -> DeclHead S -> Parse SymbolAndLoc
-collectDeclHead hl_kind dhead = case dhead of
-  DHead _l name tyvarbinds -> collectHeadAndBinds name tyvarbinds
-  DHInfix _l ty1 name ty2 -> collectHeadAndBinds name [ty1, ty2]
-  DHParen _l innerHead -> collectDeclHead hl_kind innerHead
+collectDeclHead hl_kind = \case
+  DHead _l name -> collectHead name
+  DHInfix _l ty name -> do
+    parseTyVarBind ty
+    collectHead name
+  DHParen _l dh ->
+    collectDeclHead hl_kind dh
+  DHApp _l dh ty -> do
+    parseTyVarBind ty
+    collectDeclHead hl_kind dh
   where
-  collectHeadAndBinds hd binds = do
+  collectHead hd = do
     highlight (ann hd) hl_kind
-    parseTyVarBinds binds
     return $ hseNameToSymbolAndLoc CType hd
 
 parseTyVarBinds :: [TyVarBind S] -> Parse ()
-parseTyVarBinds tyvarbinds =
-  mapM_ (\b -> highlight (ann b) TypeVariable) tyvarbinds
+parseTyVarBinds = mapM_ parseTyVarBind
+
+parseTyVarBind :: TyVarBind S -> Parse ()
+parseTyVarBind b = highlight (ann b) TypeVariable
 
 parseClassDecl :: Symbol -> ClassDecl S -> Parse SymTab
 parseClassDecl clsname cdecl = case cdecl of
@@ -752,22 +770,17 @@ collectQualConDecl tyname (QualConDecl _l mb_tyvarbinds mb_ctx ctor_decl) =
     highlightName name
     tell . DList.fromList . mkChild' tyname $
       Ctxed CTerm (hseSymOrIdentValue name)
-    mapM_ (collectType . bangType) bangs
+    mapM_ collectType bangs
     return . M.fromList $ [hseNameToSymbolAndLoc CTerm name]
 
 collectFieldDecl :: FieldDecl S -> Parse SymTab
 collectFieldDecl (FieldDecl l names bang) = do
-  collectType . bangType $ bang
+  collectType $ bang
   mapM_ (\n -> highlight (ann n) (VariableDecl RecordField)) names
   return . M.fromList . map (hseNameToSymbolAndLoc CTerm) $ names
 
-bangType :: BangType l -> Type l
-bangType (BangedTy _ t) = t
-bangType (UnBangedTy _ t) = t
-bangType (UnpackedTy _ t) = t
-
 collectType :: Type S -> Parse ()
-collectType ty = case ty of
+collectType = \case
   TyCon l qname -> parseQName CType qname >> highlight l TypeConstructorRef
   TyFun _l t1 t2 -> mapM_ collectType [t1, t2]
   -- Note: for semantic highlight we might need to keep track
@@ -784,6 +797,7 @@ collectType ty = case ty of
       Nothing -> return ()
     warnMay mb_ctx "Context"
     collectType t
+  TyBang _l _bangtype t -> collectType t
   other -> warn other "Type"
 
 parseQOp :: Ctx -> QOp S -> Parse ()
