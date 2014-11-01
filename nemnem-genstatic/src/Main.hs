@@ -118,8 +118,8 @@ main = do
   processModules :: ProcessModuleConfig
                  -> SourceInfo
                  -> StateT (Map MName ModuleInfo) IO ()
-  processModules ProcessModuleConfig{..} source_info = do
-    raw_src <- lift
+  processModules ProcessModuleConfig{..} source_info = {-# SCC processModules #-} do
+    raw_src <- {-# SCC readsource #-} lift
             -- TODO custom lenientDecode which also debug-logs error
             . fmap (T.unpack . T.decodeUtf8With TE.lenientDecode)
             . BS.readFile
@@ -141,15 +141,15 @@ main = do
         writeCppd pmcOutDir source_to_link (siPath source_info ++ ".cpp")
         -- TODO write a combination of untabbed/cppd source for full info
         --      content
-        writeLinked pmcOutDir source_to_link pmModuleInfo
+        writeLinked pmcOutDir source_to_link pmModuleInfo pmNonCrossrefInfo
     lift . putStrLn $ "Done"
   --
-  writeLinked :: String -> String -> ModuleInfo -> IO ()
-  writeLinked outdir src mi = do
+  writeLinked :: String -> String -> ModuleInfo -> NonCrossRefInfo -> IO ()
+  writeLinked outdir src mi nxi = {-# SCC writeLinked #-} do
     let fn = outdir ++ fromMaybe "Anonymous" (miName mi) ++ ".html"
     res <- try 
            . TL.writeFile fn
-           $ renderTaggedHtml moduleTransformStatic src mi
+           $ renderTaggedHtml moduleTransformStatic src mi nxi
     case res of
       Left (ex :: SomeException) ->
         putStrLn $ "Error hyperlinking " ++ fn ++ ", error: " ++ show ex
@@ -158,25 +158,25 @@ main = do
   writeCppd :: String -> String -> FilePath -> IO ()
   writeCppd outdir src to_path = TL.writeFile to_path . TL.pack $ src
   --
-  moduleRanges :: String -> ModuleInfo -> [Range Tag]
-  moduleRanges src mi = 
+  moduleRanges :: String -> ModuleInfo -> NonCrossRefInfo -> [Range Tag]
+  moduleRanges src ModuleInfo{..} NonCrossRefInfo{..} = {-# SCC moduleRanges #-}
     let lineLens = map ((+1) . length) (lines src)
-        bases = basesOf (miRefs mi) (miExports mi)
+        bases = basesOf miRefs miExports
         ranges = let ofsFun = offsetAt (mkOffsetTable lineLens)
-                     refs = map (refToRange ofsFun) (miRefs mi)
+                     refs = map (refToRange ofsFun) miRefs
                      entities =
-                       mapMaybe (tagEntitiesOfCurrentModule ofsFun (miName mi))
+                       mapMaybe (tagEntitiesOfCurrentModule ofsFun miName)
                                 bases
-                     warns = map (warnsToRange ofsFun) (miWarns mi)
-                     hlits = map (highlightsToRange ofsFun) (miHighlights mi)
+                     warns = map (warnsToRange ofsFun) miWarns
+                     hlits = map (highlightsToRange ofsFun) miHighlights
                  in DL.toList . DL.concat . map DL.fromList $
                       [refs, entities, warns, hlits]
     in ranges
   --
-  renderTaggedHtml :: (Maybe MName -> TL.Text) -> String -> ModuleInfo -> TL.Text
-  renderTaggedHtml module_transform src mi =
+  renderTaggedHtml :: (Maybe MName -> TL.Text) -> String -> ModuleInfo -> NonCrossRefInfo -> TL.Text
+  renderTaggedHtml module_transform src mi nxi = {-# SCC renderTaggedHtml #-}
     -- assumes newline is \n (single char)
-    let ranges = moduleRanges src mi
+    let ranges = moduleRanges src mi nxi
         tagTransformer = tagToBlaze module_transform (miName mi)
         tagged = tagRanges tagTransformer ranges (T.pack src)
     in BR.renderHtml . withHeader $ tagged
@@ -198,7 +198,7 @@ tagRanges
   -> [Range a]
   -> T.Text
   -> B.Markup
-tagRanges blazer rs txt0 =
+tagRanges blazer rs txt0 = {-# SCC tagRanges #-}
   let fs = map (modifyR blazer) rs
       ordered = L.sortBy (comparing (\(Range _ s e) -> (s,-e))) fs
       tlen = T.length txt0

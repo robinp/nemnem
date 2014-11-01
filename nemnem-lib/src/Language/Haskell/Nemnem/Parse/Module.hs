@@ -3,6 +3,7 @@ module Language.Haskell.Nemnem.Parse.Module where
 
 import Control.Applicative ((<$>), (<*>), (<|>), pure)
 import Data.Functor.Identity
+import Control.DeepSeq (NFData(..), deepseq)
 import Control.Monad (foldM, void, when)
 import Control.Monad.Trans.RWS
 import Data.Aeson.Types as A
@@ -57,15 +58,18 @@ type MName = String
 
 data Ctx = CType | CTerm
   deriving (Eq, Ord, Show)
+instance NFData Ctx
 
 data Ctxed a = Ctxed
   { ctx :: Ctx
   , dropCtx :: a
-  }
-  deriving (Eq, Ord, Show)
+  } deriving (Eq, Ord, Show)
 
 instance Functor Ctxed where
   fmap f (Ctxed c a) = Ctxed c (f a)
+
+instance (NFData a) => NFData (Ctxed a) where
+  rnf Ctxed{..} = rnf ctx `seq` rnf dropCtx `seq` ()
 
 type S = SrcSpanInfo
 
@@ -84,6 +88,9 @@ data SymLoc = SymLoc
   -- TODO symPackage to avoid ambiguities
   }
   deriving (Eq, Show)
+
+instance NFData SymLoc where
+  rnf SymLoc{..} = rnf symRange `seq` rnf symModule `seq` ()
 
 -- TODO rather transform these structures in the serving code and add
 -- instances there? 
@@ -199,23 +206,32 @@ highlightAt' range hl_kind = LHighlight $ Highlight range hl_kind
 
 type Logs = DList.DList Log
 
+-- | For example data constructors of type.
 type ChildMap = Map Symbol [Symbol]
 
+-- | Module info that is not useful for cross-referencing, and thus need not be
+-- held in memory while processing the full dependency graph.
+data NonCrossRefInfo = NonCrossRefInfo
+  { miSymbols :: SymTab     -- ^ Top-level symbols in module.
+  , miChildren :: ChildMap  -- ^ All relations defined in module.
+  , miRefs :: [Ref]         -- ^ References from this module.
+  , miWarns :: [Warn]       -- ^ Warnings while processing AST.
+  , miHighlights :: [Highlight]
+  } deriving (Show)
+
+-- | Potentially kept in memory while the graph is being processed.
 data ModuleInfo = ModuleInfo
   { miName :: Maybe MName
-    -- | newly defined top-level symbols (regardless of being exported or not)
-  , miSymbols :: SymTab
-    -- | exported symbols
-  , miExports :: SymTab
-    -- | exported parent-child relations (for example type -> constructors)
-  , miChildren :: ChildMap
-    -- | references from this module
-  , miRefs :: [Ref]
-    -- | warnings while processing AST (likely todos)
-  , miWarns :: [Warn]
-  , miHighlights :: [Highlight]
+  , miExports :: SymTab             -- ^ Only the exported symbols.
+  , miExportedChildren :: ChildMap  -- ^ Exported parent-child relations.
   , miOriginalPath :: Maybe String
   } deriving (Show)
+
+instance NFData ModuleInfo where
+  rnf ModuleInfo{..} =
+    rnf miName `seq`
+    rnf miExports `seq`
+    rnf miExportedChildren `seq` ()
 
 exportedKeys :: Map MName ModuleInfo -> ChildMap -> [ExportSpec l]
              -> ([Symbol], [ModuleInfo], SymTab)
@@ -296,7 +312,7 @@ importSyms modules decls = mconcat <$> mapM getImports decls
         filtered <-
           let exports = miExports mi
           in case importSpecs of
-            Just specs -> filterImports (miChildren mi) specs exports
+            Just specs -> filterImports (miExportedChildren mi) specs exports
             Nothing -> return exports
         let aliased_symtab = 
               let alias_name = mname . fromMaybe importModule $ importAs
@@ -351,7 +367,10 @@ parseModuleSymbols modules (Module _l mhead _pragmas imports decls) = do
   imported_symtab <- importSyms modules imports
   return $ mkAvailableSymbols imported_symtab module_symtab
 
-collectModule :: Map MName ModuleInfo -> Module S -> ModuleInfo
+collectModule
+  :: Map MName ModuleInfo
+  -> Module S
+  -> (ModuleInfo, NonCrossRefInfo)
 collectModule modules m@(Module _l mhead _pragmas imports decls) =
   let (av_symtab, _, dlogs) = runRWS (parseModuleSymbols modules m) pctx ()
       logs = DList.toList dlogs
@@ -366,17 +385,23 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
       (exports, reexport_children) = fromMaybe (M.empty, M.empty) $
                                        headExports av_symtab children <$> mhead
       module_name = moduleHeadName <$> mhead
-  in {-# SCC collectModule #-} ModuleInfo
-      { miName = module_name
-      , miSymbols = aSymDefined av_symtab
-      -- TODO add imported symbols to ModuleInfo if needed
-      , miExports = exports
-      , miChildren = exportedChildren exports children `M.union` reexport_children
-      , miRefs = map (fillModuleName module_name)$ logs >>= getRef
-      , miWarns = logs >>= getWarn
-      , miHighlights = logs >>= getHighlight
-      , miOriginalPath = Nothing
-      }
+      module_info = ModuleInfo
+        { miName = module_name
+        -- TODO add imported symbols to ModuleInfo if needed
+        , miExports = exports
+        , miExportedChildren = exportedChildren exports children 
+                                `M.union` reexport_children
+        , miOriginalPath = Nothing
+        }
+      nonxref_info = NonCrossRefInfo
+        { miSymbols = aSymDefined av_symtab
+        , miChildren = children
+        , miRefs = map (fillModuleName module_name)$ logs >>= getRef
+        , miWarns = logs >>= getWarn
+        , miHighlights = logs >>= getHighlight
+        }
+  in {-# SCC collectModule #-} module_info `deepseq`
+      (module_info, nonxref_info)
   where
   headExports av_symtab children (ModuleHead _ _ _ exportSpecs) =
     case exportSpecs of
@@ -395,7 +420,7 @@ collectModule modules m@(Module _l mhead _pragmas imports decls) =
                     in M.mapKeys toUnqualified . M.filterWithKey keyInKeySet $
                          symtab
               in export_symtab `M.union` reexport_symtab
-            reexport_children = M.unions . map miChildren $ reexport_infos
+            reexport_children = M.unions . map miExportedChildren $ reexport_infos
         in (result_symtab, reexport_children)
   exportedChildren :: SymTab -> ChildMap -> ChildMap
   exportedChildren exports =

@@ -37,6 +37,7 @@ data ProcessedModule = ProcessedModule
   -- TODO make reverse-map (so also the  original file can be tagged eventually)
   , pmModifiedRegions :: Maybe [LineRegionModification]
   , pmModuleInfo :: ModuleInfo
+  , pmNonCrossrefInfo :: NonCrossRefInfo
   } deriving (Show)
 
 data ProcessModuleError = ProcessModuleError
@@ -73,10 +74,10 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC 
             --      link comments to definitions.
             let comment_hls = {-# SCC comments #-}
                               map makeCommentHighlight comments
-                m_info0 = (collectModule modules ast)
-                            { miOriginalPath = Just siPath }
-                m_info = {-# SCC concat #-} m_info0
-                           { miHighlights = miHighlights m_info0 ++ comment_hls}
+                (m_info0, nonxref_info0) = (collectModule modules ast)
+                m_info = m_info0 { miOriginalPath = Just siPath }
+                nonxref_info = {-# SCC concat #-} nonxref_info0
+                  { miHighlights = miHighlights nonxref_info0 ++ comment_hls}
                 new_modules = M.insert
                                 (fromMaybe "Anonymous" . miName $ m_info)
                                 m_info
@@ -85,7 +86,9 @@ processModule cpp_defines SourceInfo{..} raw_src = StateT $ \modules -> {-# SCC 
                            { pmUntabbedSource = untabbed_src
                            , pmUncppedSource = uncpp_src
                            , pmModifiedRegions = mb_region_mods
-                           , pmModuleInfo = m_info }
+                           , pmModuleInfo = m_info
+                           , pmNonCrossrefInfo = nonxref_info
+                           }
             return (Right result, new_modules)
   where
   parse =
