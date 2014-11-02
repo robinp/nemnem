@@ -17,3 +17,6 @@ cat out | grep ParseFailed  | grep -o '/home/[^\\]*' | grep -o '^[a-zA-Z/-]*[0-9
 
 # To get common defines
 find pull |grep hs$ | xargs grep '^#if' | cut -d: -f2 | sort -u
+
+grep 'compat(a,b,c)' out | grep -o '/home.*line [0-9]\+' | cut -d\  -f1,5 | tr ' ' ':' > compatlocs
+for i in $(cat compatlocs); do F=$(echo $i | cut -d: -f1); L=$(echo $i | cut -d: -f2); echo === $F; sed -n ${L}p $F; done > problematic

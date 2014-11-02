@@ -1,6 +1,7 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
 module Language.Haskell.Nemnem.Parse
   ( SourceInfo(..)
+  , definesFromPackages
   , processModule
   , ProcessedModule(..)
   , ProcessModuleError(..)
@@ -11,6 +12,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.State
 import qualified Data.Array as A
 import qualified Data.List as L
+import qualified Data.List.Split as L
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
@@ -44,6 +46,36 @@ data ProcessModuleError = ProcessModuleError
   { pmeUncppedSource :: String
   , pmeParseFailure :: String
   } deriving (Show)
+
+-- | From Cabal/Distribution/Simple/Build/Macros.hs .
+-- Assumes, that each package has a single version.
+definesFromPackages :: [SourceInfo] -> [(String, String)]
+definesFromPackages sis =
+  let uniques = L.nub . map pkgInfo $ sis
+  in uniques >>= packageDefines
+  where
+  pkgInfo SourceInfo{..} = (siPackage, siPackageVersion)
+  packageDefines (pkg0, ver) =
+    let pkg = L.intercalate "_" . L.splitOn "-" $ pkg0
+        ver_define = genVersion pkg ver
+    in case extractVersion ver of
+        Just v  -> [ver_define, genMinVersion pkg v]
+        Nothing -> [ver_define]
+  genVersion pkg ver = ("VERSION_" ++ pkg, ver)
+  genMinVersion pkg (a,b,c) = 
+    let key = "MIN_VERSION_" ++ pkg ++ "(major1,major2,minor)"
+        value = concat
+          [ "(\\\n"
+          , "  (major1) <  ", a, " || \\\n"
+          , "  (major1) == ", a, " && (major2) <  ", b, " || \\\n"
+          , "  (major1) == ", a, " && (major2) == ", b, " && (minor) <= ", c, ")"
+          ]
+    in (key, value)
+  extractVersion :: String -> Maybe (String, String, String)
+  extractVersion ver = case L.splitOn "." ver of
+    a:b:c:_ -> Just (a,b,c)
+    [a,b]   -> Just (a,b,"0")
+    _       -> Nothing
 
 processModule
   :: (MonadIO m)

@@ -23,3 +23,4 @@ executable nemnem-genstatic
                        scotty >= 0.8,
                        text >= 1.1,
                        transformers >= 0.3
+  ghc-options: -Wall -O2

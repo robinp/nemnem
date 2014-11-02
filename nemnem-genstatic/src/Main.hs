@@ -70,18 +70,21 @@ main = do
   args <- getArgs
   source_infos <- dagOrdered siPath =<< case args of
     [] -> return []
-    (path_file:_) -> map parseSourceInfoLine 
-                       . filter (not . ("#" `L.isPrefixOf`)) 
+    (path_file:_) -> map parseSourceInfoLine
+                       . filter (not . ("#" `L.isPrefixOf`))
                        . lines
                        <$> readFile path_file
-  let config = ProcessModuleConfig "deploy/"
-                  -- TODO defines from args/cfg
-                  -- TODO LANGUAGE_xy, MIN_VERSION_xy ?
-                 [ ("UseGHC", "1")
-                 , ("__GLASGOW_HASKELL__", "783")
-                 , ("INTEGER_GMP", "1")
-                 , ("SIZEOF_HSWORD", "4")
-                 ]  
+  let pkg_defines = definesFromPackages source_infos
+      hacky_defines =
+        -- TODO LANGUAGE_xy ?
+        -- TODO defines from args/cfg
+        [ ("UseGHC", "1")
+        , ("__GLASGOW_HASKELL__", "783")
+        , ("INTEGER_GMP", "1")
+        , ("SIZEOF_HSWORD", "4")
+        ]
+      config = ProcessModuleConfig "deploy/" $ concat [hacky_defines, pkg_defines]
+  print pkg_defines
   module_infos <- mapM_ (processModules config) source_infos `execStateT` M.empty
   return ()
   {-
